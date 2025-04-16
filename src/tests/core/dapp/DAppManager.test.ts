@@ -5,7 +5,6 @@ import { SessionManager } from '../../../core/session/SessionManager';
 import { KeyManager } from '../../../core/keyManagement/KeyManager';
 import { DAppManifest } from '../../../types/dapp';
 import { ErrorCorrelator } from '../../../core/error/ErrorCorrelator';
-import { WalletError } from '../../../core/error/ErrorHandler';
 
 // Mock dependencies
 jest.mock('../../../core/session/SessionManager');
@@ -16,13 +15,6 @@ describe('DAppManager', () => {
   let sessionManager: jest.Mocked<SessionManager>;
   let errorCorrelator: ErrorCorrelator;
   let keyManager: jest.Mocked<KeyManager>;
-
-  const mockNetwork: ChainConfig = {
-    chainId: 1,
-    name: 'Ethereum',
-    symbol: 'ETH',
-    rpcUrl: 'https://eth-mainnet.g.alchemy.com/v2/your-api-key'
-  };
 
   const mockManifest: DAppManifest = {
     id: 'test-dapp',
@@ -40,7 +32,6 @@ describe('DAppManager', () => {
     errorCorrelator = ErrorCorrelator.getInstance();
     keyManager = new KeyManager() as jest.Mocked<KeyManager>;
 
-    // Create DAppManager instance
     dAppManager = new DAppManager(sessionManager, errorCorrelator);
   });
 

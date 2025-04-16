@@ -1,15 +1,18 @@
 import { ErrorSeverity, ErrorContext, RecoveryStrategy } from '../../types/error';
 
 export class WalletError extends Error {
+  public timestamp: number;
+
   constructor(
     message: string,
     public code?: string,
-    public context?: ErrorContext,
+    public context: ErrorContext = {},
     public severity: ErrorSeverity = 'medium',
     public recoveryStrategy?: RecoveryStrategy
   ) {
     super(message);
     this.name = 'WalletError';
+    this.timestamp = Date.now();
   }
 }
 

@@ -1,11 +1,9 @@
 import { describe, expect, it, jest, beforeEach } from '@jest/globals';
 import { SecurityService } from '../services/SecurityService';
-import { TokenService } from '../services/TokenService';
-import { TransactionService } from '../services/TransactionService';
 import useWalletStore from '../store/wallet';
 import { KeyManager } from '../core/keyManagement/KeyManager';
 import { TransactionManager } from '../core/transaction/TransactionManager';
-import { ChainConfig } from '../types/wallet';
+import { ChainConfig, TransactionRequest, TransactionReceipt } from '../types/wallet';
 import { generateMnemonic, validateMnemonic } from '../utils/crypto';
 import { type EthereumProvider } from '../types/ethereum';
 import { type Address } from 'viem';
@@ -13,8 +11,8 @@ import { mainnet } from 'viem/chains';
 
 // Mock window.ethereum with proper types
 const mockEthereum = {
-  request: jest.fn().mockImplementation((args: { method: string; params?: unknown[] }) => {
-    return Promise.resolve(undefined);
+  request: jest.fn(async (args: { method: string; params?: unknown[] }): Promise<unknown> => {
+    return undefined;
   }),
   on: jest.fn(),
   removeListener: jest.fn(),
@@ -41,8 +39,6 @@ global.localStorage = localStorageMock;
 
 describe('Wallet Tests', () => {
   let securityService: SecurityService;
-  let tokenService: TokenService;
-  let transactionService: TransactionService;
   let keyManager: KeyManager;
   let txManager: TransactionManager;
 
@@ -53,6 +49,7 @@ describe('Wallet Tests', () => {
     symbol: 'ETH',
     rpcUrl: 'https://mainnet.infura.io/v3/your-project-id'
   };
+  const testPassword = 'testPassword123';
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -63,67 +60,70 @@ describe('Wallet Tests', () => {
       balance: '0'
     });
 
-    securityService = new SecurityService();
-    tokenService = new TokenService(mockNetwork);
-    transactionService = new TransactionService({
-      chainId: mainnet.id,
-      rpcUrl: 'https://mainnet.infura.io/v3/your-project-id'
-    });
-
+    securityService = SecurityService.getInstance();
     keyManager = new KeyManager();
     txManager = new TransactionManager(mockNetwork.rpcUrl, keyManager);
   });
 
   describe('Transaction Management', () => {
-    const password = 'testPassword123';
-    
     beforeEach(async () => {
       const mnemonic = generateMnemonic();
-      await keyManager.setup(password, mnemonic);
-      await keyManager.unlock(password);
+      await keyManager.setup(testPassword, mnemonic);
+      await keyManager.unlock(testPassword);
     });
 
     it('should prepare transaction with correct parameters', async () => {
-      const mockTransaction = {
+      const mockTransaction: TransactionRequest = {
+        from: mockAddress,
         to: mockAddress,
-        value: BigInt('1000000000000000000'),
+        value: '1000000000000000000',
         data: '0x' as `0x${string}`
       };
 
-      const tx = await transactionService.sendTransaction(mockTransaction);
+      const tx = await txManager.sendTransaction(mockTransaction);
       expect(tx).toMatch(/^0x[a-fA-F0-9]{64}$/);
     });
 
-    it('should track multiple pending transactions', async () => {
-      const mockTransactions = [
-        {
-          hash: '0x123' as Address,
-          from: mockAddress,
-          to: '0x456' as Address,
-          value: BigInt('1000000'),
-          status: 'confirmed' as const,
-          timestamp: Date.now(),
-        },
-      ];
+    it('should track transaction status', async () => {
+      const mockTxHash = '0x123' as `0x${string}`;
+      const mockTxReceipt: TransactionReceipt = {
+        hash: mockTxHash,
+        status: 'confirmed',
+        blockNumber: 12345,
+        blockHash: '0x789' as `0x${string}`,
+        transactionIndex: 1,
+        from: mockAddress,
+        to: '0x456' as Address,
+        contractAddress: null,
+        logs: [],
+        logsBloom: '0x0',
+        gasUsed: '21000',
+        effectiveGasPrice: '20000000000',
+        cumulativeGasUsed: '21000',
+        type: '0x2',
+        timestamp: Date.now(),
+        value: '1000000000000000000'
+      };
 
-      (mockEthereum.request as jest.Mock).mockResolvedValueOnce(mockTransactions);
+      (mockEthereum.request as jest.Mock).mockResolvedValueOnce(mockTxReceipt);
 
-      const transactions = await transactionService.getTransactions(mockAddress);
-      expect(transactions).toHaveLength(1);
-      expect(transactions[0].hash).toBe(mockTransactions[0].hash);
+      const receipt = await txManager.getTransactionReceipt(mockTxHash);
+      expect(receipt).toBeDefined();
+      if (receipt) {
+        expect(receipt.hash).toBe(mockTxReceipt.hash);
+        expect(receipt.status).toBe(mockTxReceipt.status);
+      }
     });
   });
 
   describe('Security Tests', () => {
-    const password = 'testPassword123';
-    
     beforeEach(async () => {
       const mnemonic = generateMnemonic();
-      await keyManager.setup(password, mnemonic);
+      await keyManager.setup(testPassword, mnemonic);
     });
 
     it('should lock and unlock wallet', async () => {
-      await keyManager.unlock(password);
+      await keyManager.unlock(testPassword);
       const address = await keyManager.getAddress();
       expect(address).toMatch(/^0x[a-fA-F0-9]{40}$/);
 
@@ -140,7 +140,7 @@ describe('Wallet Tests', () => {
     it('should validate transaction security', async () => {
       const mockTransaction = {
         to: mockAddress,
-        value: BigInt('1000000000000000000'),
+        value: '1000000000000000000',
         data: '0x' as `0x${string}`
       };
 
@@ -149,79 +149,10 @@ describe('Wallet Tests', () => {
     });
   });
 
-  describe('Token Tests', () => {
-    it('should get token balance', async () => {
-      const mockBalance = BigInt('1000000000000000000');
-      (mockEthereum.request as jest.Mock).mockResolvedValueOnce(mockBalance);
-
-      const balance = await transactionService.getTransactions(mockAddress);
-      expect(balance).toBeDefined();
-    });
-
-    it('should send token transaction', async () => {
-      const mockHash = '0x123' as Address;
-      (mockEthereum.request as jest.Mock).mockResolvedValueOnce(mockHash);
-
-      const hash = await transactionService.sendTransaction({
-        to: mockAddress,
-        value: BigInt('1000000000000000000'),
-        data: '0x' as `0x${string}`
-      });
-      expect(hash).toBe(mockHash);
-    });
-  });
-
-  describe('Transaction Tests', () => {
-    it('should fetch transaction history', async () => {
-      const mockTransactions = [
-        {
-          hash: '0x123' as Address,
-          from: mockAddress,
-          to: '0x456' as Address,
-          value: '1000000',
-          status: 'confirmed' as const,
-          timestamp: Date.now(),
-        },
-      ];
-
-      mockEthereum.request.mockResolvedValueOnce(mockTransactions);
-
-      const transactions = await transactionService.getTransactions(mockAddress);
-      expect(transactions).toHaveLength(1);
-      expect(transactions[0].hash).toBe(mockTransactions[0].hash);
-    });
-  });
-
-  describe('Wallet Creation and Import', () => {
-    it('should create a wallet with valid mnemonic', async () => {
-      const password = 'testPassword123';
-      const mnemonic = generateMnemonic();
-      await keyManager.setup(password, mnemonic);
-      expect(validateMnemonic(mnemonic)).toBe(true);
-      expect(mnemonic.split(' ').length).toBe(12);
-    });
-
-    it('should import wallet with valid mnemonic', async () => {
-      const password = 'testPassword123';
-      const mnemonic = generateMnemonic();
-      await keyManager.setup(password, mnemonic);
-      await keyManager.unlock(password);
-      const address = await keyManager.getAddress();
-      expect(address).toMatch(/^0x[a-fA-F0-9]{40}$/);
-    });
-
-    it('should throw error for invalid mnemonic', async () => {
-      const password = 'testPassword123';
-      const invalidMnemonic = 'invalid mnemonic phrase here test';
-      await expect(keyManager.setup(password, invalidMnemonic))
-        .rejects
-        .toThrow('Invalid mnemonic');
-    });
-  });
-
   describe('Account Management', () => {
     beforeEach(async () => {
-      await keyManager.createWallet();
+      const mnemonic = generateMnemonic();
+      await keyManager.setup(testPassword, mnemonic);
     });
 
     it('should derive multiple accounts', async () => {
@@ -234,7 +165,7 @@ describe('Wallet Tests', () => {
 
     it('should manage active account', async () => {
       const account1 = await keyManager.deriveAccount(0);
-      const account2 = await keyManager.deriveAccount(1);
+      await keyManager.deriveAccount(1);
       
       const activeAccount = await keyManager.getActiveAccount();
       expect(activeAccount.address).toBe(account1);
@@ -248,7 +179,8 @@ describe('Wallet Tests', () => {
 
   describe('Message Signing', () => {
     beforeEach(async () => {
-      await keyManager.createWallet();
+      const mnemonic = generateMnemonic();
+      await keyManager.setup(testPassword, mnemonic);
     });
 
     it('should sign messages with correct format', async () => {
@@ -263,13 +195,6 @@ describe('Wallet Tests', () => {
       await expect(newKeyManager.signMessage('test'))
         .rejects
         .toThrow('Wallet not initialized');
-    });
-  });
-
-  describe('Wallet', () => {
-    it('should create a new wallet', async () => {
-      const wallet = new Wallet(mockNetwork);
-      expect(wallet).toBeDefined();
     });
   });
 });

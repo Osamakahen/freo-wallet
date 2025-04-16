@@ -1,7 +1,8 @@
 import { WalletError } from './ErrorHandler';
 import { ErrorContext, ErrorSeverity } from '../../types/error';
+import { AnalyticsService } from '../analytics/AnalyticsService';
 
-interface ErrorPattern {
+export interface ErrorPattern {
   type: string;
   message: string;
   stackTrace: string;
@@ -9,23 +10,25 @@ interface ErrorPattern {
   lastOccurrence: number;
 }
 
-interface ErrorCorrelation {
+export interface ErrorCorrelation {
   correlationId: string;
   rootCause: string;
   relatedErrors: string[];
   pattern?: ErrorPattern;
   severity: ErrorSeverity;
   timestamp: number;
+  context: ErrorContext;
 }
 
 export class ErrorCorrelator {
   private static instance: ErrorCorrelator;
-  private patterns: Map<string, ErrorPattern> = new Map();
+  private errorMap: Map<string, WalletError[]> = new Map();
   private correlations: Map<string, ErrorCorrelation> = new Map();
-  private errorMap: Map<string, WalletError[]>;
+  private patterns: Map<string, ErrorPattern> = new Map();
+  private analyticsService: AnalyticsService;
 
   private constructor() {
-    this.errorMap = new Map();
+    this.analyticsService = AnalyticsService.getInstance();
   }
 
   static getInstance(): ErrorCorrelator {
@@ -78,11 +81,30 @@ export class ErrorCorrelator {
       relatedErrors: relatedErrors.map(e => e.message),
       pattern,
       severity: this.determineSeverity(error, pattern),
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      context
     };
 
+    const walletError = error instanceof WalletError 
+      ? new WalletError(
+          error.message,
+          error.code,
+          { ...error.context, ...context },
+          error.severity,
+          error.recoveryStrategy
+        )
+      : new WalletError(error.message, undefined, context);
+
     this.correlations.set(correlationId, correlation);
-    this.errorMap.set(correlationId, [error instanceof WalletError ? error : new WalletError(error.message)]);
+    this.errorMap.set(correlationId, [walletError]);
+    
+    await this.analyticsService.trackError({
+      error: walletError,
+      correlationId,
+      timestamp: Date.now(),
+      context
+    });
+
     return correlation;
   }
 
@@ -98,6 +120,10 @@ export class ErrorCorrelator {
     return Math.random().toString(36).substring(2, 15);
   }
 
+  private generateErrorKey(error: Error): string {
+    return `${error.constructor.name}:${error.message}`;
+  }
+
   private async analyzeErrorPattern(error: Error): Promise<ErrorPattern | undefined> {
     const errorKey = this.generateErrorKey(error);
     const pattern = this.patterns.get(errorKey);
@@ -105,26 +131,25 @@ export class ErrorCorrelator {
     if (pattern) {
       pattern.frequency++;
       pattern.lastOccurrence = Date.now();
-    } else {
-      const newPattern: ErrorPattern = {
-        type: error.constructor.name,
-        message: error.message,
-        stackTrace: error.stack || '',
-        frequency: 1,
-        lastOccurrence: Date.now()
-      };
-      this.patterns.set(errorKey, newPattern);
-      return newPattern;
+      return pattern;
     }
 
-    return pattern;
+    const newPattern: ErrorPattern = {
+      type: error.constructor.name,
+      message: error.message,
+      stackTrace: error.stack || '',
+      frequency: 1,
+      lastOccurrence: Date.now()
+    };
+    this.patterns.set(errorKey, newPattern);
+    return newPattern;
   }
 
   private async findRelatedErrors(error: Error): Promise<Error[]> {
     const errorHistory = Array.from(this.errorMap.values()).flat();
     return errorHistory.filter(e => 
       this.isRelatedError(e, error) &&
-      Date.now() - e.timestamp < 24 * 60 * 60 * 1000 // Last 24 hours
+      Date.now() - (e instanceof WalletError ? e.timestamp : 0) < 24 * 60 * 60 * 1000 // Last 24 hours
     );
   }
 
@@ -151,10 +176,6 @@ export class ErrorCorrelator {
       return 'high';
     }
     return 'medium';
-  }
-
-  private generateErrorKey(error: Error): string {
-    return `${error.constructor.name}:${error.message}`;
   }
 
   private similarityScore(str1: string, str2: string): number {
@@ -205,9 +226,11 @@ export class ErrorCorrelator {
   }
 
   addContext(errorId: string, context: Record<string, unknown>): void {
-    const error = this.errorMap.get(errorId);
-    if (error) {
-      error.context = { ...error.context, ...context };
+    const errors = this.errorMap.get(errorId);
+    if (errors && errors.length > 0) {
+      errors.forEach(error => {
+        error.context = { ...error.context, ...context };
+      });
     }
   }
 } 

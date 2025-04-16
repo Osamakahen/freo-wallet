@@ -9,20 +9,24 @@ import { type EthereumProvider } from '../types/ethereum';
 import { type ChainConfig } from '../types/wallet';
 import { type Address } from 'viem';
 
+interface MockCryptoSubtle {
+  digest: (algorithm: string, data: Uint8Array) => Promise<ArrayBuffer>;
+  importKey: (format: string, keyData: ArrayBuffer, algorithm: string | object, extractable: boolean, keyUsages: string[]) => Promise<CryptoKey>;
+  exportKey: (format: string, key: CryptoKey) => Promise<ArrayBuffer>;
+  encrypt: (algorithm: string | object, key: CryptoKey, data: ArrayBuffer) => Promise<ArrayBuffer>;
+  decrypt: (algorithm: string | object, key: CryptoKey, data: ArrayBuffer) => Promise<ArrayBuffer>;
+}
+
+interface MockCrypto {
+  getRandomValues: (array: Uint8Array) => Uint8Array;
+  subtle: MockCryptoSubtle;
+}
+
 declare const global: {
   TextEncoder: typeof TextEncoder;
   TextDecoder: typeof TextDecoder;
   localStorage: LocalStorage;
-  crypto: {
-    getRandomValues: (array: Uint8Array) => Uint8Array;
-    subtle: {
-      digest: (algorithm: string, data: Uint8Array) => Promise<ArrayBuffer>;
-      importKey: (format: string, keyData: ArrayBuffer, algorithm: string | object, extractable: boolean, keyUsages: string[]) => Promise<CryptoKey>;
-      exportKey: (format: string, key: CryptoKey) => Promise<ArrayBuffer>;
-      encrypt: (algorithm: string | object, key: CryptoKey, data: ArrayBuffer) => Promise<ArrayBuffer>;
-      decrypt: (algorithm: string | object, key: CryptoKey, data: ArrayBuffer) => Promise<ArrayBuffer>;
-    };
-  };
+  crypto: MockCrypto;
   fetch: typeof fetch;
   ResizeObserver: typeof ResizeObserver;
   IntersectionObserver: typeof IntersectionObserver;
@@ -30,12 +34,20 @@ declare const global: {
 
 // Mock TextEncoder and TextDecoder
 global.TextEncoder = TextEncoder;
-global.TextDecoder = TextDecoder as any;
+global.TextDecoder = TextDecoder as typeof TextDecoder;
 
 // Mock localStorage
 global.localStorage = new LocalStorage('./scratch');
 
 // Mock crypto API
+const mockCryptoSubtle: MockCryptoSubtle = {
+  digest: jest.fn(async (algorithm: string, data: Uint8Array) => new ArrayBuffer(32)),
+  importKey: jest.fn(async (format: string, keyData: ArrayBuffer, algorithm: string | object, extractable: boolean, keyUsages: string[]) => ({} as CryptoKey)),
+  exportKey: jest.fn(async (format: string, key: CryptoKey) => new ArrayBuffer(32)),
+  encrypt: jest.fn(async (algorithm: string | object, key: CryptoKey, data: ArrayBuffer) => new ArrayBuffer(32)),
+  decrypt: jest.fn(async (algorithm: string | object, key: CryptoKey, data: ArrayBuffer) => new ArrayBuffer(32))
+};
+
 global.crypto = {
   getRandomValues: (array) => {
     for (let i = 0; i < array.length; i++) {
@@ -43,36 +55,49 @@ global.crypto = {
     }
     return array;
   },
-  subtle: {
-    digest: jest.fn(),
-    importKey: jest.fn(),
-    exportKey: jest.fn(),
-    encrypt: jest.fn(),
-    decrypt: jest.fn(),
-  },
+  subtle: mockCryptoSubtle
 };
 
 // Mock fetch
-global.fetch = jest.fn(() =>
-  Promise.resolve({
-    json: () => Promise.resolve({}),
-    text: () => Promise.resolve(''),
-  })
-) as jest.Mock;
+global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => ({
+  json: async () => ({}),
+  text: async () => '',
+  ok: true,
+  status: 200,
+  statusText: 'OK',
+  headers: new Headers(),
+  body: null,
+  bodyUsed: false,
+  url: typeof input === 'string' ? input : input.toString(),
+  type: 'basic' as ResponseType,
+  redirected: false,
+  clone: function() { return this; },
+  arrayBuffer: async () => new ArrayBuffer(0),
+  blob: async () => new Blob([]),
+  formData: async () => new FormData()
+} as Response)) as unknown as typeof fetch;
 
 // Mock ResizeObserver
-global.ResizeObserver = jest.fn().mockImplementation(() => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
-}));
+class MockResizeObserver implements ResizeObserver {
+  constructor(private callback: ResizeObserverCallback) {}
+  observe = jest.fn();
+  unobserve = jest.fn();
+  disconnect = jest.fn();
+}
+global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
 
 // Mock IntersectionObserver
-global.IntersectionObserver = jest.fn().mockImplementation(() => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
-}));
+class MockIntersectionObserver implements IntersectionObserver {
+  constructor(private callback: IntersectionObserverCallback) {}
+  root: Element | null = null;
+  rootMargin: string = '0px';
+  thresholds: readonly number[] = [0];
+  observe = jest.fn();
+  unobserve = jest.fn();
+  disconnect = jest.fn();
+  takeRecords = () => [];
+}
+global.IntersectionObserver = MockIntersectionObserver as unknown as typeof IntersectionObserver;
 
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
@@ -91,8 +116,17 @@ Object.defineProperty(window, 'matchMedia', {
 
 // Mock window.ethereum
 const mockEthereum: EthereumProvider = {
-  request: jest.fn().mockImplementation(async (method: string, params?: unknown[]) => {
-    return Promise.resolve(undefined);
+  request: jest.fn(async (args: { method: string; params?: unknown[] }): Promise<unknown> => {
+    switch (args.method) {
+      case 'eth_requestAccounts':
+        return [mockAddresses.user];
+      case 'eth_accounts':
+        return [mockAddresses.user];
+      case 'eth_chainId':
+        return '0x1';
+      default:
+        return null;
+    }
   }),
   on: jest.fn(),
   removeListener: jest.fn(),
@@ -112,8 +146,22 @@ const localStorageMock = {
   removeItem: jest.fn(),
   clear: jest.fn(),
   length: 0,
-  key: jest.fn()
-} as unknown as Storage;
+  key: jest.fn(),
+  on: jest.fn(),
+  addListener: jest.fn(),
+  once: jest.fn(),
+  removeListener: jest.fn(),
+  emit: jest.fn(),
+  listeners: jest.fn(),
+  rawListeners: jest.fn(),
+  listenerCount: jest.fn(),
+  prependListener: jest.fn(),
+  prependOnceListener: jest.fn(),
+  eventNames: jest.fn(),
+  removeAllListeners: jest.fn(),
+  setMaxListeners: jest.fn(),
+  getMaxListeners: jest.fn()
+} as unknown as LocalStorage;
 
 global.localStorage = localStorageMock;
 
@@ -150,18 +198,18 @@ const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
 
 beforeAll(() => {
-  console.error = (...args: any[]) => {
+  console.error = (...args: unknown[]) => {
     if (
       typeof args[0] === 'string' &&
-      args[0].includes('Warning: componentWill') ||
-      args[0].includes('Warning: React.createFactory()')
+      (args[0].includes('Warning: componentWill') ||
+      args[0].includes('Warning: React.createFactory()'))
     ) {
       return;
     }
     originalConsoleError.call(console, ...args);
   };
 
-  console.warn = (...args: any[]) => {
+  console.warn = (...args: unknown[]) => {
     if (
       typeof args[0] === 'string' &&
       args[0].includes('Warning: componentWill')

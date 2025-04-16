@@ -5,13 +5,14 @@ import {
   BridgeState, 
   BridgeEvents, 
   BridgeConfig,
-  SessionPermissions,
+  DAppRequest,
+  DAppResponse,
   Permission
 } from '../../types/dapp'
 import { TransactionRequest } from '../../types/wallet'
 import { WalletError, DAppError, TransactionError } from '../error/ErrorHandler'
-import { ErrorContext } from '../../types/error'
-import { DAppResponse } from '../../types/dapp'
+import { ErrorCorrelator } from '../error/ErrorCorrelator'
+import { PermissionManager } from '../security/PermissionManager'
 
 export class DAppBridge {
   private sessionManager: SessionManager
