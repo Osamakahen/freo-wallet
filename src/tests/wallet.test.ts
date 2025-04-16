@@ -11,7 +11,7 @@ import { mainnet } from 'viem/chains';
 
 // Mock window.ethereum with proper types
 const mockEthereum = {
-  request: jest.fn(async (args: { method: string; params?: unknown[] }): Promise<unknown> => {
+  request: jest.fn(async (_args: { method: string; params?: unknown[] }): Promise<unknown> => {
     return undefined;
   }),
   on: jest.fn(),
@@ -73,14 +73,14 @@ describe('Wallet Tests', () => {
     });
 
     it('should prepare transaction with correct parameters', async () => {
-      const mockTransaction: TransactionRequest = {
+      const transaction: TransactionRequest = {
         from: mockAddress,
         to: mockAddress,
         value: '1000000000000000000',
         data: '0x' as `0x${string}`
       };
 
-      const tx = await txManager.sendTransaction(mockTransaction);
+      const tx = await txManager.sendTransaction(transaction);
       expect(tx).toMatch(/^0x[a-fA-F0-9]{64}$/);
     });
 
@@ -105,7 +105,7 @@ describe('Wallet Tests', () => {
         value: '1000000000000000000'
       };
 
-      (mockEthereum.request as jest.Mock).mockResolvedValueOnce(mockTxReceipt);
+      (mockEthereum.request as jest.Mock<Promise<TransactionReceipt>>).mockResolvedValueOnce(mockTxReceipt);
 
       const receipt = await txManager.getTransactionReceipt(mockTxHash);
       expect(receipt).toBeDefined();

@@ -41,11 +41,11 @@ global.localStorage = new LocalStorage('./scratch');
 
 // Mock crypto API
 const mockCryptoSubtle: MockCryptoSubtle = {
-  digest: jest.fn(async (algorithm: string, data: Uint8Array) => new ArrayBuffer(32)),
-  importKey: jest.fn(async (format: string, keyData: ArrayBuffer, algorithm: string | object, extractable: boolean, keyUsages: string[]) => ({} as CryptoKey)),
-  exportKey: jest.fn(async (format: string, key: CryptoKey) => new ArrayBuffer(32)),
-  encrypt: jest.fn(async (algorithm: string | object, key: CryptoKey, data: ArrayBuffer) => new ArrayBuffer(32)),
-  decrypt: jest.fn(async (algorithm: string | object, key: CryptoKey, data: ArrayBuffer) => new ArrayBuffer(32))
+  digest: jest.fn(async (_algorithm: string, _data: Uint8Array) => new ArrayBuffer(32)),
+  importKey: jest.fn(async (_format: string, _keyData: ArrayBuffer, _algorithm: string | object, _extractable: boolean, _keyUsages: string[]) => ({} as CryptoKey)),
+  exportKey: jest.fn(async (_format: string, _key: CryptoKey) => new ArrayBuffer(32)),
+  encrypt: jest.fn(async (_algorithm: string | object, _key: CryptoKey, _data: ArrayBuffer) => new ArrayBuffer(32)),
+  decrypt: jest.fn(async (_algorithm: string | object, _key: CryptoKey, _data: ArrayBuffer) => new ArrayBuffer(32))
 };
 
 global.crypto = {
