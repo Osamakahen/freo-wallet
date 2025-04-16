@@ -23,7 +23,9 @@ const createSession: RequestHandler = async (req, res) => {
       id: uuidv4(),
       address,
       chainId,
+      network: 'ethereum', // Default network
       permissions: ['read', 'write'],
+      timestamp: Date.now(),
       createdAt: Date.now(),
       expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
     };
