@@ -6,6 +6,7 @@ import { Button, Card, List, Typography, Space, Statistic, Alert } from 'antd';
 import { SendOutlined, SwapOutlined, QrcodeOutlined, SettingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { TransactionReceipt } from '../types/wallet';
+import { useNetwork } from '../contexts/NetworkContext';
 
 const { Text } = Typography;
 
@@ -20,16 +21,18 @@ const WalletDashboard: React.FC<WalletDashboardProps> = ({
   onReceiveClick,
   onSwapClick,
 }) => {
-  const { selectedAddress } = useWallet();
+  const { address } = useWallet();
+  const { chainId } = useNetwork();
   const { transactionHistory, loading: transactionsLoading } = useTransactions();
   const [formattedBalance, setFormattedBalance] = useState<string>('0');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (selectedAddress) {
-      setFormattedBalance(formatEther(selectedAddress));
+    if (address) {
+      setFormattedBalance(formatEther(address));
     }
-  }, [selectedAddress]);
+  }, [address]);
 
   const recentTransactions = transactionHistory.slice(0, 5);
 
@@ -61,7 +64,7 @@ const WalletDashboard: React.FC<WalletDashboardProps> = ({
       <List.Item.Meta
         title={
           <Space>
-            <Text strong>{tx.from === selectedAddress ? 'Sent' : 'Received'}</Text>
+            <Text strong>{tx.from === address ? 'Sent' : 'Received'}</Text>
             <Text type="secondary">{new Date(tx.timestamp).toLocaleString()}</Text>
           </Space>
         }
@@ -90,7 +93,7 @@ const WalletDashboard: React.FC<WalletDashboardProps> = ({
             suffix="ETH"
           />
           <Text type="secondary" style={{ display: 'block', marginTop: '8px' }}>
-            {selectedAddress}
+            {address}
           </Text>
         </Card>
 

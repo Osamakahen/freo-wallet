@@ -11,22 +11,22 @@ interface TokenApproval {
 }
 
 export const TokenApproval: React.FC = () => {
-  const { selectedAddress } = useWallet();
+  const { address } = useWallet();
   const { chainId, provider } = useNetwork();
 
   const [approvals, setApprovals] = useState<TokenApproval[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (selectedAddress && provider) {
+    if (address && provider) {
       loadApprovals();
     }
-  }, [selectedAddress, chainId, provider]);
+  }, [address, chainId, provider]);
 
   const loadApprovals = async () => {
     try {
-      setIsLoading(true);
+      setLoading(true);
       setError(null);
 
       // In a real implementation, this would fetch actual token approvals
@@ -50,13 +50,13 @@ export const TokenApproval: React.FC = () => {
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load approvals');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const revokeApproval = async (token: string, spender: string) => {
     try {
-      setIsLoading(true);
+      setLoading(true);
       setError(null);
 
       // In a real implementation, this would call the token contract to revoke approval
@@ -65,7 +65,7 @@ export const TokenApproval: React.FC = () => {
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to revoke approval');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -88,7 +88,7 @@ export const TokenApproval: React.FC = () => {
     return `${days}d ago`;
   };
 
-  if (!selectedAddress) {
+  if (!address) {
     return (
       <div className="p-4">
         <h2 className="text-2xl font-bold mb-4">Token Approvals</h2>
@@ -107,7 +107,7 @@ export const TokenApproval: React.FC = () => {
         </div>
       )}
 
-      {isLoading ? (
+      {loading ? (
         <div className="text-center py-4">Loading approvals...</div>
       ) : approvals.length === 0 ? (
         <div className="text-center py-4 text-gray-500">No active token approvals found.</div>
@@ -137,7 +137,7 @@ export const TokenApproval: React.FC = () => {
                 <button
                   onClick={() => revokeApproval(approval.token, approval.spender)}
                   className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-                  disabled={isLoading}
+                  disabled={loading}
                 >
                   Revoke
                 </button>
