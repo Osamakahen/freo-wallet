@@ -76,8 +76,7 @@ export const DAppConnections: React.FC = () => {
                     </div>
                   </div>
                   <Button
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    size="sm"
+                    className="h-8 rounded-md px-3 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     onClick={() => handleDisconnect(session.dappId)}
                     disabled={disconnecting === session.dappId}
                   >
