@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useDApp } from '../../contexts/DAppContext';
-import { DAppSession } from '../../types/dapp';
-import { formatDistanceToNow } from 'date-fns';
+import { DAppSession, DAppPermission, SessionPermissions } from '../../types/dapp';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { ScrollArea } from '../ui/scroll-area';
+
+const convertToSessionPermissions = (permissions: DAppPermission[]): SessionPermissions => {
+  return {
+    read: permissions.includes('read'),
+    write: permissions.includes('transaction'),
+    sign: permissions.includes('message-sign'),
+    nft: permissions.includes('assets')
+  };
+};
 
 export const DAppConnections: React.FC = () => {
   const { connectedDApps, disconnectDApp } = useDApp();
@@ -11,50 +23,48 @@ export const DAppConnections: React.FC = () => {
     setSessions(connectedDApps);
   }, [connectedDApps]);
 
-  const handleDisconnect = async (origin: string) => {
-    await disconnectDApp(origin);
+  const handleDisconnect = async (dappId: string) => {
+    await disconnectDApp(dappId);
   };
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Connected dApps</h2>
-      {sessions.length === 0 ? (
-        <p className="text-gray-500">No connected dApps</p>
-      ) : (
-        <div className="grid gap-4">
-          {sessions.map((session) => (
-            <div
-              key={session.origin}
-              className="bg-white rounded-lg shadow p-4 flex items-center justify-between"
-            >
-              <div>
-                <div className="flex items-center space-x-3">
-                  {session.icon && (
-                    <img
-                      src={session.icon}
-                      alt={session.name}
-                      className="w-8 h-8 rounded"
-                    />
-                  )}
-                  <div>
-                    <h3 className="font-semibold">{session.name}</h3>
-                    <p className="text-sm text-gray-500">{session.origin}</p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Connected DApps</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ScrollArea className="h-[300px]">
+          {sessions.length === 0 ? (
+            <p className="text-muted-foreground">No DApps connected</p>
+          ) : (
+            <div className="space-y-4">
+              {sessions.map((session) => {
+                const permissions = convertToSessionPermissions(session.permissions);
+                return (
+                  <div key={session.dappId} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="space-y-1">
+                      <div className="font-medium">{session.dappId}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {permissions.read && <Badge variant="secondary" className="mr-2">Read</Badge>}
+                        {permissions.write && <Badge variant="secondary" className="mr-2">Write</Badge>}
+                        {permissions.sign && <Badge variant="secondary" className="mr-2">Sign</Badge>}
+                        {permissions.nft && <Badge variant="secondary" className="mr-2">NFT</Badge>}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDisconnect(session.dappId)}
+                    >
+                      Disconnect
+                    </Button>
                   </div>
-                </div>
-                <p className="text-sm text-gray-500 mt-2">
-                  Connected {formatDistanceToNow(session.connectedAt)} ago
-                </p>
-              </div>
-              <button
-                onClick={() => handleDisconnect(session.origin)}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-              >
-                Disconnect
-              </button>
+                );
+              })}
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+          )}
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
 }; 
