@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { type Address } from 'viem'
 import { FaPlug, FaTrash, FaExternalLinkAlt } from 'react-icons/fa'
-import { type DAppManifest } from '../core/dapp/DAppBridge'
+import { type DAppManifest, AuditStatus } from '../types/dapp'
+import { ChainId } from '../types/chain'
 import Image from 'next/image'
 
 interface DAppConnectionsProps {
@@ -20,12 +21,16 @@ export function DAppConnections({ address }: DAppConnectionsProps) {
         // In a real implementation, we would fetch this from SessionManager
         const mockDApps: DAppManifest[] = [
           {
+            id: 'example-dapp',
             name: 'Example DApp',
+            description: 'An example DApp for testing',
             origin: 'https://example.com',
             icon: 'https://example.com/icon.png',
-            scopes: ['read', 'transaction']
-          },
-          // Add more mock dApps here
+            permissions: ['read', 'transaction'],
+            chains: [ChainId.ETHEREUM],
+            version: '1.0.0',
+            auditStatus: AuditStatus.PENDING
+          }
         ]
 
         setConnectedDApps(mockDApps)
@@ -97,12 +102,12 @@ export function DAppConnections({ address }: DAppConnectionsProps) {
                   <h3 className="text-lg font-medium text-gray-900">{dapp.name}</h3>
                   <p className="text-sm text-gray-500">{dapp.origin}</p>
                   <div className="flex gap-2 mt-1">
-                    {dapp.scopes.map((scope) => (
+                    {dapp.permissions.map((permission) => (
                       <span
-                        key={scope}
+                        key={permission}
                         className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
                       >
-                        {scope}
+                        {permission}
                       </span>
                     ))}
                   </div>
