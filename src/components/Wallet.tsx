@@ -6,7 +6,6 @@ import { TokenList } from './TokenList';
 import { SendToken } from './SendToken';
 import TransactionHistory from './TransactionHistory';
 import { TransactionStatus } from './TransactionStatus';
-import { mainnet } from 'viem/chains';
 
 interface Props {
   wallet: Wallet;
