@@ -45,18 +45,18 @@ export const DAppConnections: React.FC = () => {
                     <div className="space-y-1">
                       <div className="font-medium">{session.dappId}</div>
                       <div className="text-sm text-muted-foreground">
-                        {permissions.read && <Badge variant="secondary" className="mr-2">Read</Badge>}
-                        {permissions.write && <Badge variant="secondary" className="mr-2">Write</Badge>}
-                        {permissions.sign && <Badge variant="secondary" className="mr-2">Sign</Badge>}
-                        {permissions.nft && <Badge variant="secondary" className="mr-2">NFT</Badge>}
+                        {permissions.read && <Badge className="mr-2 bg-secondary text-secondary-foreground">Read</Badge>}
+                        {permissions.write && <Badge className="mr-2 bg-secondary text-secondary-foreground">Write</Badge>}
+                        {permissions.sign && <Badge className="mr-2 bg-secondary text-secondary-foreground">Sign</Badge>}
+                        {permissions.nft && <Badge className="mr-2 bg-secondary text-secondary-foreground">NFT</Badge>}
                       </div>
                     </div>
-                    <Button
+                    <button
                       className="border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
                       onClick={() => handleDisconnect(session.dappId)}
                     >
                       Disconnect
-                    </Button>
+                    </button>
                   </div>
                 );
               })}
