@@ -112,12 +112,12 @@ export function WalletInterface({ initialNetwork }: WalletInterfaceProps) {
 
         {/* Tab Content */}
         <div className="bg-white rounded-lg shadow p-6">
-          {activeTab === 'portfolio' && <PortfolioView address={address} />}
+          {activeTab === 'portfolio' && <PortfolioView address={address} network={initialNetwork} />}
           {activeTab === 'transactions' && (
             <TransactionHistory address={address} network={initialNetwork} />
           )}
-          {activeTab === 'nfts' && <NFTGallery address={address} />}
-          {activeTab === 'dapps' && <DAppConnections />}
+          {activeTab === 'nfts' && <NFTGallery address={address} network={initialNetwork} />}
+          {activeTab === 'dapps' && <DAppConnections address={address} />}
         </div>
       </main>
 
