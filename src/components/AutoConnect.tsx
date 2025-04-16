@@ -11,7 +11,7 @@ export const AutoConnect = ({
   requiredPermissions = [],
 }: AutoConnectProps) => {
   const { isAuthenticated, permissions } = useSession();
-  const { connect, disconnect, selectedAddress } = useWallet();
+  const { connect, disconnect, address } = useWallet();
 
   useEffect(() => {
     const autoConnect = async () => {
@@ -37,7 +37,7 @@ export const AutoConnect = ({
 
   return (
     <div>
-      <p>Connected to: {selectedAddress}</p>
+      <p>Connected to: {address}</p>
       <button onClick={disconnect}>Disconnect</button>
     </div>
   );

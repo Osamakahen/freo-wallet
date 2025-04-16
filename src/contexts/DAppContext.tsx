@@ -19,9 +19,31 @@ interface DAppContextType {
   sendTransaction: (transaction: TransactionRequest) => Promise<string>;
   loading: boolean;
   error: string | null;
+  connectedDApps: string[];
+  disconnectDApp: () => Promise<void>;
 }
 
-const DAppContext = createContext<DAppContextType | undefined>(undefined);
+const DAppContext = createContext<DAppContextType>({
+  bridge: null as unknown as DAppBridge, // Using unknown as intermediate step for type assertion
+  isConnected: false,
+  currentAccount: null,
+  currentChain: 1,
+  connect: async () => {},
+  disconnect: () => {},
+  requestAccounts: async () => [],
+  requestPermissions: async () => ({
+    read: false,
+    write: false,
+    sign: false,
+    nft: false
+  }),
+  signMessage: async () => '',
+  sendTransaction: async () => '',
+  loading: false,
+  error: null,
+  connectedDApps: [],
+  disconnectDApp: async () => {}
+});
 
 export const DAppProvider: React.FC<{
   children: React.ReactNode;
@@ -36,6 +58,7 @@ export const DAppProvider: React.FC<{
   const [currentChain, setCurrentChain] = useState(config.defaultChain || 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [connectedDApps, setConnectedDApps] = useState<string[]>([]);
 
   useEffect(() => {
     const handleAccountsChanged = (accounts: string[]) => {
@@ -149,6 +172,17 @@ export const DAppProvider: React.FC<{
     }
   }, [bridge]);
 
+  const disconnectDApp = useCallback(async () => {
+    try {
+      bridge.disconnect();
+      setIsConnected(false);
+      setCurrentAccount(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to disconnect');
+      toast.error('Failed to disconnect from DApp');
+    }
+  }, [bridge]);
+
   const value = {
     bridge,
     isConnected,
@@ -161,7 +195,9 @@ export const DAppProvider: React.FC<{
     signMessage,
     sendTransaction,
     loading,
-    error
+    error,
+    connectedDApps,
+    disconnectDApp
   };
 
   return <DAppContext.Provider value={value}>{children}</DAppContext.Provider>;

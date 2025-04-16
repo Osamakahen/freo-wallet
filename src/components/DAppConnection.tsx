@@ -1,22 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useDApp } from '../contexts/DAppContext';
-import { Permission } from '../types/session';
-import { DAppMetadata } from '../types/dapp';
+import { DAppMetadata, DAppPermission, SessionPermissions } from '../types/dapp';
 import Image from 'next/image';
 
 interface DAppConnectionProps {
-  metadata: DAppMetadata;
+  metadata: DAppMetadata & { permissions: DAppPermission[] };
   onConnect: (accounts: string[]) => void;
   onError: (error: string) => void;
 }
+
+const convertToSessionPermissions = (permissions: DAppPermission[]): SessionPermissions => {
+  return {
+    read: permissions.includes('read'),
+    write: permissions.includes('transaction'),
+    sign: permissions.includes('message-sign'),
+    nft: permissions.includes('assets')
+  };
+};
+
+const convertToPermissionArray = (permissions: SessionPermissions): DAppPermission[] => {
+  const result: DAppPermission[] = [];
+  if (permissions.read) result.push('read');
+  if (permissions.write) result.push('transaction');
+  if (permissions.sign) result.push('message-sign');
+  if (permissions.nft) result.push('assets');
+  return result;
+};
 
 export const DAppConnection: React.FC<DAppConnectionProps> = ({
   metadata,
   onConnect,
   onError,
 }) => {
-  const { isConnected, currentAccount, connect, requestPermissions, loading, error } = useDApp();
-  const [permissionsGranted, setPermissionsGranted] = useState<Permission[]>([]);
+  const { isConnected, currentAccount, connect, requestAccounts, requestPermissions, loading, error } = useDApp();
+  const [permissionsGranted, setPermissionsGranted] = useState<DAppPermission[]>([]);
 
   useEffect(() => {
     if (error) {
@@ -27,12 +44,14 @@ export const DAppConnection: React.FC<DAppConnectionProps> = ({
   const handleConnect = async () => {
     try {
       // Request connection
-      const accounts = await connect();
+      await connect();
+      const accounts = await requestAccounts();
       onConnect(accounts);
 
       // Request permissions
-      const grantedPermissions = await requestPermissions(metadata.permissions);
-      setPermissionsGranted(grantedPermissions as Permission[]);
+      const sessionPermissions = convertToSessionPermissions(metadata.permissions);
+      const grantedPermissions = await requestPermissions(sessionPermissions);
+      setPermissionsGranted(convertToPermissionArray(grantedPermissions));
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Failed to connect');
     }

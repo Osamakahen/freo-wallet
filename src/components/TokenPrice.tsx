@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { PriceTracker } from '../core/price/PriceTracker';
-import { TokenBalance } from '../types/wallet';
 import { formatCurrency, formatPercentage } from '../utils/format';
 
 interface TokenDetails {
@@ -9,13 +8,22 @@ interface TokenDetails {
   volume24h: number;
 }
 
+interface PortfolioToken {
+  address: string;
+  symbol: string;
+  balance: string;
+  price: number;
+  value: number;
+  change24h: number;
+  decimals: number;
+}
+
 interface TokenPriceProps {
-  token: TokenBalance;
+  token: PortfolioToken;
   priceTracker: PriceTracker;
 }
 
 export const TokenPrice: React.FC<TokenPriceProps> = ({ token, priceTracker }) => {
-  const [price, setPrice] = useState<number>(0);
   const [details, setDetails] = useState<TokenDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,11 +32,7 @@ export const TokenPrice: React.FC<TokenPriceProps> = ({ token, priceTracker }) =
     const loadPriceData = async () => {
       try {
         setLoading(true);
-        const [tokenPrice, tokenDetails] = await Promise.all([
-          priceTracker.getTokenPrice(token.address),
-          priceTracker.getTokenDetails(token.address)
-        ]);
-        setPrice(tokenPrice);
+        const tokenDetails = await priceTracker.getTokenDetails(token.address);
         setDetails(tokenDetails);
       } catch (err) {
         setError('Failed to load price data');
@@ -49,7 +53,7 @@ export const TokenPrice: React.FC<TokenPriceProps> = ({ token, priceTracker }) =
     return <div className="text-red-500">{error}</div>;
   }
 
-  const tokenValue = (Number(token.balance) / Math.pow(10, token.decimals)) * price;
+  const tokenValue = (Number(token.balance) / Math.pow(10, token.decimals)) * token.price;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
@@ -61,9 +65,9 @@ export const TokenPrice: React.FC<TokenPriceProps> = ({ token, priceTracker }) =
           </p>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold">{formatCurrency(price)}</p>
-          <p className={`text-sm ${details?.change24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            {formatPercentage(details?.change24h || 0)} (24h)
+          <p className="text-2xl font-bold">{formatCurrency(token.price)}</p>
+          <p className={`text-sm ${token.change24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            {formatPercentage(token.change24h)} (24h)
           </p>
         </div>
       </div>

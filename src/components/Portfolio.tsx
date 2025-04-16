@@ -1,12 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { PortfolioManager } from '../core/portfolio/PortfolioManager';
 import { PriceTracker } from '../core/price/PriceTracker';
-import { TokenBalance } from '../types/wallet';
 import { TokenPrice } from './TokenPrice';
 import { formatCurrency } from '../utils/format';
+import { Address } from 'viem';
+
+interface PortfolioToken {
+  address: string;
+  symbol: string;
+  balance: string;
+  price: number;
+  value: number;
+  change24h: number;
+  decimals: number;
+}
 
 interface PortfolioProps {
-  address: string;
+  address: Address;
   portfolioManager: PortfolioManager;
   priceTracker: PriceTracker;
 }
@@ -16,7 +26,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({
   portfolioManager,
   priceTracker
 }) => {
-  const [tokens, setTokens] = useState<TokenBalance[]>([]);
+  const [tokens, setTokens] = useState<PortfolioToken[]>([]);
   const [portfolioValue, setPortfolioValue] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,11 +35,12 @@ export const Portfolio: React.FC<PortfolioProps> = ({
     const loadPortfolio = async () => {
       try {
         setLoading(true);
-        const tokenBalances = await portfolioManager.getTokenBalances(address);
-        setTokens(tokenBalances);
-        
-        const value = await priceTracker.getPortfolioValue(tokenBalances);
-        setPortfolioValue(value);
+        const summary = await portfolioManager.getPortfolioSummary(address);
+        setTokens(summary.tokens.map(token => ({
+          ...token,
+          decimals: token.address === 'native' ? 18 : 18 // Default to 18 decimals for now
+        })));
+        setPortfolioValue(summary.totalValue);
       } catch (err) {
         setError('Failed to load portfolio');
         console.error(err);
@@ -39,7 +50,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({
     };
 
     loadPortfolio();
-  }, [address, portfolioManager, priceTracker]);
+  }, [address, portfolioManager]);
 
   if (loading) {
     return (

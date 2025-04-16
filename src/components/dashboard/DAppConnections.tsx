@@ -1,124 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import { useDApp } from '../../contexts/DAppContext';
-import { DAppSession, DAppPermission } from '../../types/dapp';
+import { DAppSession } from '../../types/dapp';
 import { formatDistanceToNow } from 'date-fns';
 
 export const DAppConnections: React.FC = () => {
-  const { bridge } = useDApp();
+  const { connectedDApps, disconnectDApp } = useDApp();
   const [sessions, setSessions] = useState<DAppSession[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadSessions = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    setSessions(connectedDApps);
+  }, [connectedDApps]);
 
-        // In a real implementation, this would fetch from a backend
-        const mockSessions: DAppSession[] = [
-          {
-            dappId: 'uniswap',
-            address: '0x123...abc',
-            permissions: [DAppPermission.READ, DAppPermission.TRANSACTION],
-            expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-            deviceFingerprint: 'device1',
-          },
-          {
-            dappId: 'aave',
-            address: '0x456...def',
-            permissions: [DAppPermission.READ, DAppPermission.ASSETS],
-            expiresAt: Date.now() + 12 * 60 * 60 * 1000,
-            deviceFingerprint: 'device1',
-          },
-        ];
-
-        setSessions(mockSessions);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load sessions');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadSessions();
-  }, [bridge]);
-
-  const handleRevoke = async (dappId: string) => {
-    try {
-      await bridge.revokeSession(dappId);
-      setSessions(sessions.filter(session => session.dappId !== dappId));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to revoke session');
-    }
+  const handleDisconnect = async (origin: string) => {
+    await disconnectDApp(origin);
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-4 text-red-500 bg-red-50 rounded-lg">
-        {error}
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-sm">
-        <h2 className="text-2xl font-semibold mb-4">Connected dApps</h2>
-        
-        <div className="space-y-4">
+      <h2 className="text-2xl font-bold">Connected dApps</h2>
+      {sessions.length === 0 ? (
+        <p className="text-gray-500">No connected dApps</p>
+      ) : (
+        <div className="grid gap-4">
           {sessions.map((session) => (
-            <div key={session.dappId} className="border rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-medium">{session.dappId}</h3>
-                  <p className="text-sm text-gray-500">
-                    Connected {formatDistanceToNow(session.expiresAt - 24 * 60 * 60 * 1000)} ago
-                  </p>
+            <div
+              key={session.origin}
+              className="bg-white rounded-lg shadow p-4 flex items-center justify-between"
+            >
+              <div>
+                <div className="flex items-center space-x-3">
+                  {session.icon && (
+                    <img
+                      src={session.icon}
+                      alt={session.name}
+                      className="w-8 h-8 rounded"
+                    />
+                  )}
+                  <div>
+                    <h3 className="font-semibold">{session.name}</h3>
+                    <p className="text-sm text-gray-500">{session.origin}</p>
+                  </div>
                 </div>
-                <button
-                  onClick={() => handleRevoke(session.dappId)}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  Revoke
-                </button>
+                <p className="text-sm text-gray-500 mt-2">
+                  Connected {formatDistanceToNow(session.connectedAt)} ago
+                </p>
               </div>
-
-              <div className="mt-4">
-                <h4 className="text-sm font-medium mb-2">Permissions:</h4>
-                <div className="flex flex-wrap gap-2">
-                  {session.permissions.map((permission) => (
-                    <span
-                      key={permission}
-                      className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800"
-                    >
-                      {permission}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-4 text-sm text-gray-500">
-                Expires {formatDistanceToNow(session.expiresAt, { addSuffix: true })}
-              </div>
+              <button
+                onClick={() => handleDisconnect(session.origin)}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              >
+                Disconnect
+              </button>
             </div>
           ))}
-
-          {sessions.length === 0 && (
-            <div className="text-center text-gray-500 py-8">
-              No active dApp connections
-            </div>
-          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }; 
