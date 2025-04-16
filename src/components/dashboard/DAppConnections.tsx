@@ -3,7 +3,7 @@ import { useDApp } from '../../contexts/DAppContext';
 import { DAppSession, DAppPermission, SessionPermissions } from '../../types/dapp';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
+import { Badge, type BadgeVariant } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
 
 const convertToSessionPermissions = (permissions: DAppPermission[]): SessionPermissions => {
