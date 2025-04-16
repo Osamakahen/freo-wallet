@@ -22,7 +22,6 @@ export const WalletComponent: React.FC<Props> = ({ wallet }) => {
   const [balance, setBalance] = useState<string>('0');
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
   const [activeTransaction, setActiveTransaction] = useState<`0x${string}` | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadWalletData = async () => {
@@ -87,10 +86,6 @@ export const WalletComponent: React.FC<Props> = ({ wallet }) => {
       console.error('Error handling transaction completion:', error);
     }
   };
-
-  if (error) {
-    return <div className="error">{error}</div>;
-  }
 
   return (
     <div className="wallet-container">
