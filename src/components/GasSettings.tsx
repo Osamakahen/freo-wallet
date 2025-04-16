@@ -75,9 +75,9 @@ export const GasSettings: React.FC<GasSettingsProps> = ({
           <h3 className="text-lg font-semibold mb-2">Current Gas Prices</h3>
           {gasPrices && (
             <div className="space-y-2">
-              <p>Base Fee: {formatGwei(gasPrices.baseFee)} Gwei</p>
-              <p>Max Fee: {formatGwei(gasPrices.maxFeePerGas)} Gwei</p>
-              <p>Priority Fee: {formatGwei(gasPrices.maxPriorityFeePerGas)} Gwei</p>
+              <p>Slow: {formatGwei(BigInt(gasPrices.slow))} Gwei</p>
+              <p>Standard: {formatGwei(BigInt(gasPrices.standard))} Gwei</p>
+              <p>Fast: {formatGwei(BigInt(gasPrices.fast))} Gwei</p>
               <p className="text-sm text-gray-500">
                 Last updated: {new Date(gasPrices.timestamp).toLocaleTimeString()}
               </p>
