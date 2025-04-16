@@ -13,8 +13,10 @@ import { TransactionRequest } from '../../types/wallet'
 import { WalletError, DAppError, TransactionError } from '../error/ErrorHandler'
 import { ErrorCorrelator } from '../error/ErrorCorrelator'
 import { PermissionManager } from '../security/PermissionManager'
+import { type Address } from 'viem'
 
 export class DAppBridge {
+  private static instance: DAppBridge
   private sessionManager: SessionManager
   private transactionManager: TransactionManager
   private config: BridgeConfig
@@ -22,23 +24,21 @@ export class DAppBridge {
   private events: BridgeEvents
   private dAppInfo: DAppInfo | null = null
   private connectedAccount: string | null = null
-  private isConnected = false
+  private isConnected: boolean = false
+  private currentAddress: Address | null = null
+  private currentChainId: number | null = null
 
-  constructor(
-    sessionManager: SessionManager,
-    transactionManager: TransactionManager,
-    config: Partial<BridgeConfig> = {}
-  ) {
-    this.sessionManager = sessionManager
-    this.transactionManager = transactionManager
+  private constructor() {
+    this.sessionManager = new SessionManager()
+    this.transactionManager = new TransactionManager()
     this.config = {
       autoConnect: true,
       sessionTimeout: 3600000, // 1 hour
       maxConnections: 5,
       requireConfirmation: true,
-      rpcUrl: config.rpcUrl || '',
-      qrcodeModal: config.qrcodeModal,
-      defaultChain: config.defaultChain
+      rpcUrl: '',
+      qrcodeModal: undefined,
+      defaultChain: undefined
     }
 
     this.state = {
@@ -56,6 +56,13 @@ export class DAppBridge {
       chainChanged: () => {},
       message: () => {}
     }
+  }
+
+  static getInstance(): DAppBridge {
+    if (!DAppBridge.instance) {
+      DAppBridge.instance = new DAppBridge()
+    }
+    return DAppBridge.instance
   }
 
   public async initialize(dAppInfo: DAppInfo): Promise<void> {
@@ -156,18 +163,18 @@ export class DAppBridge {
   }
 
   public async sendTransaction(transaction: TransactionRequest): Promise<DAppResponse> {
-    if (!this.isConnected()) {
+    if (!this.isConnected) {
       throw new DAppError('Wallet is not connected', {
         method: 'sendTransaction',
         connectionStatus: false
-      });
+      })
     }
 
     try {
-      const txHash = await this.transactionManager.sendTransaction(transaction);
+      const txHash = await this.transactionManager.sendTransaction(transaction)
       return {
         result: txHash
-      };
+      }
     } catch (error) {
       throw new TransactionError(
         error instanceof Error ? error.message : 'Failed to send transaction',
@@ -176,7 +183,7 @@ export class DAppBridge {
           transaction,
           originalError: error
         }
-      );
+      )
     }
   }
 

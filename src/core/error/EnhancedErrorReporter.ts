@@ -1,3 +1,6 @@
+import { ErrorContext } from '../../types/error';
+import { WalletError } from './ErrorHandler';
+
 interface DeviceInfo {
   userAgent: string;
   platform: string;
@@ -21,21 +24,12 @@ interface UserContext {
   timezone?: string;
 }
 
-interface ErrorContext {
-  timestamp: number;
-  error: Error;
-  stackTrace: string;
-  environment: string;
-  userContext: UserContext;
-  systemMetrics: SystemMetrics;
-  correlationId?: string;
-  relatedErrors?: string[];
-}
-
 export class EnhancedErrorReporter {
   private static instance: EnhancedErrorReporter;
   private errorHistory: Map<string, ErrorContext[]> = new Map();
   private correlationMap: Map<string, string[]> = new Map();
+  private errorCount: number = 0;
+  private lastErrorTime: number = 0;
 
   private constructor() {}
 
@@ -46,24 +40,34 @@ export class EnhancedErrorReporter {
     return EnhancedErrorReporter.instance;
   }
 
-  async reportError(error: Error, context: Partial<ErrorContext> = {}): Promise<string> {
-    const correlationId = this.generateCorrelationId();
-    const fullContext: ErrorContext = {
-      timestamp: Date.now(),
-      error,
-      stackTrace: error.stack || '',
-      environment: process.env.NODE_ENV || 'development',
-      userContext: await this.getUserContext(),
-      systemMetrics: await this.getSystemMetrics(),
-      correlationId,
-      ...context
-    };
+  public async reportError(error: Error, context: ErrorContext): Promise<void> {
+    this.errorCount++;
+    this.lastErrorTime = Date.now();
 
-    this.storeError(fullContext);
-    this.analyzeError();
-    await this.sendToMonitoringService(fullContext);
+    if (error instanceof WalletError) {
+      await this.handleWalletError(error, context);
+    } else {
+      await this.handleGenericError(error, context);
+    }
+  }
 
-    return correlationId;
+  private async handleWalletError(error: WalletError, context: ErrorContext): Promise<void> {
+    // Enhanced error handling for wallet-specific errors
+    console.error('Wallet Error:', {
+      message: error.message,
+      code: error.code,
+      context: context,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  private async handleGenericError(error: Error, context: ErrorContext): Promise<void> {
+    // Enhanced error handling for generic errors
+    console.error('Generic Error:', {
+      message: error.message,
+      context: context,
+      timestamp: new Date().toISOString()
+    });
   }
 
   private generateCorrelationId(): string {
