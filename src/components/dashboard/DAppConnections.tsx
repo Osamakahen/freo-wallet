@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -18,13 +18,34 @@ const getPermissionLabel = (permission: DAppPermission): string => {
 }
 
 export const DAppConnections: React.FC = () => {
-  const { sessions, disconnectDApp } = useDApp()
+  const { bridge, isConnected } = useDApp()
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
+  const [sessions, setSessions] = useState<DAppSession[]>([])
+
+  useEffect(() => {
+    if (isConnected) {
+      const state = bridge.getState()
+      if (state.address) {
+        // Mock sessions for now - replace with actual session management
+        setSessions([{
+          dappId: 'example-dapp',
+          address: state.address,
+          permissions: ['read', 'transaction'],
+          expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+          deviceFingerprint: '',
+          timestamp: Date.now()
+        }])
+      }
+    } else {
+      setSessions([])
+    }
+  }, [bridge, isConnected])
 
   const handleDisconnect = async (dappId: string) => {
     setDisconnecting(dappId)
     try {
-      await disconnectDApp(dappId)
+      await bridge.disconnect()
+      setSessions(prev => prev.filter(session => session.dappId !== dappId))
     } finally {
       setDisconnecting(null)
     }
@@ -55,7 +76,7 @@ export const DAppConnections: React.FC = () => {
                     </div>
                   </div>
                   <Button
-                    variant="destructive"
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     size="sm"
                     onClick={() => handleDisconnect(session.dappId)}
                     disabled={disconnecting === session.dappId}
