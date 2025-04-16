@@ -60,8 +60,9 @@ export const Send: React.FC = () => {
       setIsLoading(true);
 
       const transaction = {
-        to: formData.recipient,
-        value: ethers.parseEther(formData.amount),
+        from: address as `0x${string}`,
+        to: formData.recipient as `0x${string}`,
+        value: ethers.parseEther(formData.amount).toString(),
         chainId
       };
 
