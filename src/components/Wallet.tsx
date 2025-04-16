@@ -85,15 +85,29 @@ export const Wallet: React.FC = () => {
     setActiveTransaction(null);
     // Refresh balance and tokens
     if (wallet) {
-      wallet.getBalance().then(setBalance);
-    }
-    if (tokenManager) {
-      tokenManager.getTokenBalances().then(balances => {
-        setTokens(balances.map(token => ({
-          ...token.metadata,
-          balance: token.balance
-        })));
-      });
+      const walletState = wallet.getState();
+      if (walletState.address) {
+        // Update balance from wallet state
+        setBalance(walletState.balance);
+        
+        // Update tokens if tokenManager is available
+        if (tokenManager) {
+          tokenManager.getTokenList().then(tokenAddresses => {
+            Promise.all(
+              tokenAddresses.map(tokenAddress => 
+                tokenManager.getTokenBalance(tokenAddress, walletState.address as `0x${string}`)
+              )
+            ).then(balances => {
+              setTokens(balances.map(token => ({
+                address: token.tokenAddress,
+                symbol: token.symbol,
+                decimals: token.decimals,
+                balance: token.balance.toString()
+              })));
+            });
+          });
+        }
+      }
     }
   };
 
