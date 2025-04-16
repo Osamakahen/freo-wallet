@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { useWallet } from '../contexts/WalletContext';
-import QRCode from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 
 export const Receive: React.FC = () => {
-  const { selectedAddress } = useWallet();
+  const { address } = useWallet();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    if (selectedAddress) {
+    if (address) {
       try {
-        await navigator.clipboard.writeText(selectedAddress);
+        await navigator.clipboard.writeText(address);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch (error) {
@@ -18,7 +18,7 @@ export const Receive: React.FC = () => {
     }
   };
 
-  if (!selectedAddress) {
+  if (!address) {
     return (
       <div className="p-4">
         <h2 className="text-2xl font-bold mb-4">Receive</h2>
@@ -32,12 +32,11 @@ export const Receive: React.FC = () => {
       <h2 className="text-2xl font-bold mb-4">Receive</h2>
       <div className="flex flex-col items-center space-y-4">
         <div className="bg-white p-4 rounded-lg shadow-md">
-          <QRCode
-            value={selectedAddress}
+          <QRCodeSVG
+            value={address}
             size={200}
             level="H"
             includeMargin
-            renderAs="svg"
           />
         </div>
 
@@ -45,7 +44,7 @@ export const Receive: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="overflow-hidden">
               <p className="text-sm text-gray-500 mb-1">Your Address</p>
-              <p className="font-mono text-sm break-all">{selectedAddress}</p>
+              <p className="font-mono text-sm break-all">{address}</p>
             </div>
             <button
               onClick={handleCopy}
