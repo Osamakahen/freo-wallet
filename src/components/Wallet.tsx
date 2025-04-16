@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet } from '../core/wallet/Wallet';
 import { TokenBalance } from '../types/token';
-import { TransactionRequest, TransactionReceipt } from '../types/wallet';
+import { TransactionRequest } from '../types/wallet';
 import { TokenList } from './TokenList';
 import { SendToken } from './SendToken';
 import TransactionHistory from './TransactionHistory';
@@ -15,7 +15,7 @@ interface Props {
 export const WalletComponent: React.FC<Props> = ({ wallet }) => {
   const [balance, setBalance] = useState<string>('0');
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
-  const [activeTransaction, setActiveTransaction] = useState<string | null>(null);
+  const [activeTransaction, setActiveTransaction] = useState<`0x${string}` | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,18 +50,18 @@ export const WalletComponent: React.FC<Props> = ({ wallet }) => {
       const transaction: TransactionRequest = {
         from: state.address,
         to: tokenAddress,
-        value: BigInt(0),
+        value: '0',
         data
       };
 
       const hash = await wallet.sendTransaction(transaction);
-      setActiveTransaction(hash);
+      setActiveTransaction(hash as `0x${string}`);
     } catch (error) {
       console.error('Error sending token:', error);
     }
   };
 
-  const handleTransactionComplete = async (hash: string) => {
+  const handleTransactionComplete = async (hash: `0x${string}`) => {
     try {
       setActiveTransaction(null);
       const receipt = await wallet.getTransactionReceipt(hash);
@@ -97,23 +97,35 @@ export const WalletComponent: React.FC<Props> = ({ wallet }) => {
         <TransactionStatus
           txHash={activeTransaction}
           transactionManager={wallet}
-          onComplete={handleTransactionComplete}
+          onComplete={() => handleTransactionComplete(activeTransaction)}
         />
       )}
 
       <div className="wallet-content">
         <div className="wallet-section">
           <SendToken
-            onSend={handleSendToken}
+            onSend={(to, amount, tokenAddress) => handleSendToken(tokenAddress || to, to, amount)}
             balance={balance}
-            tokens={tokens}
+            tokens={tokens.map(token => ({
+              address: token.tokenAddress,
+              name: token.tokenAddress,
+              symbol: token.tokenAddress.slice(0, 6),
+              decimals: 18,
+              balance: token.balance.toString()
+            }))}
           />
-          <TokenList tokens={tokens} />
+          <TokenList tokens={tokens.map(token => ({
+            address: token.tokenAddress,
+            name: token.tokenAddress,
+            symbol: token.tokenAddress.slice(0, 6),
+            decimals: 18,
+            balance: token.balance.toString()
+          }))} />
         </div>
         <div className="wallet-section">
           <TransactionHistory 
-            address={wallet?.getState().address || '0x'}
-            network={wallet?.getState().network || 'mainnet'}
+            address={wallet.getState().address || '0x'}
+            network={wallet.getState().network || 'mainnet'}
           />
         </div>
       </div>
