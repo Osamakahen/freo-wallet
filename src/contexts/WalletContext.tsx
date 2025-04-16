@@ -24,12 +24,14 @@ interface WalletError {
 interface WalletState {
   address: string | null;
   isConnected: boolean;
+  chainId: number;
 }
 
 interface WalletContextType extends WalletState {
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   error: string | null;
+  setChainId: (chainId: number) => void;
 }
 
 export const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -45,7 +47,8 @@ export const useWallet = () => {
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [wallet, setWallet] = useState<WalletState>({
     address: null,
-    isConnected: false
+    isConnected: false,
+    chainId: 1 // Default to Ethereum Mainnet
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -157,14 +160,23 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const setChainId = (chainId: number) => {
+    setWallet(prev => ({
+      ...prev,
+      chainId
+    }));
+  };
+
   return (
     <WalletContext.Provider
       value={{
         address: wallet.address,
         isConnected: wallet.isConnected,
+        chainId: wallet.chainId,
         connect,
         disconnect,
-        error
+        error,
+        setChainId
       }}
     >
       {children}
