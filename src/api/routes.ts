@@ -1,5 +1,6 @@
 import { Router, RequestHandler } from 'express';
-import { Session, Transaction, Analytics } from '../sdk/types';
+import { Session, Analytics } from '../sdk/types';
+import { TransactionRequest } from '../types/wallet';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
@@ -47,7 +48,7 @@ const deleteSession: RequestHandler = async (req, res) => {
 // Transaction verification
 const verifyTransaction: RequestHandler = async (req, res) => {
   try {
-    const transaction: Transaction = req.body;
+    const transaction: TransactionRequest = req.body;
     const sessionId = req.headers.authorization?.split(' ')[1];
 
     if (!sessionId || !sessions.has(sessionId)) {
