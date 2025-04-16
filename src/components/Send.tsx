@@ -63,7 +63,7 @@ export const Send: React.FC = () => {
         from: address as `0x${string}`,
         to: formData.recipient as `0x${string}`,
         value: ethers.parseEther(formData.amount).toString(),
-        chainId
+        chainId: chainId || undefined
       };
 
       const txHash = await sendTransaction(transaction);
