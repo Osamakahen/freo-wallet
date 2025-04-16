@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
 import { useWallet } from '../contexts/WalletContext';
-import { useTransaction } from '../contexts/TransactionContext';
+import { useTransactions } from '../contexts/TransactionContext';
 import { useNetwork } from '../contexts/NetworkContext';
 import { useAddressBook } from '../contexts/AddressBookContext';
 
@@ -13,8 +13,8 @@ interface SendFormData {
 }
 
 export const Send: React.FC = () => {
-  const { selectedAddress } = useWallet();
-  const { sendTransaction } = useTransaction();
+  const { address } = useWallet();
+  const { sendTransaction } = useTransactions();
   const { chainId } = useNetwork();
   const { contacts } = useAddressBook();
 
@@ -150,7 +150,7 @@ export const Send: React.FC = () => {
 
         <button
           type="submit"
-          disabled={isLoading || !selectedAddress}
+          disabled={isLoading || !address}
           className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 disabled:bg-gray-400"
         >
           {isLoading ? 'Sending...' : 'Send'}
