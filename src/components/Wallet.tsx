@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet } from '../core/wallet/Wallet';
-import { TokenBalance, TransactionReceipt } from '../types/token';
-import { TransactionRequest } from '../types/wallet';
+import { TokenBalance } from '../types/token';
+import { TransactionRequest, TransactionReceipt } from '../types/wallet';
 import { TokenList } from './TokenList';
 import { SendToken } from './SendToken';
 import TransactionHistory from './TransactionHistory';
