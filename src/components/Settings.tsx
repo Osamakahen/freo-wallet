@@ -9,7 +9,7 @@ interface SettingsSection {
 }
 
 export const Settings: React.FC = () => {
-  const { selectedAddress } = useWallet();
+  const { address } = useWallet();
   const { chainId, networkName } = useNetwork();
   const [activeSection, setActiveSection] = useState<string>('general');
 
@@ -101,7 +101,7 @@ export const Settings: React.FC = () => {
     }
   };
 
-  if (!selectedAddress) {
+  if (!address) {
     return (
       <div className="p-4">
         <h2 className="text-2xl font-bold mb-4">Settings</h2>
