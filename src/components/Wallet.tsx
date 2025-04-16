@@ -27,30 +27,42 @@ export const Wallet: React.FC = () => {
           rpcUrl: 'https://mainnet.infura.io/v3/your-api-key'
         };
         const walletInstance = new WalletCore(config);
-        await walletInstance.initialize();
+        await walletInstance.initialize('default-password');
         setWallet(walletInstance);
         setIsConnected(true);
 
-        const transactionManagerInstance = new TransactionManager(walletInstance);
+        const transactionManagerInstance = new TransactionManager(
+          walletInstance.networkManager.getAdapter(),
+          walletInstance.keyManager
+        );
         setTransactionManager(transactionManagerInstance);
 
-        const tokenManagerInstance = new TokenManager(walletInstance);
+        const tokenManagerInstance = new TokenManager(walletInstance.networkManager.getAdapter());
         setTokenManager(tokenManagerInstance);
 
         // Load initial balance
-        if (walletInstance.state.address) {
-          const initialBalance = await walletInstance.getBalance(walletInstance.state.address);
-          setBalance(initialBalance);
-
-          // Load tokens
-          const tokenBalances = await tokenManagerInstance.getTokenBalances(walletInstance.state.address);
-          setTokens(tokenBalances.map((token: TokenBalance) => ({
-            address: token.address,
-            name: '',  // TokenBalance doesn't include name, would need to fetch from token contract
-            symbol: token.symbol,
-            decimals: token.decimals,
-            balance: token.balance.toString()
-          })));
+        const walletState = walletInstance.getState();
+        if (walletState.address) {
+          setBalance(walletState.balance);
+          
+          // Load tokens if tokenManager is available
+          if (tokenManagerInstance) {
+            tokenManagerInstance.getTokenList().then(tokenAddresses => {
+              Promise.all(
+                tokenAddresses.map(tokenAddress => 
+                  tokenManagerInstance.getTokenBalance(tokenAddress, walletState.address as `0x${string}`)
+                )
+              ).then(balances => {
+                setTokens(balances.map(token => ({
+                  address: token.tokenAddress,
+                  name: token.name || '',
+                  symbol: token.symbol,
+                  decimals: token.decimals,
+                  balance: token.balance.toString()
+                })));
+              });
+            });
+          }
         }
       } catch (err) {
         setError('Failed to initialize wallet');
