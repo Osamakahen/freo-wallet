@@ -1,7 +1,5 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import { WalletProvider, useWallet } from './contexts/WalletContext';
 import { TokenProvider } from './contexts/TokenContext';
 import { TransactionProvider } from './contexts/TransactionContext';
@@ -18,6 +16,7 @@ import { BiometricPrompt } from './components/BiometricPrompt';
 import { type Address } from 'viem';
 import { mainnet } from 'viem/chains';
 import { NetworkManager } from './core/network/NetworkManager';
+import { Toaster } from './components/ui/toaster';
 
 // Default chain configuration
 const defaultChainConfig = mainnet;
@@ -42,17 +41,6 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
       <Router>
         <Routes>
           <Route 
@@ -133,6 +121,7 @@ const AppContent: React.FC = () => {
           />
         </Routes>
       </Router>
+      <Toaster />
     </div>
   );
 };

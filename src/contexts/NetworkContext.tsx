@@ -39,7 +39,7 @@ interface NetworkResponse<T = unknown> {
 }
 
 interface NetworkContextType extends NetworkState {
-  connect: (url: string) => Promise<NetworkResponse<{ connected: boolean; chainId: number }>>;
+  connect: () => Promise<NetworkResponse<{ connected: boolean; chainId: number }>>;
   disconnect: () => void;
   switchNetwork: (chainId: number) => Promise<NetworkResponse<{ chainId: number }>>;
   getProvider: () => ethers.Provider | null;

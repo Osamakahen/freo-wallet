@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
+import { toast } from '../ui/use-toast';
 
 const convertToSessionPermissions = (permissions: DAppPermission[]): SessionPermissions => {
   return {
@@ -18,13 +19,29 @@ const convertToSessionPermissions = (permissions: DAppPermission[]): SessionPerm
 export const DAppConnections: React.FC = () => {
   const { connectedDApps, disconnectDApp } = useDApp();
   const [sessions, setSessions] = useState<DAppSession[]>([]);
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
 
   useEffect(() => {
     setSessions(connectedDApps);
   }, [connectedDApps]);
 
   const handleDisconnect = async (dappId: string) => {
-    await disconnectDApp(dappId);
+    try {
+      setDisconnecting(dappId);
+      await disconnectDApp(dappId);
+      toast({
+        title: "DApp Disconnected",
+        description: "The DApp has been successfully disconnected.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to disconnect DApp",
+        variant: "destructive",
+      });
+    } finally {
+      setDisconnecting(null);
+    }
   };
 
   return (
@@ -45,18 +62,20 @@ export const DAppConnections: React.FC = () => {
                     <div className="space-y-1">
                       <div className="font-medium">{session.dappId}</div>
                       <div className="text-sm text-muted-foreground">
-                        {permissions.read && <Badge className="mr-2 bg-secondary text-secondary-foreground">Read</Badge>}
-                        {permissions.write && <Badge className="mr-2 bg-secondary text-secondary-foreground">Write</Badge>}
-                        {permissions.sign && <Badge className="mr-2 bg-secondary text-secondary-foreground">Sign</Badge>}
-                        {permissions.nft && <Badge className="mr-2 bg-secondary text-secondary-foreground">NFT</Badge>}
+                        {permissions.read && <Badge variant="secondary" className="mr-2">Read</Badge>}
+                        {permissions.write && <Badge variant="secondary" className="mr-2">Write</Badge>}
+                        {permissions.sign && <Badge variant="secondary" className="mr-2">Sign</Badge>}
+                        {permissions.nft && <Badge variant="secondary" className="mr-2">NFT</Badge>}
                       </div>
                     </div>
-                    <button
-                      className="border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs"
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleDisconnect(session.dappId)}
+                      disabled={disconnecting === session.dappId}
                     >
-                      Disconnect
-                    </button>
+                      {disconnecting === session.dappId ? "Disconnecting..." : "Disconnect"}
+                    </Button>
                   </div>
                 );
               })}

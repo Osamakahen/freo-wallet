@@ -16,30 +16,34 @@ import { PermissionManager } from '../security/PermissionManager'
 import { type Address } from 'viem'
 
 export class DAppBridge {
-  private static instance: DAppBridge
-  private sessionManager: SessionManager
-  private transactionManager: TransactionManager
-  private config: BridgeConfig
-  private state: BridgeState
-  private events: BridgeEvents
-  private dAppInfo: DAppInfo | null = null
-  private connectedAccount: string | null = null
-  private isConnected: boolean = false
-  private currentAddress: Address | null = null
-  private currentChainId: number | null = null
+  private static instance: DAppBridge | null = null;
+  private sessionManager: SessionManager;
+  private transactionManager: TransactionManager;
+  private config: BridgeConfig;
+  private state: BridgeState;
+  private events: BridgeEvents;
+  private dAppInfo: DAppInfo | null = null;
+  private connectedAccount: string | null = null;
+  private isConnected: boolean = false;
+  private currentAddress: Address | null = null;
+  private currentChainId: number | null = null;
 
-  private constructor() {
-    this.sessionManager = new SessionManager()
-    this.transactionManager = new TransactionManager()
+  constructor(
+    sessionManager: SessionManager,
+    transactionManager: TransactionManager,
+    config: BridgeConfig
+  ) {
+    this.sessionManager = sessionManager;
+    this.transactionManager = transactionManager;
     this.config = {
       autoConnect: true,
       sessionTimeout: 3600000, // 1 hour
       maxConnections: 5,
       requireConfirmation: true,
-      rpcUrl: '',
-      qrcodeModal: undefined,
-      defaultChain: undefined
-    }
+      rpcUrl: config.rpcUrl || '',
+      qrcodeModal: config.qrcodeModal,
+      defaultChain: config.defaultChain
+    };
 
     this.state = {
       isConnected: false,
@@ -47,7 +51,7 @@ export class DAppBridge {
       chainId: null,
       permissions: null,
       error: null
-    }
+    };
 
     this.events = {
       connect: () => {},
@@ -55,14 +59,18 @@ export class DAppBridge {
       accountsChanged: () => {},
       chainChanged: () => {},
       message: () => {}
-    }
+    };
   }
 
-  static getInstance(): DAppBridge {
+  static getInstance(
+    sessionManager: SessionManager,
+    transactionManager: TransactionManager,
+    config: BridgeConfig
+  ): DAppBridge {
     if (!DAppBridge.instance) {
-      DAppBridge.instance = new DAppBridge()
+      DAppBridge.instance = new DAppBridge(sessionManager, transactionManager, config);
     }
-    return DAppBridge.instance
+    return DAppBridge.instance;
   }
 
   public async initialize(dAppInfo: DAppInfo): Promise<void> {

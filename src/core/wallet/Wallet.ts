@@ -6,6 +6,8 @@ import { NetworkManager } from '../network/NetworkManager';
 import { DAppManager } from '../dapp/DAppManager';
 import { WalletConfig, WalletState } from '../../types/wallet';
 import { SessionManager } from '../session/SessionManager';
+import { TokenManager } from '../token/TokenManager';
+import { TokenBalance, TransactionReceipt } from '../../types/token';
 
 export class Wallet {
   private keyManager: KeyManager;
@@ -13,6 +15,7 @@ export class Wallet {
   private networkManager: NetworkManager;
   private dappManager: DAppManager;
   private sessionManager: SessionManager;
+  private tokenManager: TokenManager;
   private state: WalletState;
   private client: ReturnType<typeof createWalletClient>;
 
@@ -29,12 +32,13 @@ export class Wallet {
       this.keyManager,
       this.networkManager.getAdapter()
     );
+    this.tokenManager = new TokenManager(this.networkManager.getAdapter());
     
     // Initialize state with proper types
     this.state = {
       isInitialized: false,
       isConnected: false,
-      address: '0x' as `0x${string}`,
+      address: null,
       balance: '0',
       network: config.networkName
     };
@@ -108,5 +112,33 @@ export class Wallet {
 
   getState(): WalletState {
     return { ...this.state };
+  }
+
+  public async getTokenList(): Promise<`0x${string}`[]> {
+    if (!this.state.isConnected) {
+      throw new Error('Wallet not connected');
+    }
+    return this.tokenManager.getTokenList();
+  }
+
+  public async getTokenBalance(tokenAddress: `0x${string}`, ownerAddress: `0x${string}`): Promise<TokenBalance> {
+    if (!this.state.isConnected) {
+      throw new Error('Wallet not connected');
+    }
+    return this.tokenManager.getTokenBalance(tokenAddress, ownerAddress);
+  }
+
+  public async getTokenTransferData(tokenAddress: `0x${string}`, to: `0x${string}`, amount: string): Promise<`0x${string}`> {
+    if (!this.state.isConnected) {
+      throw new Error('Wallet not connected');
+    }
+    return this.tokenManager.getTransferData(tokenAddress, to, amount);
+  }
+
+  public async getTransactionReceipt(hash: string): Promise<TransactionReceipt | null> {
+    if (!this.state.isConnected) {
+      throw new Error('Wallet not connected');
+    }
+    return this.transactionManager.getTransactionReceipt(hash);
   }
 } 
