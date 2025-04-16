@@ -6,11 +6,18 @@ import { TokenList } from './TokenList';
 import { SendToken } from './SendToken';
 import TransactionHistory from './TransactionHistory';
 import { TransactionStatus } from './TransactionStatus';
-import { TokenMetadata, WalletConfig } from '../types/wallet';
+import { mainnet } from 'viem/chains';
 
 interface Props {
   wallet: Wallet;
 }
+
+const mainnetConfig = {
+  chainId: 1,
+  name: 'Ethereum',
+  symbol: 'ETH',
+  rpcUrl: 'https://mainnet.infura.io/v3/your-api-key'
+};
 
 export const WalletComponent: React.FC<Props> = ({ wallet }) => {
   const [balance, setBalance] = useState<string>('0');
@@ -125,7 +132,7 @@ export const WalletComponent: React.FC<Props> = ({ wallet }) => {
         <div className="wallet-section">
           <TransactionHistory 
             address={wallet.getState().address || '0x'}
-            network={wallet.getState().network || 'mainnet'}
+            network={mainnetConfig}
           />
         </div>
       </div>
