@@ -1,0 +1,9 @@
+1:44  Error: 'vi' is defined but never used.  @typescript-eslint/no-unused-vars
+8:9  Error: 'mockAddress' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+9:10  Error: 'WalletError' is defined but never used.  @typescript-eslint/no-unused-vars
+18:42  Error: '_args' is defined but never used.  @typescript-eslint/no-unused-vars
+19:37  Error: '_event' is defined but never used.  @typescript-eslint/no-unused-vars
+19:60  Error: '_callback' is defined but never used.  @typescript-eslint/no-unused-vars
+20:49  Error: '_event' is defined but never used.  @typescript-eslint/no-unused-vars
+20:72  Error: '_callback' is defined but never used.  @typescript-eslint/no-unused-vars
+Error: Command "npm run build" exited with 1 

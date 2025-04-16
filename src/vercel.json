@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "builds": [
+    {
+      "src": "src/next.config.js",
+      "use": "@vercel/next"
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_MAINNET_RPC_URL": "@next_public_mainnet_rpc_url",
+    "NEXT_PUBLIC_POLYGON_RPC_URL": "@next_public_polygon_rpc_url",
+    "NEXT_PUBLIC_BSC_RPC_URL": "@next_public_bsc_rpc_url",
+    "NEXT_PUBLIC_ARBITRUM_RPC_URL": "@next_public_arbitrum_rpc_url",
+    "NEXT_PUBLIC_OPTIMISM_RPC_URL": "@next_public_optimism_rpc_url"
+  }
+} 
