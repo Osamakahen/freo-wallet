@@ -20,7 +20,6 @@ export const GasSettings: React.FC<GasSettingsProps> = ({
     gasPrices,
     loading,
     error,
-    simulationResult,
     updateGasSettings
   } = useGas();
 
@@ -80,19 +79,6 @@ export const GasSettings: React.FC<GasSettingsProps> = ({
               <p className="text-sm text-gray-500">
                 Last updated: {new Date(gasPrices.timestamp).toLocaleTimeString()}
               </p>
-            </div>
-          )}
-        </div>
-
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Transaction Simulation</h3>
-          {simulationResult && (
-            <div className={`space-y-2 ${simulationResult.success ? 'text-green-500' : 'text-red-500'}`}>
-              <p>Status: {simulationResult.success ? 'Success' : 'Failed'}</p>
-              <p>Gas Used: {simulationResult.gasUsed}</p>
-              {simulationResult.error && (
-                <p className="text-sm">Error: {simulationResult.error}</p>
-              )}
             </div>
           )}
         </div>
