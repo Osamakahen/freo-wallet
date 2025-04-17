@@ -1,17 +1,27 @@
 import { useEffect } from 'react';
 import { useSession } from '../contexts/SessionContext';
 import { useWallet } from '../contexts/WalletContext';
-import { Permission } from '../types/session';
+import { Permission, SessionPermissions } from '../types/session';
 
 interface AutoConnectProps {
-  requiredPermissions?: Permission[];
+  requiredPermissions?: SessionPermissions;
+  onConnect?: () => void;
+  onError?: (error: string) => void;
 }
 
-export const AutoConnect = ({
-  requiredPermissions = [],
-}: AutoConnectProps) => {
+export const AutoConnect: React.FC<AutoConnectProps> = ({
+  requiredPermissions = {
+    read: true,
+    write: true,
+    sign: true,
+    connect: true,
+    disconnect: true
+  },
+  onConnect,
+  onError
+}) => {
   const { isAuthenticated, permissions } = useSession();
-  const { connect, disconnect, address } = useWallet();
+  const { connect, disconnect, selectedAddress } = useWallet();
 
   useEffect(() => {
     const autoConnect = async () => {
@@ -37,7 +47,7 @@ export const AutoConnect = ({
 
   return (
     <div>
-      <p>Connected to: {address}</p>
+      <p>Connected to: {selectedAddress}</p>
       <button onClick={disconnect}>Disconnect</button>
     </div>
   );

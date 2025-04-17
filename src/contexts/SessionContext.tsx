@@ -1,15 +1,27 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Permission } from '../types/session';
+import { Permission, SessionPermissions } from '../types/session';
 
 interface SessionContextType {
-  isAuthenticated: boolean;
-  permissions: Permission[];
-  login: () => Promise<void>;
-  logout: () => Promise<void>;
-  checkPermission: (permission: Permission) => boolean;
+  isConnected: boolean;
+  address: string | null;
+  permissions: SessionPermissions;
+  connect: () => Promise<void>;
+  disconnect: () => void;
 }
 
-const SessionContext = createContext<SessionContextType | undefined>(undefined);
+export const SessionContext = createContext<SessionContextType>({
+  isConnected: false,
+  address: null,
+  permissions: {
+    read: false,
+    write: false,
+    sign: false,
+    connect: false,
+    disconnect: false
+  },
+  connect: async () => {},
+  disconnect: () => {}
+});
 
 export function useSession() {
   const context = useContext(SessionContext);
@@ -19,9 +31,16 @@ export function useSession() {
   return context;
 }
 
-export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
+export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [address, setAddress] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState<SessionPermissions>({
+    read: false,
+    write: false,
+    sign: false,
+    connect: false,
+    disconnect: false
+  });
 
   useEffect(() => {
     // Check for existing session
@@ -30,7 +49,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         // Add your session check logic here
         const hasSession = localStorage.getItem('session');
         if (hasSession) {
-          setIsAuthenticated(true);
+          setIsConnected(true);
           // Load permissions from storage or API
           const storedPermissions = localStorage.getItem('permissions');
           if (storedPermissions) {
@@ -45,49 +64,57 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     checkSession();
   }, []);
 
-  const login = async () => {
+  const connect = async () => {
     try {
-      // Add your login logic here
-      setIsAuthenticated(true);
+      // Add your connect logic here
+      setIsConnected(true);
       // Set default permissions
-      const defaultPermissions: Permission[] = ['read', 'write'];
+      const defaultPermissions: SessionPermissions = {
+        read: true,
+        write: true,
+        sign: true,
+        connect: true,
+        disconnect: true
+      };
       setPermissions(defaultPermissions);
       localStorage.setItem('session', 'true');
       localStorage.setItem('permissions', JSON.stringify(defaultPermissions));
     } catch (error) {
-      console.error('Failed to login:', error);
+      console.error('Failed to connect:', error);
       throw error;
     }
   };
 
-  const logout = async () => {
+  const disconnect = () => {
     try {
-      // Add your logout logic here
-      setIsAuthenticated(false);
-      setPermissions([]);
+      // Add your disconnect logic here
+      setIsConnected(false);
+      setPermissions({
+        read: false,
+        write: false,
+        sign: false,
+        connect: false,
+        disconnect: false
+      });
       localStorage.removeItem('session');
       localStorage.removeItem('permissions');
     } catch (error) {
-      console.error('Failed to logout:', error);
+      console.error('Failed to disconnect:', error);
       throw error;
     }
-  };
-
-  const checkPermission = (permission: Permission) => {
-    return permissions.includes(permission);
   };
 
   return (
     <SessionContext.Provider
       value={{
-        isAuthenticated,
+        isConnected,
+        address,
         permissions,
-        login,
-        logout,
-        checkPermission
+        connect,
+        disconnect
       }}
     >
       {children}
     </SessionContext.Provider>
   );
-} 
+}; 
