@@ -57,36 +57,40 @@ export const DAppConnections: React.FC = () => {
       {sessions.length === 0 ? (
         <p className="text-gray-500">No connected DApps</p>
       ) : (
-        <ScrollArea className="h-[300px] w-full">
-          <div className="space-y-4 pr-4">
-            {sessions.map((session: DAppSession) => (
-              <Card key={session.dappId} className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-medium">{session.dappId}</h3>
+        <div className="h-[300px] w-full">
+          <ScrollArea className="h-full w-full rounded-md border">
+            <div className="p-4">
+              <div className="space-y-4">
+                {sessions.map((session: DAppSession) => (
+                  <Card key={session.dappId} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-medium">{session.dappId}</h3>
+                        </div>
+                        <p className="text-sm text-gray-500 mb-2">Connected: {new Date(session.timestamp).toLocaleString()}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {session.permissions.map((permission: DAppPermission) => (
+                            <Badge key={permission} variant="secondary">
+                              {getPermissionLabel(permission)}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <Button
+                        className="h-8 rounded-md px-3 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={() => handleDisconnect(session.dappId)}
+                        disabled={disconnecting === session.dappId}
+                      >
+                        {disconnecting === session.dappId ? "Disconnecting..." : "Disconnect"}
+                      </Button>
                     </div>
-                    <p className="text-sm text-gray-500 mb-2">Connected: {new Date(session.timestamp).toLocaleString()}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {session.permissions.map((permission: DAppPermission) => (
-                        <Badge key={permission} variant="secondary">
-                          {getPermissionLabel(permission)}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <Button
-                    className="h-8 rounded-md px-3 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    onClick={() => handleDisconnect(session.dappId)}
-                    disabled={disconnecting === session.dappId}
-                  >
-                    {disconnecting === session.dappId ? "Disconnecting..." : "Disconnect"}
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </ScrollArea>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </ScrollArea>
+        </div>
       )}
     </Card>
   )
