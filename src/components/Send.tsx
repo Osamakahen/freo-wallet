@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useDApp } from '../contexts/DAppContext';
 import { useNetwork } from '../contexts/NetworkContext';
 import { TokenManager } from '../core/token/TokenManager';

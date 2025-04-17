@@ -68,7 +68,7 @@ export const WalletComponent: React.FC<Props> = ({ wallet }) => {
 
   const handleTransactionComplete = async (hash: `0x${string}`) => {
     try {
-      setActiveTransaction(null);
+    setActiveTransaction(null);
       const receipt = await wallet.getTransactionReceipt(hash);
       if (receipt) {
         const state = wallet.getState();
