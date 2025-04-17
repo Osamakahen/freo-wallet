@@ -1,16 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { GasManager } from '../core/gas/GasManager';
-import { GasEstimate, GasPrice, GasHistory, GasSimulationResult } from '../types/gas';
+import { GasEstimate, GasPrice } from '../types/gas';
 import { ErrorCorrelator } from '../core/error/ErrorCorrelator';
 import { toast } from 'react-toastify';
 
 interface GasContextType {
   gasManager: GasManager;
   gasPrices: GasPrice | null;
-  gasHistory: GasHistory | null;
   loading: boolean;
   error: string | null;
-  simulationResult: GasSimulationResult | null;
   gasEstimate: GasEstimate | null;
   getGasEstimate: (
     from: `0x${string}`,
@@ -34,10 +32,8 @@ export const GasProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     errorCorrelator
   ));
   const [gasPrices, setGasPrices] = useState<GasPrice | null>(null);
-  const [gasHistory, setGasHistory] = useState<GasHistory | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [simulationResult, setSimulationResult] = useState<GasSimulationResult | null>(null);
   const [gasEstimate, setGasEstimate] = useState<GasEstimate | null>(null);
 
   const startGasPriceUpdates = useCallback(() => {
@@ -129,10 +125,8 @@ export const GasProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         gasManager,
         gasPrices,
-        gasHistory,
         loading,
         error,
-        simulationResult,
         gasEstimate,
         getGasEstimate,
         updateGasSettings
