@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useDApp } from '../../contexts/DAppContext';
 import { TokenManager } from '../../core/token/TokenManager';
-import type { TokenBalance } from '../../types/token';
-import { formatEther } from 'ethers';
+import { TokenBalance } from '../../types/token';
+import { formatEther } from 'ethers/lib/utils';
 
 interface PortfolioProps {
   tokenManager: TokenManager;
@@ -42,7 +42,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
         setError(null);
 
         // Load native token balance
-        const nativeBalance = await tokenManager.getBalance(currentAccount);
+        const nativeBalance = await tokenManager.getBalance('0x0000000000000000000000000000000000000000', currentAccount);
         
         // Load ERC20 token balances
         const tokenBalances = await tokenManager.getTokenBalances(currentAccount);
