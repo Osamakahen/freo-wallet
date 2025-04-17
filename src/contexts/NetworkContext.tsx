@@ -42,7 +42,7 @@ interface NetworkContextType extends NetworkState {
   connect: () => Promise<NetworkResponse<{ connected: boolean; chainId: number }>>;
   disconnect: () => void;
   switchNetwork: (chainId: number) => Promise<NetworkResponse<{ chainId: number }>>;
-  getProvider: () => ethers.Provider | null;
+  getProvider: () => ethers.BrowserProvider | null;
   refreshNetwork: () => Promise<void>;
 }
 
@@ -68,6 +68,8 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
           isConnected: true,
           provider
         });
+      } else {
+        setState(prev => ({ ...prev, isConnected: false, provider: null }));
       }
     } catch (error) {
       console.error('Failed to refresh network:', error);
@@ -77,9 +79,20 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const connect = async (): Promise<NetworkResponse<{ connected: boolean; chainId: number }>> => {
     try {
+      if (!window.ethereum) {
+        throw new Error('No Ethereum provider found');
+      }
+
       const provider = new ethers.BrowserProvider(window.ethereum as ethers.Eip1193Provider);
       const network = await provider.getNetwork();
       
+      setState({
+        chainId: Number(network.chainId),
+        networkName: network.name,
+        isConnected: true,
+        provider
+      });
+
       return {
         status: 200,
         data: {
@@ -96,7 +109,7 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
         },
         error: {
           code: 500,
-          message: 'Failed to connect to network'
+          message: error instanceof Error ? error.message : 'Failed to connect to network'
         }
       };
     }
@@ -113,6 +126,8 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
         params: [{ chainId: `0x${chainId.toString(16)}` }]
       });
 
+      await refreshNetwork();
+
       return {
         status: 200,
         data: { chainId }
@@ -123,14 +138,19 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
         data: { chainId: 0 },
         error: {
           code: 500,
-          message: 'Failed to switch network'
+          message: error instanceof Error ? error.message : 'Failed to switch network'
         }
       };
     }
   };
 
   const disconnect = () => {
-    // Implementation
+    setState({
+      chainId: null,
+      networkName: '',
+      isConnected: false,
+      provider: null
+    });
   };
 
   const getProvider = () => {

@@ -70,10 +70,13 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (window.ethereum) {
         try {
           const accounts = await window.ethereum.request({ method: 'eth_accounts' }) as string[];
+          const chainId = await window.ethereum.request({ method: 'eth_chainId' }) as string;
+          
           if (accounts.length > 0) {
             setWallet({
               address: accounts[0],
-              isConnected: true
+              isConnected: true,
+              chainId: parseInt(chainId, 16)
             });
           }
         } catch (err) {
@@ -87,41 +90,37 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     if (window.ethereum) {
-      const handleAccountsChanged = (accounts: unknown) => {
-        if (Array.isArray(accounts) && accounts.every(account => typeof account === 'string')) {
-          if (accounts.length === 0) {
-            setWallet({
-              address: null,
-              isConnected: false
-            });
-          } else {
-            setWallet({
-              address: accounts[0] as string,
-              isConnected: true
-            });
-          }
-        }
-      };
-
-      const handleDisconnect = (error: unknown) => {
-        if (typeof error === 'object' && error !== null && 'code' in error && 'message' in error) {
-          setWallet({
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (accounts.length === 0) {
+          setWallet(prev => ({
+            ...prev,
             address: null,
             isConnected: false
-          });
+          }));
+        } else {
+          setWallet(prev => ({
+            ...prev,
+            address: accounts[0],
+            isConnected: true
+          }));
         }
       };
 
-      if (window.ethereum) {
-        window.ethereum.on('accountsChanged', handleAccountsChanged as EthereumCallback);
-        window.ethereum.on('disconnect', handleDisconnect as EthereumCallback);
-      }
+      const handleDisconnect = (error: { code: number; message: string }) => {
+        setWallet(prev => ({
+          ...prev,
+          address: null,
+          isConnected: false
+        }));
+        setError(error.message);
+      };
+
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      window.ethereum.on('disconnect', handleDisconnect);
 
       return () => {
-        if (window.ethereum) {
-          window.ethereum.removeListener('accountsChanged', handleAccountsChanged as EthereumCallback);
-          window.ethereum.removeListener('disconnect', handleDisconnect as EthereumCallback);
-        }
+        window.ethereum?.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum?.removeListener('disconnect', handleDisconnect);
       };
     }
   }, []);
@@ -135,10 +134,12 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     try {
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }) as string[];
-      const address = accounts[0];
+      const chainId = await window.ethereum.request({ method: 'eth_chainId' }) as string;
+      
       setWallet({
-        address,
-        isConnected: true
+        address: accounts[0],
+        isConnected: true,
+        chainId: parseInt(chainId, 16)
       });
     } catch (error) {
       const walletError = handleError(error);
@@ -149,10 +150,14 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const disconnect = async (): Promise<void> => {
     try {
-      setWallet({
+      if (window.ethereum) {
+        await window.ethereum.request({ method: 'wallet_revokePermissions' });
+      }
+      setWallet(prev => ({
+        ...prev,
         address: null,
         isConnected: false
-      });
+      }));
     } catch (error) {
       const walletError = handleError(error);
       setError(walletError.message);
@@ -161,10 +166,15 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const setChainId = (chainId: number) => {
-    setWallet(prev => ({
-      ...prev,
-      chainId
-    }));
+    try {
+      setWallet(prev => ({
+        ...prev,
+        chainId
+      }));
+    } catch (error) {
+      const walletError = handleError(error);
+      setError(walletError.message);
+    }
   };
 
   return (

@@ -54,11 +54,11 @@ export const DAppConnections: React.FC = () => {
   return (
     <Card className="p-4">
       <h2 className="text-lg font-semibold mb-4">Connected DApps</h2>
-      <ScrollArea className="h-[300px]">
-        {sessions.length === 0 ? (
-          <p className="text-gray-500">No connected DApps</p>
-        ) : (
-          <div className="space-y-4">
+      {sessions.length === 0 ? (
+        <p className="text-gray-500">No connected DApps</p>
+      ) : (
+        <ScrollArea className="h-[300px] w-full">
+          <div className="space-y-4 pr-4">
             {sessions.map((session: DAppSession) => (
               <Card key={session.dappId} className="p-4">
                 <div className="flex items-center justify-between">
@@ -86,8 +86,8 @@ export const DAppConnections: React.FC = () => {
               </Card>
             ))}
           </div>
-        )}
-      </ScrollArea>
+        </ScrollArea>
+      )}
     </Card>
   )
 } 
