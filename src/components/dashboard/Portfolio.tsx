@@ -3,11 +3,14 @@ import Image from 'next/image';
 import { useDApp } from '../../contexts/DAppContext';
 import { TokenManager } from '../../core/token/TokenManager';
 import { TokenBalance } from '../../types/token';
-import { formatEther } from 'viem';
+import { formatEther, parseEther } from 'viem';
 
-interface ExtendedTokenBalance extends TokenBalance {
-  name: string;
+interface ExtendedTokenBalance {
+  address: string;
   symbol: string;
+  name: string;
+  balance: string;
+  decimals: number;
   price: string;
 }
 
@@ -21,7 +24,6 @@ const TokenImage: React.FC<{ address: string; symbol: string }> = ({ address, sy
   return (
     <div className="flex-shrink-0 h-10 w-10 relative">
       <Image
-        unoptimized
         className="rounded-full"
         src={imgSrc}
         alt={symbol}
@@ -66,7 +68,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
         );
         
         // Combine and sort balances
-        const allBalances = [
+        const allBalances: ExtendedTokenBalance[] = [
           {
             address: 'native',
             symbol: 'ETH',
@@ -154,12 +156,12 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {formatEther(token.balance)}
+                    {token.balance}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    ${(parseFloat(formatEther(token.balance)) * parseFloat(token.price || '0')).toFixed(2)}
+                    ${(Number(token.balance) * Number(token.price || '0')).toFixed(2)}
                   </div>
                 </td>
               </tr>
