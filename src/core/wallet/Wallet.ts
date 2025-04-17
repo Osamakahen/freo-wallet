@@ -4,7 +4,7 @@ import { KeyManager } from '../keyManagement/KeyManager';
 import { TransactionManager } from '../transaction/TransactionManager';
 import { NetworkManager } from '../network/NetworkManager';
 import { DAppManager } from '../dapp/DAppManager';
-import { WalletConfig, WalletState } from '../../types/wallet';
+import { WalletConfig, WalletState, TransactionRequest } from '../../types/wallet';
 import { SessionManager } from '../session/SessionManager';
 import { TokenManager } from '../token/TokenManager';
 import { TokenBalance, TransactionReceipt } from '../../types/token';
@@ -83,16 +83,19 @@ export class Wallet {
     this.state.balance = '0';
   }
 
-  async sendTransaction(tx: any): Promise<string> {
-    if (!this.state.isConnected) {
-      throw new Error('Wallet not connected');
-    }
+  async sendTransaction(tx: TransactionRequest): Promise<string> {
     try {
-      const hash = await this.transactionManager.sendTransaction(tx);
+      if (!this.client) {
+        throw new Error('No client available');
+      }
+
+      const signer = this.client.getSigner();
+      const response = await signer.sendTransaction(tx);
       await this.updateBalance();
-      return hash;
+      return response.hash;
     } catch (error) {
-      throw new Error(`Failed to send transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error sending transaction:', error);
+      throw error;
     }
   }
 

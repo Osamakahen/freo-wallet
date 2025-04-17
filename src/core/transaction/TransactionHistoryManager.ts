@@ -3,6 +3,7 @@ import { mainnet } from 'viem/chains';
 import { ERC20_ABI } from '../token/abi/ERC20';
 import { TransactionReceipt } from '../../types/wallet';
 import { CategorizedTransaction } from './types';
+import { Transaction } from '../../types/transaction';
 
 export class TransactionHistoryManager {
   private publicClient: ReturnType<typeof createPublicClient>;
@@ -211,6 +212,23 @@ export class TransactionHistoryManager {
       await this.errorCorrelator.correlateError(
         new WalletError('Failed to process transaction', 'TRANSACTION_PROCESSING_ERROR', { error })
       );
+    }
+  }
+
+  async addTransaction(tx: Transaction): Promise<void> {
+    try {
+      const transaction = {
+        ...tx,
+        timestamp: Date.now(),
+        status: 'pending'
+      };
+
+      this.transactions.push(transaction);
+      await this.saveTransactions();
+      this.emit('transactionAdded', transaction);
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+      throw error;
     }
   }
 } 

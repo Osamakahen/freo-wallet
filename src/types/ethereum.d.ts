@@ -2,12 +2,12 @@ export type EthereumEvent = 'accountsChanged' | 'chainChanged' | 'connect' | 'di
 export type EthereumCallback = (params?: unknown) => void;
 
 export interface EthereumProvider {
-  request: (args: { method: string; params?: any[] }) => Promise<any>;
-  on: (eventName: string, handler: (params: any) => void) => void;
-  removeListener: (eventName: string, handler: (params: any) => void) => void;
-  selectedAddress: string | null;
-  chainId: string | null;
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+  on: (eventName: string, handler: (params: unknown) => void) => void;
+  removeListener: (eventName: string, handler: (params: unknown) => void) => void;
   isMetaMask?: boolean;
+  chainId?: string;
+  selectedAddress?: string;
 }
 
 declare global {

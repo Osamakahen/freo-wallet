@@ -1,5 +1,6 @@
 import { ChainId } from './chain';
 import { Address } from 'viem';
+import { QRCodeModal } from '@walletconnect/qrcode-modal';
 
 export type DAppPermission = 'read' | 'transaction' | 'message-sign' | 'assets' | 'history';
 
@@ -106,16 +107,29 @@ export interface Permission {
 
 export interface DAppRequest {
   method: string;
-  params: any;
-  id?: string | number;
+  params: unknown[];
+  id: number;
 }
 
 export interface DAppResponse {
-  result: any;
+  result: unknown;
   error?: {
     code: number;
     message: string;
-    data?: any;
   };
-  id?: string | number;
+  id: number;
+}
+
+export interface DAppMessage {
+  type: string;
+  data?: unknown;
+}
+
+export interface DAppConnector {
+  qrcodeModal: QRCodeModal;
+  connect: () => Promise<void>;
+  disconnect: () => Promise<void>;
+  send: (request: DAppRequest) => Promise<DAppResponse>;
+  on: (event: string, callback: (data: DAppMessage) => void) => void;
+  off: (event: string, callback: (data: DAppMessage) => void) => void;
 } 
