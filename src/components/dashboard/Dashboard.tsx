@@ -4,16 +4,13 @@ import { Portfolio } from './Portfolio';
 import { DAppConnections } from './DAppConnections';
 import { TransactionHistory } from './TransactionHistory';
 import { TokenManager } from '../../core/token/TokenManager';
-import { TransactionManager } from '../../core/transaction/TransactionManager';
 
 interface DashboardProps {
   tokenManager: TokenManager;
-  transactionManager: TransactionManager;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
   tokenManager,
-  transactionManager,
 }) => {
   const { currentAccount } = useDApp();
   const [activeTab, setActiveTab] = useState<'portfolio' | 'dapps' | 'transactions'>('portfolio');
