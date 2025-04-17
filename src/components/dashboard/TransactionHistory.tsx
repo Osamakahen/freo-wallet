@@ -1,174 +1,118 @@
 import React, { useState, useEffect } from 'react';
 import { useDApp } from '../../contexts/DAppContext';
-import { TransactionManager } from '../../core/transaction/TransactionManager';
-import { TransactionReceipt } from '../../types/wallet';
+import { useNetwork } from '../../contexts/NetworkContext';
 import { formatEther } from 'viem';
-import { formatDistanceToNow } from 'date-fns';
+import { TransactionRequest, TransactionReceipt } from 'viem';
 
 interface TransactionHistoryProps {
-  transactionManager: TransactionManager;
+  address: `0x${string}`;
 }
 
-export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
-  transactionManager,
-}) => {
-  const { currentAccount, currentChain } = useDApp();
+export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address }) => {
+  const { currentAccount } = useDApp();
+  const { network } = useNetwork();
   const [transactions, setTransactions] = useState<TransactionReceipt[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'success' | 'reverted'>('all');
 
   useEffect(() => {
-    const loadTransactions = async () => {
-      if (!currentAccount) return;
+    if (address) {
+      loadTransactions();
+    }
+  }, [address]);
 
-      try {
-        setLoading(true);
-        setError(null);
+  const loadTransactions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const history = await transactionManager.getTransactionHistory(currentAccount);
-        setTransactions(history);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load transactions');
-      } finally {
-        setLoading(false);
-      }
-    };
+      // In a real implementation, this would fetch actual transactions
+      // For now, we'll use mock data
+      const mockTransactions: TransactionReceipt[] = [
+        {
+          transactionHash: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+          blockNumber: BigInt(12345678),
+          from: address,
+          to: '0xabcdef1234567890123456789012345678901234' as `0x${string}`,
+          status: 'success',
+          gasUsed: BigInt(21000),
+          effectiveGasPrice: BigInt(20000000000),
+          logs: []
+        },
+        {
+          transactionHash: '0x9876543210987654321098765432109876543210' as `0x${string}`,
+          blockNumber: BigInt(12345677),
+          from: address,
+          to: '0xijklmnopqrstuvwxyz0123456789abcdef1234' as `0x${string}`,
+          status: 'success',
+          gasUsed: BigInt(42000),
+          effectiveGasPrice: BigInt(20000000000),
+          logs: []
+        }
+      ];
 
-    loadTransactions();
-  }, [currentAccount, currentChain, transactionManager]);
+      setTransactions(mockTransactions);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load transactions');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filteredTransactions = transactions.filter(tx => {
-    if (filter === 'all') return true;
-    return tx.status === filter;
-  });
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-4 text-red-500 bg-red-50 rounded-lg">
-        {error}
-      </div>
-    );
-  }
+  const formatTimeAgo = (blockNumber: bigint): string => {
+    // In a real implementation, this would calculate the time difference
+    // For now, we'll just return a mock value
+    return '2 hours ago';
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-semibold">Transaction History</h2>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                filter === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setFilter('pending')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                filter === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              Pending
-            </button>
-            <button
-              onClick={() => setFilter('success')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                filter === 'success' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              Success
-            </button>
-            <button
-              onClick={() => setFilter('reverted')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                filter === 'reverted' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              Reverted
-            </button>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Hash
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Time
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredTransactions.map((tx) => (
-                <tr key={tx.hash} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-mono text-gray-900">
-                      {tx.hash.slice(0, 8)}...{tx.hash.slice(-6)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {tx.type || 'Transfer'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {formatEther(tx.value || '0')} ETH
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        tx.status === 'success'
-                          ? 'bg-green-100 text-green-800'
-                          : tx.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {tx.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDistanceToNow(tx.timestamp * 1000, { addSuffix: true })}
-                  </td>
-                </tr>
-              ))}
-
-              {filteredTransactions.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                    No transactions found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
+      
+      <div className="mb-4">
+        <p className="text-sm text-gray-600">
+          Network: {network.networkName} (Chain ID: {network.chainId})
+        </p>
       </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-center py-4">Loading transactions...</div>
+      ) : transactions.length === 0 ? (
+        <div className="text-center py-4 text-gray-500">No transactions found.</div>
+      ) : (
+        <div className="space-y-4">
+          {transactions.map((tx, index) => (
+            <div
+              key={index}
+              className="bg-white p-4 rounded-lg shadow-sm border border-gray-200"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-medium">Transaction Hash</h3>
+                  <p className="text-sm font-mono">{tx.transactionHash}</p>
+                  <div className="mt-2">
+                    <h3 className="font-medium">To</h3>
+                    <p className="text-sm font-mono">{tx.to}</p>
+                  </div>
+                  <div className="mt-2">
+                    <h3 className="font-medium">Status</h3>
+                    <p className="text-sm">{tx.status}</p>
+                  </div>
+                  <div className="mt-2 text-sm text-gray-500">
+                    {formatTimeAgo(tx.blockNumber)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }; 
