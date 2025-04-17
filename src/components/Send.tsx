@@ -1,162 +1,113 @@
-import React, { useState } from 'react';
-import { ethers } from 'ethers';
-import { useWallet } from '../contexts/WalletContext';
-import { useTransactions } from '../contexts/TransactionContext';
+import React, { useState, useEffect } from 'react';
+import { useDApp } from '../contexts/DAppContext';
 import { useNetwork } from '../contexts/NetworkContext';
-import { useAddressBook } from '../contexts/AddressBookContext';
+import { TokenManager } from '../core/token/TokenManager';
+import { formatEther } from 'viem';
 
-interface SendFormData {
-  recipient: string;
-  amount: string;
-  token: string;
-  gasPrice: string;
+interface SendProps {
+  onSend: (to: string, amount: string, tokenAddress?: string) => void;
+  balance: string;
+  tokens: Array<{
+    address: string;
+    symbol: string;
+    balance: string;
+  }>;
 }
 
-export const Send: React.FC = () => {
-  const { address } = useWallet();
-  const { sendTransaction } = useTransactions();
-  const { chainId } = useNetwork();
-  const { contacts } = useAddressBook();
-
-  const [formData, setFormData] = useState<SendFormData>({
-    recipient: '',
-    amount: '',
-    token: 'ETH',
-    gasPrice: ''
-  });
-
+export const Send: React.FC<SendProps> = ({ onSend, balance, tokens }) => {
+  const { currentAccount: address } = useDApp();
+  const { network } = useNetwork();
+  const [to, setTo] = useState('');
+  const [amount, setAmount] = useState('');
+  const [selectedToken, setSelectedToken] = useState<string>('ETH');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setError(null);
-  };
-
-  const validateForm = (): boolean => {
-    if (!formData.recipient || !ethers.isAddress(formData.recipient)) {
-      setError('Invalid recipient address');
-      return false;
-    }
-
-    if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      setError('Invalid amount');
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!validateForm()) {
-      return;
-    }
-
+  const handleSend = async () => {
     try {
-      setIsLoading(true);
+      setLoading(true);
+      setError(null);
 
-      const transaction = {
-        from: address as `0x${string}`,
-        to: formData.recipient as `0x${string}`,
-        value: ethers.parseEther(formData.amount).toString(),
-        chainId: chainId || undefined
-      };
+      if (!address) {
+        throw new Error('No wallet connected');
+      }
 
-      const txHash = await sendTransaction(transaction);
-      console.log('Transaction sent:', txHash);
+      if (!to || !amount) {
+        throw new Error('Please fill in all fields');
+      }
 
-      // Reset form
-      setFormData({
-        recipient: '',
-        amount: '',
-        token: 'ETH',
-        gasPrice: ''
-      });
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to send transaction');
+      const token = tokens.find(t => t.symbol === selectedToken);
+      await onSend(to, amount, token?.address);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send transaction');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4">Send</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Recipient</label>
+    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-4">Send {selectedToken}</h2>
+      
+      <div className="mb-4">
+        <label className="block text-gray-700 text-sm font-bold mb-2">
+          To Address
+        </label>
+        <input
+          type="text"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="0x..."
+        />
+      </div>
+
+      <div className="mb-4">
+        <label className="block text-gray-700 text-sm font-bold mb-2">
+          Amount
+        </label>
+        <div className="flex">
           <input
             type="text"
-            name="recipient"
-            value={formData.recipient}
-            onChange={handleInputChange}
-            placeholder="0x..."
-            className="w-full p-2 border rounded"
-            list="contacts"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="flex-1 px-3 py-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="0.0"
           />
-          <datalist id="contacts">
-            {contacts.map(contact => (
-              <option key={contact.id} value={contact.address}>
-                {contact.name}
+          <select
+            value={selectedToken}
+            onChange={(e) => setSelectedToken(e.target.value)}
+            className="px-3 py-2 border-t border-r border-b rounded-r-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="ETH">ETH</option>
+            {tokens.map((token) => (
+              <option key={token.address} value={token.symbol}>
+                {token.symbol}
               </option>
             ))}
-          </datalist>
+          </select>
         </div>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Amount</label>
-          <div className="flex space-x-2">
-            <input
-              type="number"
-              name="amount"
-              value={formData.amount}
-              onChange={handleInputChange}
-              placeholder="0.0"
-              step="0.000000000000000001"
-              min="0"
-              className="flex-1 p-2 border rounded"
-            />
-            <select
-              name="token"
-              value={formData.token}
-              onChange={handleInputChange}
-              className="p-2 border rounded"
-            >
-              <option value="ETH">ETH</option>
-              {/* Add more tokens here */}
-            </select>
-          </div>
+      <div className="mb-4">
+        <p className="text-sm text-gray-600">
+          Available Balance: {formatEther(BigInt(balance))} {selectedToken}
+        </p>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+          {error}
         </div>
+      )}
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Gas Price (Gwei)</label>
-          <input
-            type="number"
-            name="gasPrice"
-            value={formData.gasPrice}
-            onChange={handleInputChange}
-            placeholder="Auto"
-            min="0"
-            className="w-full p-2 border rounded"
-          />
-        </div>
-
-        {error && (
-          <div className="text-red-500 text-sm">{error}</div>
-        )}
-
-        <button
-          type="submit"
-          disabled={isLoading || !address}
-          className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 disabled:bg-gray-400"
-        >
-          {isLoading ? 'Sending...' : 'Send'}
-        </button>
-      </form>
+      <button
+        onClick={handleSend}
+        disabled={loading}
+        className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {loading ? 'Sending...' : 'Send'}
+      </button>
     </div>
   );
 }; 
