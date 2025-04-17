@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useDApp } from '../../contexts/DAppContext';
 import { TokenManager } from '../../core/token/TokenManager';
-import { formatEther, parseEther } from 'viem';
+import { formatEther } from 'viem';
 
 interface ExtendedTokenBalance {
   address: string;
