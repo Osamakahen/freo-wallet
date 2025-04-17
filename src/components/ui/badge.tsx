@@ -1,9 +1,9 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
 
-type BadgeVariant = "default" | "secondary" | "destructive" | "outline"
+export type BadgeVariant = "default" | "secondary" | "destructive" | "outline"
 
-interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: BadgeVariant
 }
 
@@ -27,4 +27,4 @@ function Badge({ className, variant = "default", ...props }: BadgeProps) {
   )
 }
 
-export { Badge, type BadgeVariant } 
+export { Badge } 
