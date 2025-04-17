@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useDApp } from '../../contexts/DAppContext';
 import { TokenManager } from '../../core/token/TokenManager';
-import { TokenBalance } from '../../types/token';
+import { TokenBalance, TokenInfo } from '../../types/token';
 import { formatEther } from 'ethers';
 import { useWallet } from '../../contexts/WalletContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -12,6 +12,11 @@ import { ScrollArea } from '../ui/scroll-area';
 
 interface PortfolioProps {
   tokenManager: TokenManager;
+}
+
+interface ExtendedTokenBalance extends TokenBalance {
+  info?: TokenInfo;
+  price?: number;
 }
 
 const TokenImage: React.FC<{ address: string; symbol: string }> = ({ address, symbol }) => {
@@ -33,7 +38,7 @@ const TokenImage: React.FC<{ address: string; symbol: string }> = ({ address, sy
 
 export const Portfolio = () => {
   const { wallet } = useWallet();
-  const [balances, setBalances] = useState<TokenBalance[]>([]);
+  const [balances, setBalances] = useState<ExtendedTokenBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,7 +52,12 @@ export const Portfolio = () => {
         const allBalances = await Promise.all(
           tokenList.map(async (tokenAddress) => {
             const balance = await wallet.getTokenBalance(tokenAddress, wallet.getState().address!);
-            return balance;
+            const info = await wallet.getTokenInfo(tokenAddress);
+            return {
+              ...balance,
+              info,
+              price: 0 // TODO: Fetch actual price from price feed
+            };
           })
         );
         setBalances(allBalances);
@@ -84,7 +94,7 @@ export const Portfolio = () => {
   }
 
   const totalValue = balances.reduce((sum, balance) => {
-    const value = balance.price ? Number(balance.balance) * Number(balance.price) : 0;
+    const value = balance.price ? Number(balance.balance) * balance.price : 0;
     return sum + value;
   }, 0);
 
@@ -98,19 +108,19 @@ export const Portfolio = () => {
         <ScrollArea className="h-[400px]">
           <div className="space-y-4">
             {balances.map((balance) => (
-              <div key={balance.address} className="flex items-center justify-between p-4 border rounded-lg">
+              <div key={balance.tokenAddress} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-4">
-                  <img src={balance.logo} alt={balance.symbol} className="w-8 h-8" />
+                  <TokenImage address={balance.tokenAddress} symbol={balance.info?.symbol || 'TOKEN'} />
                   <div>
-                    <div className="font-medium">{balance.symbol}</div>
-                    <div className="text-sm text-gray-500">{balance.name}</div>
+                    <div className="font-medium">{balance.info?.symbol || 'TOKEN'}</div>
+                    <div className="text-sm text-gray-500">{balance.info?.name || 'Unknown Token'}</div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-medium">{balance.balance}</div>
+                  <div className="font-medium">{formatEther(balance.balance)}</div>
                   {balance.price && (
                     <div className="text-sm text-gray-500">
-                      ${(Number(balance.balance) * Number(balance.price)).toFixed(2)}
+                      ${(Number(balance.balance) * balance.price).toFixed(2)}
                     </div>
                   )}
                 </div>
