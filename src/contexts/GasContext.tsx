@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { GasManager } from '../core/gas/GasManager';
 import { GasEstimate, GasPrice, GasHistory, GasSimulationResult } from '../types/gas';
+import { ErrorCorrelator } from '../core/error/ErrorCorrelator';
 import { toast } from 'react-toastify';
 
 interface GasContextType {
@@ -27,7 +28,11 @@ interface GasContextType {
 const GasContext = createContext<GasContextType | undefined>(undefined);
 
 export const GasProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [gasManager] = useState(() => new GasManager(process.env.REACT_APP_RPC_URL || 'https://eth-mainnet.g.alchemy.com/v2/your-api-key'));
+  const [errorCorrelator] = useState(() => new ErrorCorrelator());
+  const [gasManager] = useState(() => new GasManager(
+    process.env.REACT_APP_RPC_URL || 'https://eth-mainnet.g.alchemy.com/v2/your-api-key',
+    errorCorrelator
+  ));
   const [gasPrices, setGasPrices] = useState<GasPrice | null>(null);
   const [gasHistory, setGasHistory] = useState<GasHistory | null>(null);
   const [loading, setLoading] = useState(false);
@@ -69,9 +74,8 @@ export const GasProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       setLoading(true);
       setError(null);
-      const estimate = await gasManager.estimateGas(from, to, value, data);
+      const estimate = await gasManager.getGasEstimate(from, to, value, data);
       setGasEstimate({
-        ...estimate,
         gasLimit: estimate.gasLimit.toString(),
         maxFeePerGas: estimate.maxFeePerGas.toString(),
         maxPriorityFeePerGas: estimate.maxPriorityFeePerGas.toString()
@@ -95,7 +99,16 @@ export const GasProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       setLoading(true);
       setError(null);
-      await gasManager.updateGasSettings(settings);
+      await gasManager.getOptimalGasSettings(
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000',
+        '0',
+        '0x',
+        {
+          maxGasLimit: settings.gasLimit,
+          maxCost: settings.maxFeePerGas
+        }
+      );
       toast.success('Gas settings updated', {
         position: 'top-right',
         autoClose: 3000,
