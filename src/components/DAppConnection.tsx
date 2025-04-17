@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDApp } from '../contexts/DAppContext';
-import { DAppMetadata, Permission, SessionPermissions } from '../types/dapp';
+import { DAppMetadata, SessionPermissions } from '../types/dapp';
 import Image from 'next/image';
 
 interface DAppConnectionProps {
