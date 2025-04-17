@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDApp } from '../contexts/DAppContext';
-import { DAppMetadata, Permission } from '../types/dapp';
+import { DAppMetadata } from '../types/dapp';
+import { SessionPermissions } from '../types/session';
 import Image from 'next/image';
 
 interface DAppConnectionProps {
@@ -16,7 +17,7 @@ export const DAppConnection: React.FC<DAppConnectionProps> = ({
   onError,
   onSuccess
 }) => {
-  const { connect, requestAccounts, requestPermissions } = useDApp();
+  const { connect, requestPermissions, requestAccounts } = useDApp();
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,14 +26,15 @@ export const DAppConnection: React.FC<DAppConnectionProps> = ({
       setIsConnecting(true);
       setError(null);
 
-      const permissionsToRequest: Permission[] = [
-        { type: 'read', description: 'Read wallet information' },
-        { type: 'write', description: 'Write wallet information' },
-        { type: 'message-sign', description: 'Sign messages' },
-        { type: 'nft-access', description: 'Access NFTs' }
-      ];
+      const permissions: SessionPermissions = {
+        read: true,
+        write: true,
+        sign: true,
+        connect: true,
+        disconnect: true
+      };
 
-      await requestPermissions(permissionsToRequest);
+      await requestPermissions(permissions);
       await connect();
       const accounts = await requestAccounts();
       onConnect(accounts);
