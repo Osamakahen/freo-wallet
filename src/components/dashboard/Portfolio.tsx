@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { useDApp } from '../../contexts/DAppContext';
 import { TokenManager } from '../../core/token/TokenManager';
 import { TokenBalance } from '../../types/token';
-import { formatEther } from 'ethers/lib/utils';
+import { formatEther } from 'ethers';
 import { useWallet } from '@/contexts/WalletContext';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,7 +15,7 @@ interface PortfolioProps {
 }
 
 interface TokenData extends TokenBalance {
-  address: string;
+  address: `0x${string}`;
   symbol: string;
   name: string;
   price?: string;
@@ -45,11 +45,11 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
         const tokenList = await tokenManager.getTokenList();
         const allBalances = await Promise.all(
           tokenList.map(async (tokenAddress) => {
-            const balance = await tokenManager.getTokenBalance(tokenAddress, address);
-            const info = await tokenManager.getTokenInfo(tokenAddress);
+            const balance = await tokenManager.getTokenBalance(tokenAddress as `0x${string}`, address);
+            const info = await tokenManager.getTokenInfo(tokenAddress as `0x${string}`);
             return {
               ...balance,
-              address: tokenAddress,
+              address: tokenAddress as `0x${string}`,
               symbol: info.symbol,
               name: info.name,
               price: '0' // TODO: Fetch actual price from price feed
