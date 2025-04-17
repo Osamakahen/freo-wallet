@@ -4,7 +4,6 @@ import { DAppConnections } from '../DAppConnections';
 import TransactionHistory from '../TransactionHistory';
 import { TokenManager } from '../../core/token/TokenManager';
 import { useWallet } from '../../hooks/useWallet';
-import { type Address } from 'viem';
 
 interface DashboardProps {
   tokenManager: TokenManager;
