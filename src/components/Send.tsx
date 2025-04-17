@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useDApp } from '../contexts/DAppContext';
-import { useNetwork } from '../contexts/NetworkContext';
 import { formatEther } from 'viem';
 
 interface SendProps {
@@ -15,7 +14,6 @@ interface SendProps {
 
 export const Send: React.FC<SendProps> = ({ onSend, balance, tokens }) => {
   const { currentAccount: address } = useDApp();
-  const { network } = useNetwork();
   const [to, setTo] = useState('');
   const [amount, setAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState<string>('ETH');
