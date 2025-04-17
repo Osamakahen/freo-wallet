@@ -27,6 +27,7 @@ export interface DAppSession {
   permissions: DAppPermission[];
   expiresAt: number;
   deviceFingerprint: string;
+  timestamp: number;
 }
 
 export interface DAppMetadata {

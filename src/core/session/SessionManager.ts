@@ -14,6 +14,7 @@ import { ErrorCorrelator } from '../error/ErrorCorrelator';
 import { SessionTokenManager } from './SessionTokenManager';
 import { EnhancedSessionManager } from './EnhancedSessionManager';
 import { AnalyticsService } from '../../services/AnalyticsService';
+import { DeviceFingerprint } from '../security/DeviceFingerprint';
 
 interface ISession {
   id: string;

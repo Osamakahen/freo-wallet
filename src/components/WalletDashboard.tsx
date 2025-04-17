@@ -132,4 +132,4 @@ export const WalletDashboard: React.FC<Props> = ({ wallet }) => {
       </div>
     </div>
   );
-}; 
+};

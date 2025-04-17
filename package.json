@@ -64,6 +64,7 @@
     "cross-env": "^7.0.3",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.1.0",
+    "eslint-formatter-table": "^7.32.1",
     "jose": "^5.2.2",
     "node-localstorage": "^3.0.5",
     "postcss": "^8.4.31",

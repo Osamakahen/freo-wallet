@@ -14,6 +14,7 @@ import { WalletError, DAppError, TransactionError } from '../error/ErrorHandler'
 import { ErrorCorrelator } from '../error/ErrorCorrelator'
 import { PermissionManager } from '../security/PermissionManager'
 import { type Address } from 'viem'
+import { DAppMessage } from '../../types/dapp'
 
 export class DAppBridge {
   private static instance: DAppBridge | null = null;

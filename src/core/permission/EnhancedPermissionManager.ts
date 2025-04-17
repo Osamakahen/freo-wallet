@@ -1,4 +1,5 @@
 import { Permission } from '../../types/permission';
+import { PermissionRequest } from '../../types/permission';
 import { WalletError } from '../error/ErrorHandler';
 import { ErrorCorrelator } from '../error/ErrorCorrelator';
 import { AnalyticsService } from '../../services/AnalyticsService';

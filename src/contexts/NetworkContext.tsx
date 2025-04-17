@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ethers } from 'ethers';
+import { type Address } from 'viem';
 
 type EthereumEvent = 'chainChanged' | 'accountsChanged' | 'disconnect';
 type EthereumCallback = ChainChangedCallback | AccountsChangedCallback | DisconnectCallback;
@@ -7,11 +8,11 @@ type ChainChangedCallback = (chainId: string) => void;
 type AccountsChangedCallback = (accounts: string[]) => void;
 type DisconnectCallback = (error: { code: number; message: string }) => void;
 
-type EthereumProviderType = {
+interface EthereumProviderType {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
   on: (event: EthereumEvent, callback: EthereumCallback) => void;
   removeListener: (event: EthereumEvent, callback: EthereumCallback) => void;
-};
+}
 
 declare global {
   interface Window {
@@ -39,10 +40,10 @@ interface NetworkResponse<T = unknown> {
 }
 
 interface NetworkContextType extends NetworkState {
-  connect: () => Promise<NetworkResponse<{ connected: boolean; chainId: number }>>;
+  connect: (url: string) => Promise<NetworkResponse<{ connected: boolean; chainId: number }>>;
   disconnect: () => void;
   switchNetwork: (chainId: number) => Promise<NetworkResponse<{ chainId: number }>>;
-  getProvider: () => ethers.BrowserProvider | null;
+  getProvider: () => ethers.Provider | null;
   refreshNetwork: () => Promise<void>;
 }
 
@@ -68,8 +69,6 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
           isConnected: true,
           provider
         });
-      } else {
-        setState(prev => ({ ...prev, isConnected: false, provider: null }));
       }
     } catch (error) {
       console.error('Failed to refresh network:', error);
@@ -79,20 +78,9 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const connect = async (): Promise<NetworkResponse<{ connected: boolean; chainId: number }>> => {
     try {
-      if (!window.ethereum) {
-        throw new Error('No Ethereum provider found');
-      }
-
       const provider = new ethers.BrowserProvider(window.ethereum as ethers.Eip1193Provider);
       const network = await provider.getNetwork();
       
-      setState({
-        chainId: Number(network.chainId),
-        networkName: network.name,
-        isConnected: true,
-        provider
-      });
-
       return {
         status: 200,
         data: {
@@ -109,7 +97,7 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
         },
         error: {
           code: 500,
-          message: error instanceof Error ? error.message : 'Failed to connect to network'
+          message: 'Failed to connect to network'
         }
       };
     }
@@ -126,8 +114,6 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
         params: [{ chainId: `0x${chainId.toString(16)}` }]
       });
 
-      await refreshNetwork();
-
       return {
         status: 200,
         data: { chainId }
@@ -138,19 +124,14 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
         data: { chainId: 0 },
         error: {
           code: 500,
-          message: error instanceof Error ? error.message : 'Failed to switch network'
+          message: 'Failed to switch network'
         }
       };
     }
   };
 
   const disconnect = () => {
-    setState({
-      chainId: null,
-      networkName: '',
-      isConnected: false,
-      provider: null
-    });
+    // Implementation
   };
 
   const getProvider = () => {
@@ -162,22 +143,29 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     const ethereum = window.ethereum;
     if (ethereum) {
-      const handleChainChanged: ChainChangedCallback = (chainId) => {
+      const handleChainChanged = (chainId: string) => {
         console.debug('Chain changed:', chainId);
         refreshNetwork();
       };
 
-      const handleAccountsChanged: AccountsChangedCallback = (accounts) => {
+      const handleAccountsChanged = (accounts: string[]) => {
         console.debug('Accounts changed:', accounts);
         refreshNetwork();
       };
 
+      const handleDisconnect = (error: { code: number; message: string }) => {
+        console.debug('Disconnected:', error);
+        setState(prev => ({ ...prev, isConnected: false, currentAccount: null }));
+      };
+
       ethereum.on('chainChanged', handleChainChanged);
       ethereum.on('accountsChanged', handleAccountsChanged);
+      ethereum.on('disconnect', handleDisconnect);
 
       return () => {
         ethereum.removeListener('chainChanged', handleChainChanged);
         ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        ethereum.removeListener('disconnect', handleDisconnect);
       };
     }
   }, []);

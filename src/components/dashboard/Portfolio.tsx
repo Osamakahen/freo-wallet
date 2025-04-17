@@ -14,6 +14,12 @@ interface PortfolioProps {
   tokenManager: TokenManager;
 }
 
+interface TokenData extends TokenBalance {
+  symbol: string;
+  name: string;
+  price: string;
+}
+
 const TokenImage: React.FC<{ address: string; symbol: string }> = ({ address, symbol }) => {
   const [imgSrc, setImgSrc] = useState(`https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${address}/logo.png`);
 
@@ -33,8 +39,8 @@ const TokenImage: React.FC<{ address: string; symbol: string }> = ({ address, sy
 
 export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
   const { currentAccount, currentChain } = useDApp();
-  const { state } = useWallet();
-  const [balances, setBalances] = useState<TokenBalance[]>([]);
+  const { address, balance } = useWallet();
+  const [balances, setBalances] = useState<TokenData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalValue, setTotalValue] = useState<string>('0');
@@ -48,24 +54,29 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
         setError(null);
 
         // Load native token balance
-        const nativeBalance = await tokenManager.getBalance(currentAccount);
+        const nativeBalance = await tokenManager.getBalance(currentAccount, currentChain);
         
         // Load ERC20 token balances
-        const tokenBalances = await tokenManager.getTokenBalances(currentAccount);
+        const tokenBalances = await tokenManager.getTokenBalance(currentAccount, currentChain);
         
         // Combine and sort balances
-        const allBalances = [
+        const allBalances: TokenData[] = [
           {
-            address: 'native',
-            symbol: 'ETH',
             balance: nativeBalance,
             decimals: 18,
-            price: '0', // In production, fetch from price feed
+            symbol: 'ETH',
+            name: 'Ethereum',
+            price: '2000' // Mock price
           },
-          ...tokenBalances,
+          ...tokenBalances.map(balance => ({
+            ...balance,
+            symbol: 'TOKEN', // Replace with actual symbol
+            name: 'Token', // Replace with actual name
+            price: '1' // Mock price
+          }))
         ].sort((a, b) => {
-          const valueA = parseFloat(formatEther(a.balance)) * parseFloat(a.price || '0');
-          const valueB = parseFloat(formatEther(b.balance)) * parseFloat(b.price || '0');
+          const valueA = parseFloat(formatEther(a.balance)) * parseFloat(a.price);
+          const valueB = parseFloat(formatEther(b.balance)) * parseFloat(b.price);
           return valueB - valueA;
         });
 
@@ -73,7 +84,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
 
         // Calculate total value
         const total = allBalances.reduce((sum, token) => {
-          const value = parseFloat(formatEther(token.balance)) * parseFloat(token.price || '0');
+          const value = parseFloat(formatEther(token.balance)) * parseFloat(token.price);
           return sum + value;
         }, 0);
 
@@ -89,20 +100,19 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
   }, [currentAccount, currentChain, tokenManager]);
 
   useEffect(() => {
-    if (state.address) {
+    if (address) {
       // Mock tokens for now - replace with actual token fetching
       setBalances([
         {
-          address: '0x0000000000000000000000000000000000000000',
+          balance: balance || '0',
+          decimals: 18,
           symbol: 'ETH',
           name: 'Ethereum',
-          decimals: 18,
-          balance: state.balance || '0',
           price: '2000'
         }
       ]);
     }
-  }, [state]);
+  }, [address, balance]);
 
   if (loading) {
     return (
@@ -128,8 +138,8 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
           <p className="text-gray-500">No tokens found</p>
         ) : (
           <div className="space-y-4">
-            {balances.map((token) => (
-              <Card key={token.address} className="p-4">
+            {balances.map((token, index) => (
+              <Card key={index} className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
