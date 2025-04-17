@@ -18,7 +18,6 @@ export const GasSettings: React.FC<GasSettingsProps> = ({
   const {
     gasManager,
     gasPrices,
-    gasHistory,
     loading,
     error,
     simulationResult,
@@ -131,16 +130,6 @@ export const GasSettings: React.FC<GasSettingsProps> = ({
           </div>
         </div>
       </div>
-
-      {gasHistory && (
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Gas Price History</h3>
-          <div className="h-64">
-            {/* Add your chart component here */}
-            <p className="text-sm text-gray-500">Chart implementation pending</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }; 
