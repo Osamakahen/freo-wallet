@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { NetworkManager } from '../core/network/NetworkManager';
-import { ErrorCorrelator } from '../core/error/ErrorCorrelator';
 import { toast } from 'react-toastify';
 import { mainnet } from 'viem/chains';
 
@@ -20,7 +19,6 @@ interface NetworkContextType {
 const NetworkContext = createContext<NetworkContextType | undefined>(undefined);
 
 export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [errorCorrelator] = useState(() => ErrorCorrelator.getInstance());
   const [networkManager] = useState(() => new NetworkManager({
     networkName: mainnet.name,
     chainId: mainnet.id,
@@ -32,7 +30,8 @@ export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleChainChanged = (newChainId: string) => {
+    const handleChainChanged = (params: unknown) => {
+      const newChainId = params as string;
       setChainId(newChainId);
       toast.info(`Network changed to ${newChainId}`, {
         position: 'top-right',
@@ -40,7 +39,8 @@ export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     };
 
-    const handleAccountsChanged = (accounts: string[]) => {
+    const handleAccountsChanged = (params: unknown) => {
+      const accounts = params as string[];
       if (accounts.length === 0) {
         toast.warning('Please connect your wallet', {
           position: 'top-right',
