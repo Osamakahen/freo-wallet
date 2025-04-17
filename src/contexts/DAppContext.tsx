@@ -6,12 +6,8 @@ import { KeyManager } from '../core/keyManagement/KeyManager';
 import { 
   BridgeConfig, 
   TransactionRequest, 
-  SessionPermissions, 
-  DAppManifest, 
-  DAppPermission, 
   Permission, 
-  DAppResponse,
-  BridgeEvents
+  DAppResponse
 } from '../types/dapp';
 import { TransactionRequest as WalletTransactionRequest } from '../types/wallet';
 import { toast } from 'react-toastify';
