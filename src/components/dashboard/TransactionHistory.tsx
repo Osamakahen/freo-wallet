@@ -1,123 +1,121 @@
 import React, { useState, useEffect } from 'react';
 import { useNetwork } from '../../contexts/NetworkContext';
-import { TransactionReceipt } from 'viem';
+import { useWallet } from '../../contexts/WalletContext';
+import { formatEther } from 'ethers/lib/utils';
+import { toast } from 'react-toastify';
 
-interface TransactionHistoryProps {
-  address: `0x${string}`;
+interface Transaction {
+  hash: string;
+  from: string;
+  to: string;
+  value: string;
+  timestamp: number;
+  status: 'pending' | 'confirmed' | 'failed';
 }
 
-export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address }) => {
-  const { network } = useNetwork();
-  const [transactions, setTransactions] = useState<TransactionReceipt[]>([]);
+export const TransactionHistory: React.FC = () => {
+  const { chainId } = useNetwork();
+  const { address } = useWallet();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (address) {
-      loadTransactions();
-    }
-  }, [address]);
+    const fetchTransactions = async () => {
+      if (!address || !chainId) return;
 
-    const loadTransactions = async () => {
       try {
         setLoading(true);
         setError(null);
 
-      // For now, we'll use mock data
-      const mockTransactions: TransactionReceipt[] = [
-        {
-          transactionHash: '0x1234567890123456789012345678901234567890' as `0x${string}`,
-          blockNumber: BigInt(12345678),
-          from: address,
-          to: '0xabcdef1234567890123456789012345678901234' as `0x${string}`,
-          status: 'success',
-          gasUsed: BigInt(21000),
-          effectiveGasPrice: BigInt(20000000000),
-          logs: [],
-          blockHash: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
-          contractAddress: null,
-          cumulativeGasUsed: BigInt(21000),
-          logsBloom: '0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
-          transactionIndex: 0,
-          type: '0x0' as `0x${string}`
-        },
-        {
-          transactionHash: '0x9876543210987654321098765432109876543210' as `0x${string}`,
-          blockNumber: BigInt(12345677),
-          from: address,
-          to: '0xijklmnopqrstuvwxyz0123456789abcdef1234' as `0x${string}`,
-          status: 'success',
-          gasUsed: BigInt(42000),
-          effectiveGasPrice: BigInt(20000000000),
-          logs: [],
-          blockHash: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
-          contractAddress: null,
-          cumulativeGasUsed: BigInt(42000),
-          logsBloom: '0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
-          transactionIndex: 0,
-          type: '0x0' as `0x${string}`
-        }
-      ];
+        // Here you would typically fetch transactions from your backend or blockchain
+        // For now, we'll just use a mock response
+        const mockTransactions: Transaction[] = [
+          {
+            hash: '0x123...abc',
+            from: address,
+            to: '0x456...def',
+            value: '1000000000000000000', // 1 ETH
+            timestamp: Date.now() - 3600000, // 1 hour ago
+            status: 'confirmed'
+          },
+          {
+            hash: '0x789...ghi',
+            from: address,
+            to: '0x012...jkl',
+            value: '500000000000000000', // 0.5 ETH
+            timestamp: Date.now() - 7200000, // 2 hours ago
+            status: 'pending'
+          }
+        ];
 
-      setTransactions(mockTransactions);
+        setTransactions(mockTransactions);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load transactions');
+        setError(err instanceof Error ? err.message : 'Failed to fetch transactions');
+        toast.error('Failed to fetch transaction history', {
+          position: 'top-right',
+          autoClose: 5000,
+        });
       } finally {
         setLoading(false);
       }
     };
 
-  const formatTimeAgo = (): string => {
-    // In a real implementation, this would calculate the time difference
-    // For now, we'll just return a mock value
-    return '2 hours ago';
-  };
+    fetchTransactions();
+  }, [address, chainId]);
+
+  if (loading) {
+    return <div className="text-blue-500">Loading transaction history...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
+  }
+
+  if (!address) {
+    return <div className="text-gray-500">Please connect your wallet to view transaction history</div>;
+  }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">Transaction History</h2>
       
-      <div className="mb-4">
-        <p className="text-sm text-gray-600">
-          Network: {network.networkName} (Chain ID: {network.chainId})
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-        {error}
-      </div>
-      )}
-
-      {loading ? (
-        <div className="text-center py-4">Loading transactions...</div>
-      ) : transactions.length === 0 ? (
-        <div className="text-center py-4 text-gray-500">No transactions found.</div>
+      {transactions.length === 0 ? (
+        <p className="text-gray-500">No transactions found</p>
       ) : (
         <div className="space-y-4">
-          {transactions.map((tx, index) => (
+          {transactions.map((tx) => (
             <div
-              key={index}
-              className="bg-white p-4 rounded-lg shadow-sm border border-gray-200"
+              key={tx.hash}
+              className="p-4 bg-white rounded-lg shadow-sm border border-gray-200"
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-medium">Transaction Hash</h3>
-                  <p className="text-sm font-mono">{tx.transactionHash}</p>
-                  <div className="mt-2">
-                    <h3 className="font-medium">To</h3>
-                    <p className="text-sm font-mono">{tx.to}</p>
-                  </div>
-                  <div className="mt-2">
-                    <h3 className="font-medium">Status</h3>
-                    <p className="text-sm">{tx.status}</p>
-                  </div>
-                  <div className="mt-2 text-sm text-gray-500">
-                    {formatTimeAgo()}
-          </div>
-        </div>
-                    </div>
-                    </div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {tx.to === address ? 'Received' : 'Sent'} {formatEther(tx.value)} ETH
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(tx.timestamp).toLocaleString()}
+                  </p>
+                </div>
+                <span
+                  className={`px-2 py-1 text-xs rounded-full ${
+                    tx.status === 'confirmed'
+                      ? 'bg-green-100 text-green-800'
+                      : tx.status === 'pending'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}
+                >
+                  {tx.status}
+                </span>
+              </div>
+              <div className="mt-2">
+                <p className="text-xs text-gray-500 break-all">
+                  Hash: {tx.hash}
+                </p>
+              </div>
+            </div>
           ))}
         </div>
       )}
