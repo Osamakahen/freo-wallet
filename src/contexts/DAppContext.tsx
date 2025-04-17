@@ -6,8 +6,7 @@ import { KeyManager } from '../core/keyManagement/KeyManager';
 import { 
   BridgeConfig, 
   Permission,
-  DAppResponse,
-  SessionPermissions
+  DAppResponse
 } from '../types/dapp';
 import { TransactionRequest } from '../types/wallet';
 import { toast } from 'react-toastify';
@@ -144,9 +143,10 @@ export const DAppProvider: React.FC<{
   const sendTransaction = useCallback(async (transaction: TransactionRequest) => {
     try {
       setLoading(true);
+      setError(null);
       const response = await bridge.sendTransaction(transaction);
       if (response.error) {
-        throw new Error(response.error);
+        throw new Error(response.error.message || 'Transaction failed');
       }
       return response.result as string;
     } catch (err) {
