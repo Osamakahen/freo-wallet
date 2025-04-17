@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { WalletProvider, useWallet } from './contexts/WalletContext';
+import { DAppProvider, useDApp } from './contexts/DAppContext';
 import { TokenProvider } from './contexts/TokenContext';
 import { TransactionProvider } from './contexts/TransactionContext';
 import { GasProvider } from './contexts/GasContext';
@@ -29,7 +29,7 @@ const networkManager = new NetworkManager({
 });
 
 const AppContent: React.FC = () => {
-  const { address, isConnected } = useWallet();
+  const { currentAccount: address, isConnected } = useDApp();
   
   // Only render routes if wallet is connected
   if (!isConnected || !address) {
@@ -128,7 +128,15 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <WalletProvider>
+    <DAppProvider config={{
+      defaultChain: mainnet.id,
+      rpcUrl: mainnet.rpcUrls.default.http[0],
+      autoConnect: true,
+      sessionTimeout: 3600,
+      maxConnections: 10,
+      requireConfirmation: true,
+      qrcodeModal: null,
+    }}>
       <NetworkProvider>
         <TokenProvider>
           <TransactionProvider>
@@ -142,7 +150,7 @@ const App: React.FC = () => {
           </TransactionProvider>
         </TokenProvider>
       </NetworkProvider>
-    </WalletProvider>
+    </DAppProvider>
   );
 };
 
