@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNetwork } from '../../contexts/NetworkContext';
 import { useWallet } from '../../contexts/WalletContext';
-import { formatEther } from 'ethers/lib/utils';
+import { formatEther } from 'ethers';
 import { toast } from 'react-toastify';
 
 interface Transaction {
