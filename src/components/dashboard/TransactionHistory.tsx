@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDApp } from '../../contexts/DAppContext';
 import { useNetwork } from '../../contexts/NetworkContext';
-import { formatEther } from 'viem';
 import { TransactionRequest, TransactionReceipt } from 'viem';
 
 interface TransactionHistoryProps {
