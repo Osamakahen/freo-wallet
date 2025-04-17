@@ -10,13 +10,13 @@ type DisconnectCallback = (error: { code: number; message: string }) => void;
 
 interface EthereumProviderType {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-  on: (event: EthereumEvent, callback: EthereumCallback) => void;
-  removeListener: (event: EthereumEvent, callback: EthereumCallback) => void;
+  on: (event: string, callback: unknown) => void;
+  removeListener: (event: string, callback: unknown) => void;
 }
 
 declare global {
   interface Window {
-    ethereum?: EthereumProviderType;
+    ethereum: EthereumProviderType | undefined;
   }
 }
 
@@ -40,10 +40,10 @@ interface NetworkResponse<T = unknown> {
 }
 
 interface NetworkContextType extends NetworkState {
-  connect: (url: string) => Promise<NetworkResponse<{ connected: boolean; chainId: number }>>;
+  connect: () => Promise<NetworkResponse<{ connected: boolean; chainId: number }>>;
   disconnect: () => void;
   switchNetwork: (chainId: number) => Promise<NetworkResponse<{ chainId: number }>>;
-  getProvider: () => ethers.Provider | null;
+  getProvider: () => ethers.BrowserProvider | null;
   refreshNetwork: () => Promise<void>;
 }
 
@@ -81,6 +81,14 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
       const provider = new ethers.BrowserProvider(window.ethereum as ethers.Eip1193Provider);
       const network = await provider.getNetwork();
       
+      setState(prev => ({
+        ...prev,
+        chainId: Number(network.chainId),
+        networkName: network.name,
+        isConnected: true,
+        provider
+      }));
+
       return {
         status: 200,
         data: {
@@ -114,6 +122,8 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
         params: [{ chainId: `0x${chainId.toString(16)}` }]
       });
 
+      await refreshNetwork();
+
       return {
         status: 200,
         data: { chainId }
@@ -131,7 +141,12 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const disconnect = () => {
-    // Implementation
+    setState({
+      chainId: 1,
+      networkName: 'Ethereum Mainnet',
+      isConnected: false,
+      provider: null
+    });
   };
 
   const getProvider = () => {
@@ -155,17 +170,17 @@ export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children })
 
       const handleDisconnect = (error: { code: number; message: string }) => {
         console.debug('Disconnected:', error);
-        setState(prev => ({ ...prev, isConnected: false, currentAccount: null }));
+        disconnect();
       };
 
-      ethereum.on('chainChanged', handleChainChanged);
-      ethereum.on('accountsChanged', handleAccountsChanged);
-      ethereum.on('disconnect', handleDisconnect);
+      ethereum.on('chainChanged', handleChainChanged as ChainChangedCallback);
+      ethereum.on('accountsChanged', handleAccountsChanged as AccountsChangedCallback);
+      ethereum.on('disconnect', handleDisconnect as DisconnectCallback);
 
       return () => {
-        ethereum.removeListener('chainChanged', handleChainChanged);
-        ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        ethereum.removeListener('disconnect', handleDisconnect);
+        ethereum.removeListener('chainChanged', handleChainChanged as ChainChangedCallback);
+        ethereum.removeListener('accountsChanged', handleAccountsChanged as AccountsChangedCallback);
+        ethereum.removeListener('disconnect', handleDisconnect as DisconnectCallback);
       };
     }
   }, []);
