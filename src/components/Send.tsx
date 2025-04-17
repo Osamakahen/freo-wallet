@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useDApp } from '../contexts/DAppContext';
 import { useNetwork } from '../contexts/NetworkContext';
-import { TokenManager } from '../core/token/TokenManager';
 import { formatEther } from 'viem';
 
 interface SendProps {
