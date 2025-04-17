@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNetwork } from '../contexts/NetworkContext';
 import { useWallet } from '../contexts/WalletContext';
-import { useGas } from '../contexts/GasContext';
 import { toast } from 'react-toastify';
 
 interface TokenApprovalProps {
@@ -19,7 +18,6 @@ export const TokenApproval: React.FC<TokenApprovalProps> = ({
 }) => {
   const { chainId } = useNetwork();
   const { address } = useWallet();
-  const { gasPrices, updateGasSettings } = useGas();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [approved, setApproved] = useState(false);
