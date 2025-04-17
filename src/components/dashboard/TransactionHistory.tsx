@@ -67,7 +67,7 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address 
     }
   };
 
-  const formatTimeAgo = (blockNumber: bigint): string => {
+  const formatTimeAgo = (): string => {
     // In a real implementation, this would calculate the time difference
     // For now, we'll just return a mock value
     return '2 hours ago';
@@ -113,7 +113,7 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address 
                     <p className="text-sm">{tx.status}</p>
                   </div>
                   <div className="mt-2 text-sm text-gray-500">
-                    {formatTimeAgo(tx.blockNumber)}
+                    {formatTimeAgo()}
                   </div>
                 </div>
               </div>
