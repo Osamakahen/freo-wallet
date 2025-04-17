@@ -6,27 +6,23 @@ import { KeyManager } from '../core/keyManagement/KeyManager';
 import { 
   BridgeConfig, 
   TransactionRequest, 
-  DAppManifest, 
-  DAppPermission, 
   Permission, 
   DAppResponse,
-  BridgeEvents
+  SessionPermissions
 } from '../types/dapp';
-import { TransactionRequest as WalletTransactionRequest } from '../types/wallet';
 import { toast } from 'react-toastify';
-import { type Address } from 'viem';
 
 interface DAppContextType {
   bridge: DAppBridge;
   isConnected: boolean;
-  currentAccount: Address | null;
+  currentAccount: string | null;
   currentChain: number;
   connect: () => Promise<void>;
-  disconnect: () => Promise<void>;
+  disconnect: () => void;
   requestAccounts: () => Promise<string[]>;
-  requestPermissions: (permissions: Permission[]) => Promise<Permission[]>;
+  requestPermissions: (permissions: SessionPermissions) => Promise<SessionPermissions>;
   signMessage: (message: string) => Promise<string>;
-  sendTransaction: (transaction: TransactionRequest) => Promise<DAppResponse>;
+  sendTransaction: (transaction: TransactionRequest) => Promise<string>;
   loading: boolean;
   error: string | null;
 }
@@ -42,14 +38,14 @@ export const DAppProvider: React.FC<{
   const [transactionManager] = useState(() => new TransactionManager(config.rpcUrl || '', keyManager));
   const [bridge] = useState(() => new DAppBridge(sessionManager, transactionManager, config));
   const [isConnected, setIsConnected] = useState(false);
-  const [currentAccount, setCurrentAccount] = useState<Address | null>(null);
+  const [currentAccount, setCurrentAccount] = useState<string | null>(null);
   const [currentChain, setCurrentChain] = useState(config.defaultChain || 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleAccountsChanged = (accounts: string[]) => {
-      setCurrentAccount(accounts[0] as Address);
+      setCurrentAccount(accounts[0]);
     };
 
     const handleChainChanged = (chainId: number) => {
@@ -61,14 +57,12 @@ export const DAppProvider: React.FC<{
       setCurrentAccount(null);
     };
 
-    // Set up event listeners
     bridge.on('accountsChanged', handleAccountsChanged);
     bridge.on('chainChanged', handleChainChanged);
     bridge.on('disconnect', handleDisconnect);
 
-    // Clean up event listeners
     return () => {
-      // Since DAppBridge uses a simple event system, we just need to set the callbacks to no-op
+      // Cleanup event listeners
       bridge.on('accountsChanged', () => {});
       bridge.on('chainChanged', () => {});
       bridge.on('disconnect', () => {});
@@ -81,34 +75,22 @@ export const DAppProvider: React.FC<{
       setError(null);
       await bridge.connect();
       setIsConnected(true);
-      const state = bridge.getState();
-      if (state.address) {
-        setCurrentAccount(state.address as Address);
-      }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to connect';
-      setError(errorMessage);
-      toast.error(errorMessage);
-      throw err;
+      setError(err instanceof Error ? err.message : 'Failed to connect');
+      toast.error('Failed to connect to DApp');
     } finally {
       setLoading(false);
     }
   }, [bridge]);
 
-  const disconnect = useCallback(async () => {
+  const disconnect = useCallback(() => {
     try {
-      setLoading(true);
-      setError(null);
-      await bridge.disconnect();
+      bridge.disconnect();
       setIsConnected(false);
       setCurrentAccount(null);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to disconnect';
-      setError(errorMessage);
-      toast.error(errorMessage);
-      throw err;
-    } finally {
-      setLoading(false);
+      setError(err instanceof Error ? err.message : 'Failed to disconnect');
+      toast.error('Failed to disconnect from DApp');
     }
   }, [bridge]);
 
@@ -116,30 +98,29 @@ export const DAppProvider: React.FC<{
     try {
       setLoading(true);
       setError(null);
-      const accounts = await bridge.requestAccounts();
-      if (accounts.length > 0) {
-        setCurrentAccount(accounts[0] as Address);
+      const state = bridge.getState();
+      if (!state.address) {
+        throw new Error('No connected account');
       }
-      return accounts;
+      setCurrentAccount(state.address);
+      return [state.address];
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to request accounts';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      setError(err instanceof Error ? err.message : 'Failed to request accounts');
+      toast.error('Failed to request accounts');
       return [];
     } finally {
       setLoading(false);
     }
   }, [bridge]);
 
-  const requestPermissions = useCallback(async (permissions: Permission[]) => {
+  const requestPermissions = useCallback(async (permissions: SessionPermissions) => {
     try {
       setLoading(true);
       setError(null);
       return await bridge.requestPermissions(permissions);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to request permissions';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      setError(err instanceof Error ? err.message : 'Failed to request permissions');
+      toast.error('Failed to request permissions');
       throw err;
     } finally {
       setLoading(false);
@@ -152,9 +133,8 @@ export const DAppProvider: React.FC<{
       setError(null);
       return await bridge.signMessage(message);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to sign message';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      setError(err instanceof Error ? err.message : 'Failed to sign message');
+      toast.error('Failed to sign message');
       throw err;
     } finally {
       setLoading(false);
@@ -165,23 +145,15 @@ export const DAppProvider: React.FC<{
     try {
       setLoading(true);
       setError(null);
-      if (!currentAccount) {
-        throw new Error('No connected account');
-      }
-      const walletTransaction: WalletTransactionRequest = {
-        ...transaction,
-        from: currentAccount,
-      };
-      return await bridge.sendTransaction(walletTransaction);
+      return await bridge.sendTransaction(transaction);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to send transaction';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      setError(err instanceof Error ? err.message : 'Failed to send transaction');
+      toast.error('Failed to send transaction');
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [bridge, currentAccount]);
+  }, [bridge]);
 
   const value = {
     bridge,
