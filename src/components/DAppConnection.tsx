@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDApp } from '../contexts/DAppContext';
-import { DAppMetadata, SessionPermissions } from '../types/dapp';
+import { DAppMetadata, Permission } from '../types/dapp';
 import Image from 'next/image';
 
 interface DAppConnectionProps {
@@ -25,12 +25,13 @@ export const DAppConnection: React.FC<DAppConnectionProps> = ({
       setIsConnecting(true);
       setError(null);
 
-      const permissionsToRequest: SessionPermissions = {
-        read: true,
-        write: true,
-        sign: true,
-        nft: true
-      };
+      const permissionsToRequest: Permission[] = [
+        { type: 'read', description: 'Read account data' },
+        { type: 'write', description: 'Write to account' },
+        { type: 'transaction', description: 'Send transactions' },
+        { type: 'message-sign', description: 'Sign messages' },
+        { type: 'nft-access', description: 'Access NFT data' }
+      ];
 
       await requestPermissions(permissionsToRequest);
       await connect();
@@ -53,26 +54,34 @@ export const DAppConnection: React.FC<DAppConnectionProps> = ({
           <Image
             src={metadata.icon}
             alt={metadata.name}
-            width={48}
-            height={48}
+            width={40}
+            height={40}
             className="rounded-full"
           />
         )}
         <div>
-          <h3 className="text-lg font-semibold">{metadata.name}</h3>
+          <h3 className="font-medium">{metadata.name}</h3>
           <p className="text-sm text-gray-500">{metadata.description}</p>
         </div>
       </div>
-      <div className="mt-4">
-        <button
-          onClick={handleConnect}
-          disabled={isConnecting}
-          className="w-full px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50"
-        >
-          {isConnecting ? 'Connecting...' : 'Connect'}
-        </button>
-        {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
-      </div>
+      
+      {error && (
+        <div className="mt-4 p-2 bg-red-50 text-red-500 rounded text-sm">
+          {error}
+        </div>
+      )}
+
+      <button
+        onClick={handleConnect}
+        disabled={isConnecting}
+        className={`mt-4 w-full py-2 px-4 rounded ${
+          isConnecting
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            : 'bg-blue-500 text-white hover:bg-blue-600'
+        }`}
+      >
+        {isConnecting ? 'Connecting...' : 'Connect'}
+      </button>
     </div>
   );
 }; 
