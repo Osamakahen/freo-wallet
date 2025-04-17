@@ -8,6 +8,12 @@ interface PortfolioProps {
   tokenManager: TokenManager;
 }
 
+interface ExtendedTokenBalance extends TokenBalance {
+  name: string;
+  symbol: string;
+  price?: number;
+}
+
 const TokenImage: React.FC<{ symbol: string }> = ({ symbol }) => {
   return (
     <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
@@ -18,7 +24,7 @@ const TokenImage: React.FC<{ symbol: string }> = ({ symbol }) => {
 
 export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
   const { state } = useWallet();
-  const [balances, setBalances] = useState<TokenBalance[]>([]);
+  const [balances, setBalances] = useState<ExtendedTokenBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalValue, setTotalValue] = useState<string>('0');
@@ -42,19 +48,21 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
             const info = await tokenManager.getTokenInfo(tokenAddress);
             return {
               ...balance,
-              ...info
+              ...info,
+              price: 0 // In production, fetch from price feed
             };
           })
         );
 
         // Combine native and token balances
-        const allBalances = [
+        const allBalances: ExtendedTokenBalance[] = [
           {
             tokenAddress: '0x0000000000000000000000000000000000000000' as `0x${string}`,
             balance: formatEther(nativeBalance),
             decimals: 18,
             symbol: 'ETH',
-            name: 'Ethereum'
+            name: 'Ethereum',
+            price: 0 // In production, fetch from price feed
           },
           ...tokenBalances
         ];
@@ -105,7 +113,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
             </div>
             <div className="text-right">
               <div className="font-medium">{token.balance}</div>
-              {token.price && (
+              {token.price !== undefined && (
                 <div className="text-sm text-gray-500">
                   ${(parseFloat(token.balance) * token.price).toFixed(2)}
                 </div>
