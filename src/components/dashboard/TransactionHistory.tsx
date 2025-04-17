@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDApp } from '../../contexts/DAppContext';
 import { useNetwork } from '../../contexts/NetworkContext';
-import { TransactionRequest, TransactionReceipt } from 'viem';
+import { TransactionReceipt } from 'viem';
 
 interface TransactionHistoryProps {
   address: `0x${string}`;
