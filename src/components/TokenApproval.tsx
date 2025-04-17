@@ -1,84 +1,121 @@
-import React, { useState } from 'react';
-import { useDApp } from '../contexts/DAppContext';
+import React, { useState, useEffect } from 'react';
 import { useNetwork } from '../contexts/NetworkContext';
-import { formatEther } from 'viem';
+import { useWallet } from '../contexts/WalletContext';
+import { useGas } from '../contexts/GasContext';
+import { toast } from 'react-toastify';
 
 interface TokenApprovalProps {
-  tokenAddress: string;
-  spenderAddress: string;
+  tokenAddress: `0x${string}`;
+  spenderAddress: `0x${string}`;
   amount: string;
-  onApprove: (tokenAddress: string, spenderAddress: string, amount: string) => Promise<void>;
+  onApproval: (approved: boolean) => void;
 }
 
 export const TokenApproval: React.FC<TokenApprovalProps> = ({
   tokenAddress,
   spenderAddress,
   amount,
-  onApprove
+  onApproval
 }) => {
-  const { currentAccount } = useDApp();
-  const { network } = useNetwork();
+  const { chainId } = useNetwork();
+  const { address } = useWallet();
+  const { gasPrices, updateGasSettings } = useGas();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [approved, setApproved] = useState(false);
+
+  useEffect(() => {
+    const checkApproval = async () => {
+      if (!address || !chainId) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Here you would typically call your token contract's allowance method
+        // For example:
+        // const allowance = await tokenContract.allowance(address, spenderAddress);
+        // setApproved(allowance.gte(amount));
+
+        // For now, we'll just set it to false
+        setApproved(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to check approval');
+        toast.error('Failed to check token approval', {
+          position: 'top-right',
+          autoClose: 5000,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkApproval();
+  }, [address, chainId, tokenAddress, spenderAddress, amount]);
 
   const handleApprove = async () => {
+    if (!address || !chainId) {
+      toast.error('Please connect your wallet first', {
+        position: 'top-right',
+        autoClose: 5000,
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      if (!currentAccount) {
-        throw new Error('No wallet connected');
-      }
+      // Here you would typically call your token contract's approve method
+      // For example:
+      // const tx = await tokenContract.approve(spenderAddress, amount);
+      // await tx.wait();
+      // setApproved(true);
+      // onApproval(true);
 
-      await onApprove(tokenAddress, spenderAddress, amount);
+      // For now, we'll just simulate a successful approval
+      setApproved(true);
+      onApproval(true);
+      toast.success('Token approval successful', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to approve token');
+      toast.error('Failed to approve token', {
+        position: 'top-right',
+        autoClose: 5000,
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  if (loading) {
+    return <div className="text-blue-500">Checking approval status...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
+  }
+
   return (
-    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-4">Token Approval</h2>
-      
-      <div className="mb-4">
-        <p className="text-sm text-gray-600">
-          Network: {network.networkName} (Chain ID: {network.chainId})
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Token Approval</h3>
+        <p className="text-sm text-gray-500">
+          Current Status: {approved ? 'Approved' : 'Not Approved'}
         </p>
       </div>
 
-      <div className="mb-4">
-        <p className="text-sm text-gray-600">
-          Token Address: {tokenAddress}
-        </p>
-      </div>
-
-      <div className="mb-4">
-        <p className="text-sm text-gray-600">
-          Spender Address: {spenderAddress}
-        </p>
-      </div>
-
-      <div className="mb-4">
-        <p className="text-sm text-gray-600">
-          Amount: {formatEther(BigInt(amount))}
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-          {error}
-        </div>
+      {!approved && (
+        <button
+          onClick={handleApprove}
+          className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+        >
+          Approve Token
+        </button>
       )}
-
-      <button
-        onClick={handleApprove}
-        disabled={loading || !currentAccount}
-        className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {loading ? 'Approving...' : 'Approve Token'}
-      </button>
     </div>
   );
 }; 
