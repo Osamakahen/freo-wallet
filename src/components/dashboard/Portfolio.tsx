@@ -5,7 +5,6 @@ import { TokenManager } from '../../core/token/TokenManager';
 import type { TokenBalance } from '../../types/token';
 import { TokenInfo } from '../../types/token';
 import { formatEther } from 'ethers';
-import { useWallet } from "@/contexts/WalletContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,11 +12,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PortfolioProps {
   tokenManager: TokenManager;
-}
-
-interface TokenData extends TokenInfo {
-  balance: string;
-  price: string;
 }
 
 const TokenImage: React.FC<{ address: string; symbol: string }> = ({ address, symbol }) => {
