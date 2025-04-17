@@ -24,7 +24,7 @@ export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({ child
     chainId: mainnet.id,
     rpcUrl: mainnet.rpcUrls.default.http[0]
   }));
-  const [ethereum, setEthereum] = useState<NetworkContextType['ethereum']>(undefined);
+  const ethereum = typeof window !== 'undefined' ? window.ethereum : undefined;
   const [chainId, setChainId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
