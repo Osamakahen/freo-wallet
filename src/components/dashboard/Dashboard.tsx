@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import { useDApp } from '../../contexts/DAppContext';
 import { Portfolio } from './Portfolio';
 import { DAppConnections } from './DAppConnections';
 import { TransactionHistory } from './TransactionHistory';
 import { TokenManager } from '../../core/token/TokenManager';
 import { TransactionManager } from '../../core/transaction/TransactionManager';
+import { Send } from '../Send';
+import { TokenApproval } from '../TokenApproval';
 
 interface DashboardProps {
   tokenManager: TokenManager;
@@ -14,7 +17,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
   tokenManager,
   transactionManager,
 }) => {
+  const { currentAccount } = useDApp();
   const [activeTab, setActiveTab] = useState<'portfolio' | 'dapps' | 'transactions'>('portfolio');
+
+  if (!currentAccount) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <h2 className="text-2xl font-bold mb-4">Dashboard</h2>
+        <p className="text-gray-500">Please connect your wallet to view the dashboard.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -59,7 +72,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {activeTab === 'portfolio' && <Portfolio tokenManager={tokenManager} />}
           {activeTab === 'dapps' && <DAppConnections />}
           {activeTab === 'transactions' && (
-            <TransactionHistory transactionManager={transactionManager} />
+            <TransactionHistory address={currentAccount} />
           )}
         </div>
       </div>
