@@ -5,7 +5,6 @@ import { DAppConnections } from './DAppConnections';
 import { TransactionHistory } from './TransactionHistory';
 import { TokenManager } from '../../core/token/TokenManager';
 import { TransactionManager } from '../../core/transaction/TransactionManager';
-import { TokenApproval } from '../TokenApproval';
 
 interface DashboardProps {
   tokenManager: TokenManager;
