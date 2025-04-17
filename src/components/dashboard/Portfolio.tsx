@@ -3,7 +3,12 @@ import Image from 'next/image';
 import { useDApp } from '../../contexts/DAppContext';
 import { TokenManager } from '../../core/token/TokenManager';
 import { TokenBalance } from '../../types/token';
-import { formatEther } from 'ethers/lib/utils';
+import { formatEther } from 'ethers';
+import { useWallet } from "@/contexts/WalletContext";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PortfolioProps {
   tokenManager: TokenManager;
@@ -28,6 +33,7 @@ const TokenImage: React.FC<{ address: string; symbol: string }> = ({ address, sy
 
 export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
   const { currentAccount, currentChain } = useDApp();
+  const { state } = useWallet();
   const [balances, setBalances] = useState<TokenBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +88,22 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
     loadBalances();
   }, [currentAccount, currentChain, tokenManager]);
 
+  useEffect(() => {
+    if (state.address) {
+      // Mock tokens for now - replace with actual token fetching
+      setBalances([
+        {
+          address: '0x0000000000000000000000000000000000000000',
+          symbol: 'ETH',
+          name: 'Ethereum',
+          decimals: 18,
+          balance: state.balance || '0',
+          price: '2000'
+        }
+      ]);
+    }
+  }, [state]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -99,54 +121,40 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-sm">
-        <h2 className="text-2xl font-semibold mb-2">Portfolio Value</h2>
-        <p className="text-3xl font-bold">${totalValue}</p>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Asset
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Balance
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Value
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+    <Card className="p-4">
+      <h2 className="text-lg font-semibold mb-4">Portfolio</h2>
+      <ScrollArea className="h-[300px]">
+        {balances.length === 0 ? (
+          <p className="text-gray-500">No tokens found</p>
+        ) : (
+          <div className="space-y-4">
             {balances.map((token) => (
-              <tr key={token.address} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <TokenImage address={token.address} symbol={token.symbol} />
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{token.symbol}</div>
-                      <div className="text-sm text-gray-500">{token.name}</div>
+              <Card key={token.address} className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="font-medium">{token.symbol}</h3>
+                      <Badge variant="secondary">{token.name}</Badge>
                     </div>
+                    <p className="text-sm text-gray-500">
+                      Balance: {formatEther(token.balance)} {token.symbol}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Value: ${(Number(formatEther(token.balance)) * Number(token.price)).toFixed(2)}
+                    </p>
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {formatEther(token.balance)}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    ${(parseFloat(formatEther(token.balance)) * parseFloat(token.price || '0')).toFixed(2)}
-                  </div>
-                </td>
-              </tr>
+                  <Button
+                    className="h-8 rounded-md px-3 text-xs"
+                    onClick={() => {/* TODO: Implement send token */}}
+                  >
+                    Send
+                  </Button>
+                </div>
+              </Card>
             ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </div>
+        )}
+      </ScrollArea>
+    </Card>
   );
 }; 
