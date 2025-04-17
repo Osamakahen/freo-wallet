@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useDApp } from '../../contexts/DAppContext';
 import { useNetwork } from '../../contexts/NetworkContext';
 import { TransactionReceipt } from 'viem';
 
@@ -8,7 +7,6 @@ interface TransactionHistoryProps {
 }
 
 export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address }) => {
-  const { currentAccount } = useDApp();
   const { network } = useNetwork();
   const [transactions, setTransactions] = useState<TransactionReceipt[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,7 +23,6 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address 
       setLoading(true);
       setError(null);
 
-      // In a real implementation, this would fetch actual transactions
       // For now, we'll use mock data
       const mockTransactions: TransactionReceipt[] = [
         {
@@ -36,7 +33,13 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address 
           status: 'success',
           gasUsed: BigInt(21000),
           effectiveGasPrice: BigInt(20000000000),
-          logs: []
+          logs: [],
+          blockHash: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
+          contractAddress: null,
+          cumulativeGasUsed: BigInt(21000),
+          logsBloom: '0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
+          transactionIndex: 0,
+          type: '0x0' as `0x${string}`
         },
         {
           transactionHash: '0x9876543210987654321098765432109876543210' as `0x${string}`,
@@ -46,7 +49,13 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address 
           status: 'success',
           gasUsed: BigInt(42000),
           effectiveGasPrice: BigInt(20000000000),
-          logs: []
+          logs: [],
+          blockHash: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
+          contractAddress: null,
+          cumulativeGasUsed: BigInt(42000),
+          logsBloom: '0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
+          transactionIndex: 0,
+          type: '0x0' as `0x${string}`
         }
       ];
 
