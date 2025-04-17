@@ -35,10 +35,6 @@ export const GasProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [simulationResult, setSimulationResult] = useState<GasSimulationResult | null>(null);
   const [gasEstimate, setGasEstimate] = useState<GasEstimate | null>(null);
 
-  useEffect(() => {
-    startGasPriceUpdates();
-  }, [startGasPriceUpdates]);
-
   const startGasPriceUpdates = useCallback(() => {
     gasManager.startGasPriceUpdates();
     gasManager.on('gasPriceUpdate', (update: GasPrice) => {
@@ -57,50 +53,12 @@ export const GasProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, [gasManager]);
 
-  const updateGasSettings = useCallback(async (settings: {
-    gasLimit: string;
-    maxFeePerGas: string;
-    maxPriorityFeePerGas: string;
-  }) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const history = await gasManager.getGasHistory();
-      setGasHistory(history);
-
-      // Simulate transaction with new settings
-      const simulation = await gasManager.simulateTransaction(
-        '0x0000000000000000000000000000000000000000', // Placeholder address
-        '0x0000000000000000000000000000000000000000', // Placeholder address
-        '0',
-        '0x',
-        settings
-      );
-
-      setSimulationResult({
-        success: simulation.success,
-        gasUsed: simulation.gasUsed.toString(),
-        error: simulation.error
-      });
-
-      if (!simulation.success) {
-        toast.warning('Transaction simulation failed: ' + simulation.error, {
-          position: 'top-right',
-          autoClose: 5000,
-        });
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update gas settings';
-      setError(errorMessage);
-      toast.error(errorMessage, {
-        position: 'top-right',
-        autoClose: 5000,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [gasManager]);
+  useEffect(() => {
+    startGasPriceUpdates();
+    return () => {
+      gasManager.stopGasPriceUpdates();
+    };
+  }, [gasManager, startGasPriceUpdates]);
 
   const getGasEstimate = useCallback(async (
     from: `0x${string}`,
@@ -111,12 +69,16 @@ export const GasProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       setLoading(true);
       setError(null);
-      const estimate = await gasManager.getGasEstimate(from, to, value, data);
-      setGasEstimate(estimate);
+      const estimate = await gasManager.estimateGas(from, to, value, data);
+      setGasEstimate({
+        ...estimate,
+        gasLimit: estimate.gasLimit.toString(),
+        maxFeePerGas: estimate.maxFeePerGas.toString(),
+        maxPriorityFeePerGas: estimate.maxPriorityFeePerGas.toString()
+      });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to get gas estimate';
-      setError(errorMessage);
-      toast.error(errorMessage, {
+      setError(err instanceof Error ? err.message : 'Failed to estimate gas');
+      toast.error('Failed to estimate gas', {
         position: 'top-right',
         autoClose: 5000,
       });
@@ -125,19 +87,47 @@ export const GasProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [gasManager]);
 
-  const value = {
-    gasManager,
-    gasPrices,
-    gasHistory,
-    loading,
-    error,
-    simulationResult,
-    gasEstimate,
-    getGasEstimate,
-    updateGasSettings,
-  };
+  const updateGasSettings = useCallback(async (settings: {
+    gasLimit: string;
+    maxFeePerGas: string;
+    maxPriorityFeePerGas: string;
+  }) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await gasManager.updateGasSettings(settings);
+      toast.success('Gas settings updated', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update gas settings');
+      toast.error('Failed to update gas settings', {
+        position: 'top-right',
+        autoClose: 5000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [gasManager]);
 
-  return <GasContext.Provider value={value}>{children}</GasContext.Provider>;
+  return (
+    <GasContext.Provider
+      value={{
+        gasManager,
+        gasPrices,
+        gasHistory,
+        loading,
+        error,
+        simulationResult,
+        gasEstimate,
+        getGasEstimate,
+        updateGasSettings
+      }}
+    >
+      {children}
+    </GasContext.Provider>
+  );
 };
 
 export const useGas = () => {
