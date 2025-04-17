@@ -144,7 +144,7 @@ export const DAppProvider: React.FC<{
     try {
       setLoading(true);
       setError(null);
-      const response = await bridge.sendTransaction(transaction);
+      const response: DAppResponse = await bridge.sendTransaction(transaction);
       if (response.error) {
         throw new Error(response.error.message || 'Transaction failed');
       }
