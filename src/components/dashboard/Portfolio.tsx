@@ -45,12 +45,14 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
         const nativeBalance = await tokenManager.getBalance('0x0000000000000000000000000000000000000000', currentAccount);
         
         // Load ERC20 token balances
+        const tokenAddresses = await tokenManager.getTokenList();
         const tokenBalances = await Promise.all(
-          tokenManager.getTrackedTokens().map(async (token) => {
-            const balance = await tokenManager.getTokenBalance(token.address, currentAccount);
+          tokenAddresses.map(async (tokenAddress) => {
+            const balance = await tokenManager.getTokenBalance(tokenAddress, currentAccount);
+            const info = await tokenManager.getTokenInfo(tokenAddress);
             return {
-              ...token,
-              balance,
+              ...info,
+              balance: balance.balance,
               price: '0', // In production, fetch from price feed
             };
           })
