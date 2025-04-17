@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { useDApp } from '../../contexts/DAppContext';
 import { TokenManager } from '../../core/token/TokenManager';
 import { TokenBalance } from '../../types/token';
-import { formatEther } from 'ethers';
+import { formatEther } from 'ethers/lib/utils';
 
 interface PortfolioProps {
   tokenManager: TokenManager;
@@ -45,7 +45,16 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
         const nativeBalance = await tokenManager.getBalance('0x0000000000000000000000000000000000000000', currentAccount);
         
         // Load ERC20 token balances
-        const tokenBalances = await tokenManager.getTokenBalances(currentAccount);
+        const tokenBalances = await Promise.all(
+          tokenManager.getTrackedTokens().map(async (token) => {
+            const balance = await tokenManager.getTokenBalance(token.address, currentAccount);
+            return {
+              ...token,
+              balance,
+              price: '0', // In production, fetch from price feed
+            };
+          })
+        );
         
         // Combine and sort balances
         const allBalances = [
