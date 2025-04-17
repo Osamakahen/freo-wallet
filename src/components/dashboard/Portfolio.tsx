@@ -63,7 +63,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
           {
             address: 'native',
             symbol: 'ETH',
-            balance: nativeBalance,
+            balance: formatEther(nativeBalance),
             decimals: 18,
             price: '0', // In production, fetch from price feed
           },
