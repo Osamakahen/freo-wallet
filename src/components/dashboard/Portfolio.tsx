@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useDApp } from '../../contexts/DAppContext';
 import { TokenManager } from '../../core/token/TokenManager';
-import { TokenBalance } from '../../types/token';
+import type { TokenBalance } from '../../types/token';
+import { TokenInfo } from '../../types/token';
 import { formatEther } from 'ethers';
 import { useWallet } from "@/contexts/WalletContext";
 import { Card } from "@/components/ui/card";
@@ -14,9 +15,8 @@ interface PortfolioProps {
   tokenManager: TokenManager;
 }
 
-interface TokenData extends TokenBalance {
-  symbol: string;
-  name: string;
+interface TokenData extends TokenInfo {
+  balance: string;
   price: string;
 }
 
@@ -39,8 +39,7 @@ const TokenImage: React.FC<{ address: string; symbol: string }> = ({ address, sy
 
 export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
   const { currentAccount, currentChain } = useDApp();
-  const { address, balance } = useWallet();
-  const [balances, setBalances] = useState<TokenData[]>([]);
+  const [balances, setBalances] = useState<TokenBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalValue, setTotalValue] = useState<string>('0');
@@ -54,29 +53,24 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
         setError(null);
 
         // Load native token balance
-        const nativeBalance = await tokenManager.getBalance(currentAccount, currentChain);
+        const nativeBalance = await tokenManager.getBalance(currentAccount);
         
         // Load ERC20 token balances
-        const tokenBalances = await tokenManager.getTokenBalance(currentAccount, currentChain);
+        const tokenBalances = await tokenManager.getTokenBalances(currentAccount);
         
         // Combine and sort balances
-        const allBalances: TokenData[] = [
+        const allBalances = [
           {
+            address: 'native',
+            symbol: 'ETH',
             balance: nativeBalance,
             decimals: 18,
-            symbol: 'ETH',
-            name: 'Ethereum',
-            price: '2000' // Mock price
+            price: '0', // In production, fetch from price feed
           },
-          ...tokenBalances.map(balance => ({
-            ...balance,
-            symbol: 'TOKEN', // Replace with actual symbol
-            name: 'Token', // Replace with actual name
-            price: '1' // Mock price
-          }))
+          ...tokenBalances,
         ].sort((a, b) => {
-          const valueA = parseFloat(formatEther(a.balance)) * parseFloat(a.price);
-          const valueB = parseFloat(formatEther(b.balance)) * parseFloat(b.price);
+          const valueA = parseFloat(formatEther(a.balance)) * parseFloat(a.price || '0');
+          const valueB = parseFloat(formatEther(b.balance)) * parseFloat(b.price || '0');
           return valueB - valueA;
         });
 
@@ -84,7 +78,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
 
         // Calculate total value
         const total = allBalances.reduce((sum, token) => {
-          const value = parseFloat(formatEther(token.balance)) * parseFloat(token.price);
+          const value = parseFloat(formatEther(token.balance)) * parseFloat(token.price || '0');
           return sum + value;
         }, 0);
 
@@ -98,21 +92,6 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
 
     loadBalances();
   }, [currentAccount, currentChain, tokenManager]);
-
-  useEffect(() => {
-    if (address) {
-      // Mock tokens for now - replace with actual token fetching
-      setBalances([
-        {
-          balance: balance || '0',
-          decimals: 18,
-          symbol: 'ETH',
-          name: 'Ethereum',
-          price: '2000'
-        }
-      ]);
-    }
-  }, [address, balance]);
 
   if (loading) {
     return (
@@ -131,40 +110,54 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
   }
 
   return (
-    <Card className="p-4">
-      <h2 className="text-lg font-semibold mb-4">Portfolio</h2>
-      <ScrollArea className="h-[300px]">
-        {balances.length === 0 ? (
-          <p className="text-gray-500">No tokens found</p>
-        ) : (
-          <div className="space-y-4">
-            {balances.map((token, index) => (
-              <Card key={index} className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-medium">{token.symbol}</h3>
-                      <Badge variant="secondary">{token.name}</Badge>
+    <div className="space-y-6">
+      <div className="bg-white p-6 rounded-lg shadow-sm">
+        <h2 className="text-2xl font-semibold mb-2">Portfolio Value</h2>
+        <p className="text-3xl font-bold">${totalValue}</p>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Asset
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Balance
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Value
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {balances.map((token) => (
+              <tr key={token.address} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <TokenImage address={token.address} symbol={token.symbol} />
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-gray-900">{token.symbol}</div>
+                      <div className="text-sm text-gray-500">{token.name}</div>
                     </div>
-                    <p className="text-sm text-gray-500">
-                      Balance: {formatEther(token.balance)} {token.symbol}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Value: ${(Number(formatEther(token.balance)) * Number(token.price)).toFixed(2)}
-                    </p>
                   </div>
-                  <Button
-                    className="h-8 rounded-md px-3 text-xs"
-                    onClick={() => {/* TODO: Implement send token */}}
-                  >
-                    Send
-                  </Button>
-                </div>
-              </Card>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">
+                    {formatEther(token.balance)}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">
+                    ${(parseFloat(formatEther(token.balance)) * parseFloat(token.price || '0')).toFixed(2)}
+                  </div>
+                </td>
+              </tr>
             ))}
-          </div>
-        )}
-      </ScrollArea>
-    </Card>
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }; 
