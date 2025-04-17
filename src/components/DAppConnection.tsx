@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDApp } from '../contexts/DAppContext';
-import { DAppMetadata, Permission } from '../types/dapp';
+import { DAppMetadata, Permission, SessionPermissions } from '../types/dapp';
 import Image from 'next/image';
 
 interface DAppConnectionProps {
@@ -25,12 +25,12 @@ export const DAppConnection: React.FC<DAppConnectionProps> = ({
       setIsConnecting(true);
       setError(null);
 
-      const permissionsToRequest: Permission[] = [
-        { type: 'read', description: 'Read wallet information' },
-        { type: 'write', description: 'Write wallet information' },
-        { type: 'message-sign', description: 'Sign messages' },
-        { type: 'nft-access', description: 'Access NFTs' }
-      ];
+      const permissionsToRequest: SessionPermissions = {
+        read: true,
+        write: true,
+        sign: true,
+        nft: true
+      };
 
       await requestPermissions(permissionsToRequest);
       await connect();
