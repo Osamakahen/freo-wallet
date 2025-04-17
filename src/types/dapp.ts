@@ -1,6 +1,7 @@
 import { ChainId } from './chain';
 import { Address } from 'viem';
 import { QRCodeModal } from '@walletconnect/qrcode-modal';
+import { SessionPermissions } from './session';
 
 export type DAppPermission = 'read' | 'transaction' | 'message-sign' | 'assets' | 'history';
 
@@ -41,19 +42,12 @@ export interface DAppMetadata {
 export interface DAppBridge {
   isConnected: () => boolean;
   requestAccounts: () => Promise<string[]>;
-  requestPermissions: (permissions: Permission[]) => Promise<Permission[]>;
+  requestPermissions: (permissions: SessionPermissions) => Promise<SessionPermissions>;
   signMessage: (message: string) => Promise<string>;
   sendTransaction: (transaction: TransactionRequest) => Promise<string>;
   onAccountsChanged: (callback: (accounts: string[]) => void) => void;
   onChainChanged: (callback: (chainId: string) => void) => void;
   onDisconnect: (callback: () => void) => void;
-}
-
-export interface SessionPermissions {
-  read: boolean;
-  write: boolean;
-  sign: boolean;
-  nft: boolean;
 }
 
 export interface DAppInfo {
