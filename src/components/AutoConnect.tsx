@@ -1,48 +1,37 @@
 import { useEffect } from 'react';
 import { useSession } from '../contexts/SessionContext';
 import { useWallet } from '../contexts/WalletContext';
-import { SessionPermissions } from '../types/session';
+import { Permission } from '../types/session';
 
 interface AutoConnectProps {
-  requiredPermissions?: SessionPermissions;
-  onConnect?: () => void;
-  onError?: (error: string) => void;
+  requiredPermissions?: Permission[];
 }
 
-export const AutoConnect: React.FC<AutoConnectProps> = ({
-  requiredPermissions = {
-    read: true,
-    write: true,
-    sign: true,
-    connect: true,
-    disconnect: true
-  },
-  onConnect,
-  onError
-}) => {
-  const { isConnected, permissions } = useSession();
+export const AutoConnect = ({
+  requiredPermissions = [],
+}: AutoConnectProps) => {
+  const { isAuthenticated, permissions } = useSession();
   const { connect, disconnect, address } = useWallet();
 
   useEffect(() => {
     const autoConnect = async () => {
-      if (!isConnected) {
+      if (!isAuthenticated) {
         try {
           await connect();
-          if (onConnect) onConnect();
         } catch (error) {
-          if (onError) onError(error instanceof Error ? error.message : 'Failed to connect');
+          console.error('Auto-connect failed:', error);
         }
       }
     };
 
     autoConnect();
-  }, [isConnected, connect, onConnect, onError]);
+  }, [isAuthenticated, connect]);
 
-  const hasRequiredPermissions = Object.entries(requiredPermissions).every(
-    ([key, value]) => permissions[key as keyof SessionPermissions] === value
+  const hasRequiredPermissions = requiredPermissions.every(permission =>
+    permissions.includes(permission)
   );
 
-  if (!isConnected || !hasRequiredPermissions) {
+  if (!isAuthenticated || !hasRequiredPermissions) {
     return null;
   }
 

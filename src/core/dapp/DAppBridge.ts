@@ -15,7 +15,6 @@ import { ErrorCorrelator } from '../error/ErrorCorrelator'
 import { PermissionManager } from '../security/PermissionManager'
 import { type Address } from 'viem'
 import { DAppMessage } from '../../types/dapp'
-import { SessionPermissions } from '../types/session'
 
 export class DAppBridge {
   private static instance: DAppBridge | null = null;
@@ -146,25 +145,29 @@ export class DAppBridge {
     return this.connectedAccount ? [this.connectedAccount] : []
   }
 
-  public async requestPermissions(permissions: SessionPermissions): Promise<SessionPermissions> {
+  public async requestPermissions(permissions: Permission[]): Promise<Permission[]> {
     try {
       if (!this.dAppInfo) {
         throw new Error('DApp not initialized')
       }
 
       // Mock implementation - in a real implementation, this would interact with the session manager
-      const granted: SessionPermissions = {
-        read: permissions.read,
-        write: permissions.write,
-        sign: permissions.sign,
-        connect: permissions.connect,
-        disconnect: permissions.disconnect
+      const granted: Permission[] = permissions.map(p => ({
+        type: p.type,
+        description: p.description
+      }))
+
+      this.state.permissions = {
+        read: granted.some(p => p.type === 'read'),
+        write: granted.some(p => p.type === 'write'),
+        sign: granted.some(p => p.type === 'message-sign'),
+        nft: granted.some(p => p.type === 'nft-access')
       }
 
-      this.state.permissions = granted
       return granted
-    } catch (err) {
-      throw new Error('Failed to request permissions')
+    } catch (error) {
+      this.state.error = error instanceof Error ? error.message : 'Failed to request permissions'
+      throw error
     }
   }
 

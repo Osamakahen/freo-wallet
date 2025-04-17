@@ -12,14 +12,20 @@ A modern, secure, and user-friendly Ethereum wallet built with React, TypeScript
 - 🌐 Multi-chain support (Ethereum Mainnet and testnets)
 - 🔍 Transaction history and analytics
 - 🎨 Modern UI with dark/light mode
+- 🔌 dApp Integration with DAppBridge
+- 🔒 Session-based permissions management
+- 📊 Portfolio tracking and analytics
+- 🚀 Gas optimization and transaction batching
 
 ## Tech Stack
 
 - **Frontend**: React, TypeScript, TailwindCSS
 - **Ethereum**: Viem (for all Ethereum interactions)
 - **State Management**: React Context + Custom Hooks
+- **UI Components**: Radix UI, Lucide React
 - **Testing**: Jest, React Testing Library
-- **CI/CD**: GitHub Actions
+- **CI/CD**: GitHub Actions, Vercel
+- **Security**: Device fingerprinting, session management
 
 ## Getting Started
 
@@ -55,24 +61,35 @@ A modern, secure, and user-friendly Ethereum wallet built with React, TypeScript
    - Secure key storage and management
    - Account creation and import
    - Balance tracking
+   - Device fingerprinting for enhanced security
 
 2. **Transaction System**
    - Transaction preparation and signing
    - Gas estimation and optimization
    - Real-time transaction monitoring
-   - Transaction history
+   - Transaction history with detailed analytics
+   - Transaction batching support
 
 3. **Token Management**
    - Native token (ETH) support
    - ERC20 token support
    - Token price tracking
    - Token approval system
+   - Portfolio value tracking
 
 4. **Security**
    - Encrypted key storage
    - Secure transaction signing
    - Phishing protection
    - Session management
+   - Device fingerprinting
+   - Risk scoring system
+
+5. **dApp Integration**
+   - DAppBridge for seamless dApp connections
+   - Permission management
+   - Session-based authentication
+   - Transaction request handling
 
 ### Key Classes
 
@@ -81,6 +98,9 @@ A modern, secure, and user-friendly Ethereum wallet built with React, TypeScript
 - `TokenManager`: Token operations
 - `KeyManager`: Secure key management
 - `EVMAdapter`: Ethereum network interaction
+- `DAppBridge`: dApp integration
+- `SessionManager`: Session handling
+- `DeviceFingerprint`: Security and device tracking
 
 ## Development
 
@@ -89,11 +109,17 @@ A modern, secure, and user-friendly Ethereum wallet built with React, TypeScript
 ```
 src/
 ├── components/     # React components
+│   ├── dashboard/  # Dashboard components
+│   ├── ui/        # UI components
+│   └── shared/    # Shared components
 ├── core/          # Core wallet functionality
 │   ├── wallet/    # Wallet management
 │   ├── transaction/ # Transaction handling
 │   ├── token/     # Token management
-│   └── network/   # Network adapters
+│   ├── dapp/      # dApp integration
+│   ├── session/   # Session management
+│   └── security/  # Security features
+├── contexts/      # React contexts
 ├── hooks/         # Custom React hooks
 ├── types/         # TypeScript types
 └── utils/         # Utility functions
@@ -117,6 +143,9 @@ npm run test:coverage
 - All sensitive operations require user confirmation
 - Regular security audits
 - Phishing protection mechanisms
+- Device fingerprinting for enhanced security
+- Session-based permission management
+- Risk scoring system for suspicious activities
 
 ## Contributing
 
@@ -135,3 +164,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Viem](https://viem.sh/) for Ethereum interaction
 - [React](https://reactjs.org/) for the UI framework
 - [TailwindCSS](https://tailwindcss.com/) for styling
+- [Radix UI](https://www.radix-ui.com/) for accessible components
+- [Lucide React](https://lucide.dev/) for icons
