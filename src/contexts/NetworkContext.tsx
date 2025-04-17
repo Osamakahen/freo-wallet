@@ -3,13 +3,18 @@ import { NetworkManager } from '../core/network/NetworkManager';
 import { toast } from 'react-toastify';
 import { mainnet } from 'viem/chains';
 
+type EthereumEvent = 'chainChanged' | 'accountsChanged' | 'disconnect';
+type EthereumCallback = (params: unknown) => void;
+
+interface EthereumProvider {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+  on: (event: EthereumEvent, callback: EthereumCallback) => void;
+  removeListener: (event: EthereumEvent, callback: EthereumCallback) => void;
+}
+
 interface NetworkContextType {
   networkManager: NetworkManager;
-  ethereum: {
-    request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-    on: (event: string, callback: (params: unknown) => void) => void;
-    removeListener: (event: string, callback: (params: unknown) => void) => void;
-  } | undefined;
+  ethereum: EthereumProvider | undefined;
   chainId: string | null;
   loading: boolean;
   error: string | null;
@@ -24,7 +29,7 @@ export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({ child
     chainId: mainnet.id,
     rpcUrl: mainnet.rpcUrls.default.http[0]
   }));
-  const ethereum = typeof window !== 'undefined' ? window.ethereum : undefined;
+  const ethereum = typeof window !== 'undefined' ? (window.ethereum as EthereumProvider) : undefined;
   const [chainId, setChainId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
