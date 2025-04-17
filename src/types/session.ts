@@ -1,6 +1,5 @@
 import { type SecurityEvent, type SecurityAlert } from './security';
 import { Address } from 'viem';
-import { SessionPermissions } from './dapp';
 
 export interface SessionKey {
   id: string;
