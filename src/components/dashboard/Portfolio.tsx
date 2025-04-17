@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useDApp } from '../../contexts/DAppContext';
 import { TokenManager } from '../../core/token/TokenManager';
 import { TokenBalance } from '../../types/token';
@@ -8,17 +9,19 @@ interface PortfolioProps {
   tokenManager: TokenManager;
 }
 
-interface TokenData extends TokenBalance {
-  address: `0x${string}`;
-  symbol: string;
-  name: string;
-  price?: string;
-}
+const TokenImage: React.FC<{ address: string; symbol: string }> = ({ address, symbol }) => {
+  const [imgSrc, setImgSrc] = useState(`https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${address}/logo.png`);
 
-const TokenImage: React.FC<{ symbol: string }> = ({ symbol }) => {
   return (
-    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-      <span className="text-sm font-medium">{symbol[0]}</span>
+    <div className="flex-shrink-0 h-10 w-10 relative">
+      <Image
+        className="rounded-full"
+        src={imgSrc}
+        alt={symbol}
+        width={40}
+        height={40}
+        onError={() => setImgSrc('/default-token.png')}
+      />
     </div>
   );
 };
@@ -122,7 +125,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
               <tr key={token.address} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <TokenImage symbol={token.symbol} />
+                    <TokenImage address={token.address} symbol={token.symbol} />
                     <div className="ml-4">
                       <div className="text-sm font-medium text-gray-900">{token.symbol}</div>
                       <div className="text-sm text-gray-500">{token.name}</div>
