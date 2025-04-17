@@ -28,7 +28,7 @@ interface GasContextType {
 const GasContext = createContext<GasContextType | undefined>(undefined);
 
 export const GasProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [errorCorrelator] = useState(() => new ErrorCorrelator());
+  const [errorCorrelator] = useState(() => ErrorCorrelator.getInstance());
   const [gasManager] = useState(() => new GasManager(
     process.env.REACT_APP_RPC_URL || 'https://eth-mainnet.g.alchemy.com/v2/your-api-key',
     errorCorrelator

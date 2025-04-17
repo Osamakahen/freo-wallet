@@ -45,7 +45,7 @@ describe('Wallet Tests', () => {
   const mockAddress: Address = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e' as Address;
   const mockNetwork: ChainConfig = {
     chainId: 1,
-    name: 'Ethereum',
+      name: 'Ethereum',
     symbol: 'ETH',
     rpcUrl: 'https://mainnet.infura.io/v3/your-project-id'
   };

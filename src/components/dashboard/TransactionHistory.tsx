@@ -18,10 +18,10 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address 
     }
   }, [address]);
 
-  const loadTransactions = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+    const loadTransactions = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
       // For now, we'll use mock data
       const mockTransactions: TransactionReceipt[] = [
@@ -60,12 +60,12 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address 
       ];
 
       setTransactions(mockTransactions);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load transactions');
-    } finally {
-      setLoading(false);
-    }
-  };
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load transactions');
+      } finally {
+        setLoading(false);
+      }
+    };
 
   const formatTimeAgo = (): string => {
     // In a real implementation, this would calculate the time difference
@@ -85,8 +85,8 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address 
 
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-          {error}
-        </div>
+        {error}
+      </div>
       )}
 
       {loading ? (
@@ -114,10 +114,10 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address 
                   </div>
                   <div className="mt-2 text-sm text-gray-500">
                     {formatTimeAgo()}
-                  </div>
-                </div>
-              </div>
-            </div>
+          </div>
+        </div>
+                    </div>
+                    </div>
           ))}
         </div>
       )}
