@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
-import { type Address } from 'viem';
+import { mainnet } from 'viem/chains';
 
 type EthereumEvent = 'chainChanged' | 'accountsChanged' | 'disconnect';
 type EthereumCallback = ChainChangedCallback | AccountsChangedCallback | DisconnectCallback;
@@ -8,23 +8,24 @@ type ChainChangedCallback = (chainId: string) => void;
 type AccountsChangedCallback = (accounts: string[]) => void;
 type DisconnectCallback = (error: { code: number; message: string }) => void;
 
-interface EthereumProviderType {
+type EthereumProviderType = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-  on: (event: string, callback: unknown) => void;
-  removeListener: (event: string, callback: unknown) => void;
-}
+  on: (event: EthereumEvent, callback: EthereumCallback) => void;
+  removeListener: (event: EthereumEvent, callback: EthereumCallback) => void;
+};
 
 declare global {
   interface Window {
-    ethereum: EthereumProviderType | undefined;
+    ethereum?: EthereumProviderType;
   }
 }
 
 interface NetworkState {
-  chainId: number | null;
+  chainId: number;
   networkName: string;
-  isConnected: boolean;
-  provider: ethers.BrowserProvider | null;
+  symbol: string;
+  rpcUrl: string;
+  explorer?: string;
 }
 
 interface NetworkError {
@@ -39,154 +40,90 @@ interface NetworkResponse<T = unknown> {
   error?: NetworkError;
 }
 
-interface NetworkContextType extends NetworkState {
-  connect: () => Promise<NetworkResponse<{ connected: boolean; chainId: number }>>;
-  disconnect: () => void;
-  switchNetwork: (chainId: number) => Promise<NetworkResponse<{ chainId: number }>>;
-  getProvider: () => ethers.BrowserProvider | null;
-  refreshNetwork: () => Promise<void>;
+interface NetworkContextType {
+  network: NetworkState;
+  switchNetwork: (chainId: number) => Promise<void>;
+  loading: boolean;
+  error: string | null;
 }
 
 const NetworkContext = createContext<NetworkContextType | undefined>(undefined);
 
-export const NetworkProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<NetworkState>({
-    chainId: 1, // Default to Ethereum mainnet
-    networkName: 'Ethereum Mainnet',
-    isConnected: false,
-    provider: null
+export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [network, setNetwork] = useState<NetworkState>({
+    chainId: mainnet.id,
+    networkName: mainnet.name,
+    symbol: mainnet.nativeCurrency.symbol,
+    rpcUrl: mainnet.rpcUrls.default.http[0],
+    explorer: mainnet.blockExplorers?.default.url
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const refreshNetwork = async () => {
+  const updateNetwork = useCallback(async (chainId: number) => {
     try {
-      if (window.ethereum) {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const network = await provider.getNetwork();
-        
-        setState({
-          chainId: Number(network.chainId),
-          networkName: network.name,
-          isConnected: true,
-          provider
-        });
+      setLoading(true);
+      setError(null);
+
+      if (!window.ethereum) {
+        throw new Error("Ethereum provider not found");
       }
-    } catch (error) {
-      console.error('Failed to refresh network:', error);
-      setState(prev => ({ ...prev, isConnected: false, provider: null }));
-    }
-  };
 
-  const connect = async (): Promise<NetworkResponse<{ connected: boolean; chainId: number }>> => {
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum as ethers.Eip1193Provider);
+      const provider = new ethers.BrowserProvider(window.ethereum);
       const network = await provider.getNetwork();
       
-      setState(prev => ({
-        ...prev,
+      setNetwork({
         chainId: Number(network.chainId),
-        networkName: network.name,
-        isConnected: true,
-        provider
-      }));
-
-      return {
-        status: 200,
-        data: {
-          connected: true,
-          chainId: Number(network.chainId)
-        }
-      };
-    } catch (error) {
-      return {
-        status: 500,
-        data: {
-          connected: false,
-          chainId: 0
-        },
-        error: {
-          code: 500,
-          message: 'Failed to connect to network'
-        }
-      };
-    }
-  };
-
-  const switchNetwork = async (chainId: number): Promise<NetworkResponse<{ chainId: number }>> => {
-    try {
-      if (!window.ethereum) {
-        throw new Error('MetaMask is not installed');
-      }
-
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: `0x${chainId.toString(16)}` }]
+        networkName: network.name || `Chain ${network.chainId}`,
+        symbol: mainnet.nativeCurrency.symbol,
+        rpcUrl: mainnet.rpcUrls.default.http[0],
+        explorer: mainnet.blockExplorers?.default.url
       });
-
-      await refreshNetwork();
-
-      return {
-        status: 200,
-        data: { chainId }
-      };
-    } catch (error) {
-      return {
-        status: 500,
-        data: { chainId: 0 },
-        error: {
-          code: 500,
-          message: 'Failed to switch network'
-        }
-      };
-    }
-  };
-
-  const disconnect = () => {
-    setState({
-      chainId: 1,
-      networkName: 'Ethereum Mainnet',
-      isConnected: false,
-      provider: null
-    });
-  };
-
-  const getProvider = () => {
-    return state.provider;
-  };
-
-  useEffect(() => {
-    refreshNetwork();
-
-    const ethereum = window.ethereum;
-    if (ethereum) {
-      const handleChainChanged = (chainId: string) => {
-        console.debug('Chain changed:', chainId);
-        refreshNetwork();
-      };
-
-      const handleAccountsChanged = (accounts: string[]) => {
-        console.debug('Accounts changed:', accounts);
-        refreshNetwork();
-      };
-
-      const handleDisconnect = (error: { code: number; message: string }) => {
-        console.debug('Disconnected:', error);
-        disconnect();
-      };
-
-      ethereum.on('chainChanged', handleChainChanged as ChainChangedCallback);
-      ethereum.on('accountsChanged', handleAccountsChanged as AccountsChangedCallback);
-      ethereum.on('disconnect', handleDisconnect as DisconnectCallback);
-
-      return () => {
-        ethereum.removeListener('chainChanged', handleChainChanged as ChainChangedCallback);
-        ethereum.removeListener('accountsChanged', handleAccountsChanged as AccountsChangedCallback);
-        ethereum.removeListener('disconnect', handleDisconnect as DisconnectCallback);
-      };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update network');
+    } finally {
+      setLoading(false);
     }
   }, []);
 
+  useEffect(() => {
+    if (!window.ethereum) return;
+
+    const handleChainChanged = (chainId: string) => {
+      updateNetwork(Number(chainId));
+    };
+
+    (window.ethereum as any).on('chainChanged', handleChainChanged);
+
+    return () => {
+      (window.ethereum as any).removeListener('chainChanged', handleChainChanged);
+    };
+  }, [updateNetwork]);
+
+  const switchNetwork = useCallback(async (chainId: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!window.ethereum) {
+        throw new Error("Ethereum provider not found");
+      }
+
+      await window.ethereum.request({
+        method: 'walletSwitchEthereumChain',
+        params: [{ chainId: `0x${chainId.toString(16)}` }],
+      });
+
+      await updateNetwork(chainId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to switch network');
+    } finally {
+      setLoading(false);
+    }
+  }, [updateNetwork]);
+
   return (
-    <NetworkContext.Provider value={{ ...state, connect, disconnect, switchNetwork, getProvider, refreshNetwork }}>
+    <NetworkContext.Provider value={{ network, switchNetwork, loading, error }}>
       {children}
     </NetworkContext.Provider>
   );
