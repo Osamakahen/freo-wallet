@@ -5,11 +5,11 @@ import { TransactionManager } from '../core/transaction/TransactionManager';
 import { KeyManager } from '../core/keyManagement/KeyManager';
 import { 
   BridgeConfig, 
-  TransactionRequest, 
-  Permission, 
+  Permission,
   DAppResponse,
   SessionPermissions
 } from '../types/dapp';
+import { TransactionRequest } from '../types/wallet';
 import { toast } from 'react-toastify';
 
 interface DAppContextType {
@@ -20,7 +20,7 @@ interface DAppContextType {
   connect: () => Promise<void>;
   disconnect: () => void;
   requestAccounts: () => Promise<string[]>;
-  requestPermissions: (permissions: SessionPermissions) => Promise<SessionPermissions>;
+  requestPermissions: (permissions: Permission[]) => Promise<Permission[]>;
   signMessage: (message: string) => Promise<string>;
   sendTransaction: (transaction: TransactionRequest) => Promise<string>;
   loading: boolean;
@@ -113,7 +113,7 @@ export const DAppProvider: React.FC<{
     }
   }, [bridge]);
 
-  const requestPermissions = useCallback(async (permissions: SessionPermissions) => {
+  const requestPermissions = useCallback(async (permissions: Permission[]) => {
     try {
       setLoading(true);
       setError(null);
@@ -144,11 +144,13 @@ export const DAppProvider: React.FC<{
   const sendTransaction = useCallback(async (transaction: TransactionRequest) => {
     try {
       setLoading(true);
-      setError(null);
-      return await bridge.sendTransaction(transaction);
+      const response = await bridge.sendTransaction(transaction);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.result as string;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send transaction');
-      toast.error('Failed to send transaction');
       throw err;
     } finally {
       setLoading(false);
