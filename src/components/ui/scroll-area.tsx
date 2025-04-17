@@ -4,7 +4,8 @@ import { cn } from "../../lib/utils"
 
 export interface ScrollAreaProps
   extends React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> {
-  className?: string
+  className?: string;
+  children?: React.ReactNode;
 }
 
 const ScrollArea = React.forwardRef<
@@ -28,7 +29,8 @@ ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
 
 export interface ScrollBarProps
   extends React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar> {
-  className?: string
+  className?: string;
+  orientation?: "vertical" | "horizontal";
 }
 
 const ScrollBar = React.forwardRef<
