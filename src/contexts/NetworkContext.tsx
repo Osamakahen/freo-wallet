@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { NetworkManager } from '../core/network/NetworkManager';
 import { ErrorCorrelator } from '../core/error/ErrorCorrelator';
 import { toast } from 'react-toastify';
+import { mainnet } from 'viem/chains';
 
 interface NetworkContextType {
   networkManager: NetworkManager;
@@ -20,7 +21,11 @@ const NetworkContext = createContext<NetworkContextType | undefined>(undefined);
 
 export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [errorCorrelator] = useState(() => ErrorCorrelator.getInstance());
-  const [networkManager] = useState(() => new NetworkManager(errorCorrelator));
+  const [networkManager] = useState(() => new NetworkManager({
+    networkName: mainnet.name,
+    chainId: mainnet.id,
+    rpcUrl: mainnet.rpcUrls.default.http[0]
+  }));
   const [ethereum, setEthereum] = useState<NetworkContextType['ethereum']>(undefined);
   const [chainId, setChainId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -61,7 +66,11 @@ export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       setLoading(true);
       setError(null);
-      await networkManager.switchNetwork(chainId);
+      await networkManager.switchNetwork({
+        networkName: mainnet.name,
+        chainId: parseInt(chainId),
+        rpcUrl: mainnet.rpcUrls.default.http[0]
+      });
       setChainId(chainId);
       toast.success(`Switched to network ${chainId}`, {
         position: 'top-right',
