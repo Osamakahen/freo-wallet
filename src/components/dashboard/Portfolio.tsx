@@ -4,7 +4,6 @@ import { useDApp } from '../../contexts/DAppContext';
 import { TokenManager } from '../../core/token/TokenManager';
 import type { TokenBalance } from '../../types/token';
 import { formatEther } from 'ethers';
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
