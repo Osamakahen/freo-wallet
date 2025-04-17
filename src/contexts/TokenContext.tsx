@@ -7,21 +7,12 @@ import { mainnet } from 'viem/chains';
 import debounce from 'lodash/debounce';
 import { Address } from 'viem';
 
-interface Token {
-  address: Address;
-  symbol: string;
-  name: string;
-  decimals: number;
-  balance: string;
-  chainId: number;
-}
-
 interface TokenContextType {
-  tokens: Token[];
-  addToken: (token: Token) => void;
+  tokens: TokenBalance[];
+  addToken: (token: TokenBalance) => void;
   removeToken: (address: Address) => void;
-  updateToken: (token: Token) => void;
-  getToken: (address: Address) => Token | undefined;
+  updateToken: (token: TokenBalance) => void;
+  getToken: (address: Address) => TokenBalance | undefined;
   balances: TokenBalance[];
   refreshBalances: () => Promise<void>;
   isLoading: boolean;
@@ -34,7 +25,7 @@ const STORAGE_KEY = 'tracked_tokens';
 
 export const TokenProvider = ({ children }: { children: ReactNode }) => {
   const { address, isConnected } = useWallet();
-  const [tokens, setTokens] = useState<Token[]>([]);
+  const [tokens, setTokens] = useState<TokenBalance[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const tokenManager = React.useMemo(() => new TokenManager(new EVMAdapter(mainnet)), []);
@@ -80,10 +71,7 @@ export const TokenProvider = ({ children }: { children: ReactNode }) => {
       );
       
       setTokens(newBalances);
-      setBalances(newBalances.map(balance => ({
-        ...balance,
-        address: balance.address as Address
-      })));
+      setBalances(newBalances);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to refresh balances'));
     } finally {
@@ -99,27 +87,23 @@ export const TokenProvider = ({ children }: { children: ReactNode }) => {
     [refreshBalances, debounce]
   );
 
+  // Refresh balances when address or tokens change
   useEffect(() => {
     if (address && isConnected) {
       debouncedRefresh();
     }
-    return () => debouncedRefresh.cancel();
   }, [address, isConnected, debouncedRefresh]);
 
-  const addToken = useCallback((token: Token) => {
-    setTokens(prevTokens => [...prevTokens, token]);
+  const addToken = useCallback((token: TokenBalance) => {
+    setTokens(prev => [...prev, token]);
   }, []);
 
   const removeToken = useCallback((address: Address) => {
-    setTokens(prevTokens => prevTokens.filter(token => token.address !== address));
+    setTokens(prev => prev.filter(token => token.address !== address));
   }, []);
 
-  const updateToken = useCallback((updatedToken: Token) => {
-    setTokens(prevTokens => 
-      prevTokens.map(token => 
-        token.address === updatedToken.address ? updatedToken : token
-      )
-    );
+  const updateToken = useCallback((token: TokenBalance) => {
+    setTokens(prev => prev.map(t => t.address === token.address ? token : t));
   }, []);
 
   const getToken = useCallback((address: Address) => {
@@ -127,17 +111,19 @@ export const TokenProvider = ({ children }: { children: ReactNode }) => {
   }, [tokens]);
 
   return (
-    <TokenContext.Provider value={{
-      tokens,
-      addToken,
-      removeToken,
-      updateToken,
-      getToken,
-      balances,
-      refreshBalances,
-      isLoading,
-      error
-    }}>
+    <TokenContext.Provider
+      value={{
+        tokens,
+        addToken,
+        removeToken,
+        updateToken,
+        getToken,
+        balances,
+        refreshBalances,
+        isLoading,
+        error
+      }}
+    >
       {children}
     </TokenContext.Provider>
   );
@@ -145,7 +131,7 @@ export const TokenProvider = ({ children }: { children: ReactNode }) => {
 
 export const useToken = () => {
   const context = useContext(TokenContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useToken must be used within a TokenProvider');
   }
   return context;
