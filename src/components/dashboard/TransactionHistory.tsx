@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDApp } from '../../contexts/DAppContext';
 import { TransactionManager } from '../../core/transaction/TransactionManager';
 import { TransactionReceipt } from '../../types/wallet';
-import { formatEther } from 'ethers/lib/utils';
+import { formatEther } from 'viem';
 import { formatDistanceToNow } from 'date-fns';
 
 interface TransactionHistoryProps {
