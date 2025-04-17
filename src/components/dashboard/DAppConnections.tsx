@@ -18,19 +18,37 @@ const getPermissionLabel = (permission: DAppPermission): string => {
 }
 
 export const DAppConnections: React.FC = () => {
-  const { bridge, isConnected } = useDApp()
+  const { bridge, isConnected, currentAccount } = useDApp()
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
+  const [sessions, setSessions] = useState<DAppSession[]>([])
 
   const handleDisconnect = async (dappId: string) => {
     try {
       setDisconnecting(dappId)
-      await bridge?.endSession(dappId)
+      await bridge.disconnect()
+      setSessions(prev => prev.filter(session => session.dappId !== dappId))
     } catch (error) {
       console.error('Failed to disconnect from DApp:', error)
     } finally {
       setDisconnecting(null)
     }
   }
+
+  React.useEffect(() => {
+    if (isConnected && currentAccount) {
+      // Mock sessions for now - replace with actual session management
+      setSessions([{
+        dappId: 'example-dapp',
+        address: currentAccount,
+        permissions: ['read', 'transaction'],
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+        deviceFingerprint: '',
+        timestamp: Date.now()
+      }])
+    } else {
+      setSessions([])
+    }
+  }, [isConnected, currentAccount])
 
   if (!isConnected) {
     return (
@@ -54,12 +72,12 @@ export const DAppConnections: React.FC = () => {
         <ScrollArea className="h-[300px]">
           <ScrollAreaViewport>
             <div className="space-y-4">
-              {bridge?.sessions.map((session) => (
-                <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg">
+              {sessions.map((session: DAppSession) => (
+                <div key={session.dappId} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="space-y-1">
-                    <h3 className="font-medium">{session.origin}</h3>
+                    <h3 className="font-medium">{session.dappId}</h3>
                     <div className="flex gap-2">
-                      {session.permissions.map((permission) => (
+                      {session.permissions.map((permission: DAppPermission) => (
                         <Badge key={permission} variant="secondary">
                           {getPermissionLabel(permission)}
                         </Badge>
@@ -67,16 +85,15 @@ export const DAppConnections: React.FC = () => {
                     </div>
                   </div>
                   <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDisconnect(session.id)}
-                    disabled={disconnecting === session.id}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 h-8 rounded-md px-3 text-xs"
+                    onClick={() => handleDisconnect(session.dappId)}
+                    disabled={disconnecting === session.dappId}
                   >
-                    {disconnecting === session.id ? 'Disconnecting...' : 'Disconnect'}
+                    {disconnecting === session.dappId ? 'Disconnecting...' : 'Disconnect'}
                   </Button>
                 </div>
               ))}
-              {bridge?.sessions.length === 0 && (
+              {sessions.length === 0 && (
                 <p className="text-muted-foreground">No active DApp connections.</p>
               )}
             </div>
