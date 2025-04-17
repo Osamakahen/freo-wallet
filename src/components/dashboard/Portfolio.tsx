@@ -3,7 +3,13 @@ import Image from 'next/image';
 import { useDApp } from '../../contexts/DAppContext';
 import { TokenManager } from '../../core/token/TokenManager';
 import { TokenBalance } from '../../types/token';
-import { formatEther } from 'ethers/lib/utils';
+import { formatEther } from 'viem';
+
+interface ExtendedTokenBalance extends TokenBalance {
+  name: string;
+  symbol: string;
+  price: string;
+}
 
 interface PortfolioProps {
   tokenManager: TokenManager;
@@ -15,6 +21,7 @@ const TokenImage: React.FC<{ address: string; symbol: string }> = ({ address, sy
   return (
     <div className="flex-shrink-0 h-10 w-10 relative">
       <Image
+        unoptimized
         className="rounded-full"
         src={imgSrc}
         alt={symbol}
@@ -28,7 +35,7 @@ const TokenImage: React.FC<{ address: string; symbol: string }> = ({ address, sy
 
 export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
   const { currentAccount, currentChain } = useDApp();
-  const [balances, setBalances] = useState<TokenBalance[]>([]);
+  const [balances, setBalances] = useState<ExtendedTokenBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalValue, setTotalValue] = useState<string>('0');
@@ -63,22 +70,24 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
           {
             address: 'native',
             symbol: 'ETH',
+            name: 'Ethereum',
             balance: formatEther(nativeBalance),
             decimals: 18,
             price: '0', // In production, fetch from price feed
           },
           ...tokenBalances,
         ].sort((a, b) => {
-          const valueA = parseFloat(formatEther(a.balance)) * parseFloat(a.price || '0');
-          const valueB = parseFloat(formatEther(b.balance)) * parseFloat(b.price || '0');
+          const valueA = Number(a.balance) * Number(a.price || '0');
+          const valueB = Number(b.balance) * Number(b.price || '0');
           return valueB - valueA;
         });
 
         setBalances(allBalances);
 
-        // Calculate total value
+        // Calculate total value using Number for demonstration
+        // In production, use a high-precision library
         const total = allBalances.reduce((sum, token) => {
-          const value = parseFloat(formatEther(token.balance)) * parseFloat(token.price || '0');
+          const value = Number(token.balance) * Number(token.price || '0');
           return sum + value;
         }, 0);
 
