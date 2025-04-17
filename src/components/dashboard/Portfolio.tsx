@@ -3,7 +3,6 @@ import Image from 'next/image';
 import { useDApp } from '../../contexts/DAppContext';
 import { TokenManager } from '../../core/token/TokenManager';
 import type { TokenBalance } from '../../types/token';
-import { TokenInfo } from '../../types/token';
 import { formatEther } from 'ethers';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
