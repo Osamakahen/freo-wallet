@@ -3,9 +3,6 @@ import { useDApp } from '../../contexts/DAppContext';
 import { TokenManager } from '../../core/token/TokenManager';
 import { TokenBalance } from '../../types/token';
 import { formatEther } from 'ethers';
-import { Card } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
 
 interface PortfolioProps {
   tokenManager: TokenManager;
@@ -18,7 +15,7 @@ interface TokenData extends TokenBalance {
   price?: string;
 }
 
-const TokenImage: React.FC<{ address: string; symbol: string }> = ({ symbol }) => {
+const TokenImage: React.FC<{ symbol: string }> = ({ symbol }) => {
   return (
     <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
       <span className="text-sm font-medium">{symbol[0]}</span>
@@ -125,7 +122,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({ tokenManager }) => {
               <tr key={token.address} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <TokenImage address={token.address} symbol={token.symbol} />
+                    <TokenImage symbol={token.symbol} />
                     <div className="ml-4">
                       <div className="text-sm font-medium text-gray-900">{token.symbol}</div>
                       <div className="text-sm text-gray-500">{token.name}</div>
