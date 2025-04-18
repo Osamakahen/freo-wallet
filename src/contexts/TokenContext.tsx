@@ -61,7 +61,7 @@ export const TokenProvider = ({ children }: { children: ReactNode }) => {
       
       const newBalances = await Promise.all(
         tokens.map(async (token) => {
-          const balance = await tokenManager.getTokenBalance(token.address, address as `0x${string}`);
+          const balance = await tokenManager.getTokenBalance(token.tokenAddress, address as `0x${string}`);
           return {
             ...token,
             balance: balance.balance,
@@ -99,15 +99,15 @@ export const TokenProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const removeToken = useCallback((address: Address) => {
-    setTokens(prev => prev.filter(token => token.address !== address));
+    setTokens(prev => prev.filter(token => token.tokenAddress !== address));
   }, []);
 
   const updateToken = useCallback((token: TokenBalance) => {
-    setTokens(prev => prev.map(t => t.address === token.address ? token : t));
+    setTokens(prev => prev.map(t => t.tokenAddress === token.tokenAddress ? token : t));
   }, []);
 
   const getToken = useCallback((address: Address) => {
-    return tokens.find(token => token.address === address);
+    return tokens.find(token => token.tokenAddress === address);
   }, [tokens]);
 
   return (
