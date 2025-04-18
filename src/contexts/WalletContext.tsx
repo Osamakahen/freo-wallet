@@ -36,7 +36,7 @@ interface WalletContextType {
   error: string | null;
   connect: () => Promise<void>;
   disconnect: () => void;
-  setChainId: (chainId: string) => void;
+  setChainId: (chainId: string | number) => void;
 }
 
 export const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -152,8 +152,12 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  const handleSetChainId = (newChainId: string) => {
-    setChainId(newChainId);
+  const handleSetChainId = (newChainId: string | number) => {
+    if (typeof newChainId === 'number') {
+      setChainId(`0x${newChainId.toString(16)}`);
+    } else {
+      setChainId(newChainId);
+    }
   };
 
   return (
