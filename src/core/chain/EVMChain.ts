@@ -49,7 +49,11 @@ export class EVMChain implements Chain {
       console.log('Getting receipt for transaction:', txHash);
       throw new Error('Not implemented');
     } catch (error) {
-      throw new WalletError('Failed to get transaction receipt', 'RECEIPT_FETCH_ERROR', { error });
+      throw new WalletError(
+        'Failed to get transaction receipt',
+        'RECEIPT_FETCH_ERROR',
+        { error: new Error(error instanceof Error ? error.message : String(error)) }
+      );
     }
   }
 } 
