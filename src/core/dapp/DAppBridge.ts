@@ -240,3 +240,4 @@ export class DAppBridge {
     return this.dAppInfo
   }
 } 
+} 
