@@ -1,6 +1,35 @@
 export type ErrorSeverity = 'low' | 'medium' | 'high';
 
+interface DeviceInfo {
+  userAgent: string;
+  platform: string;
+  language: string;
+  screenResolution: string;
+  colorDepth: number;
+}
+
+interface SystemMetrics {
+  memoryUsage: number;
+  cpuUsage: number;
+  networkStatus: string;
+  browserInfo: string;
+}
+
+interface UserContext {
+  userId?: string;
+  sessionId?: string;
+  deviceInfo?: DeviceInfo;
+  location?: string;
+  timezone?: string;
+}
+
 export interface ErrorContext {
+  error: Error;
+  correlationId?: string;
+  userContext?: UserContext;
+  systemMetrics?: SystemMetrics;
+  stackTrace?: string;
+  timestamp?: number;
   [key: string]: unknown;
 }
 

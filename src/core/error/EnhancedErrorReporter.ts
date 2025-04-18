@@ -1,28 +1,5 @@
-import { ErrorContext } from '../../types/error';
+import { ErrorContext, UserContext, DeviceInfo, SystemMetrics } from '../../types/error';
 import { WalletError } from './ErrorHandler';
-
-interface DeviceInfo {
-  userAgent: string;
-  platform: string;
-  language: string;
-  screenResolution: string;
-  colorDepth: number;
-}
-
-interface SystemMetrics {
-  memoryUsage: number;
-  cpuUsage: number;
-  networkStatus: string;
-  browserInfo: string;
-}
-
-interface UserContext {
-  userId?: string;
-  sessionId?: string;
-  deviceInfo?: DeviceInfo;
-  location?: string;
-  timezone?: string;
-}
 
 export class EnhancedErrorReporter {
   private static instance: EnhancedErrorReporter;
@@ -51,11 +28,11 @@ export class EnhancedErrorReporter {
     }
   }
 
-  private async handleWalletError(error: Error | WalletError, context: ErrorContext): Promise<void> {
+  private async handleWalletError(error: WalletError, context: ErrorContext): Promise<void> {
     // Enhanced error handling for wallet-specific errors
     console.error('Wallet Error:', {
-      message: error instanceof WalletError ? error.message : error.message,
-      code: error instanceof WalletError ? error.code : null,
+      message: error.message,
+      code: error.code,
       context: context,
       timestamp: new Date().toISOString()
     });
