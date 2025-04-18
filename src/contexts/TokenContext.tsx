@@ -2,11 +2,10 @@ import React, { createContext, useContext, useState, useCallback, useEffect, Rea
 import { useWallet } from './WalletContext';
 import { TokenManager } from '../core/token/TokenManager';
 import { TokenBalance } from '../types/token';
-import { EVMAdapter } from '../core/evm/EVMAdapter';
+import { EVMAdapter } from '../core/evm/WalletAdapter';
 import { mainnet } from 'viem/chains';
 import debounce from 'lodash/debounce';
 import { Address } from 'viem';
-import { WalletAdapter } from '../core/evm/WalletAdapter';
 
 interface Token {
   address: Address;
@@ -38,7 +37,7 @@ export const TokenProvider = ({ children }: { children: ReactNode }) => {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const tokenManager = React.useMemo(() => new TokenManager(new WalletAdapter(mainnet)), []);
+  const tokenManager = React.useMemo(() => new TokenManager(new EVMAdapter(mainnet)), []);
   const [balances, setBalances] = useState<TokenBalance[]>([]);
 
   // Load saved tokens on mount
