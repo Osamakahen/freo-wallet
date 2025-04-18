@@ -8,6 +8,7 @@ interface WalletContextType {
   ethereum: EthereumProvider | undefined;
   address: string | null;
   chainId: string | null;
+  isConnected: boolean;
   loading: boolean;
   error: string | null;
   connect: () => Promise<void>;
@@ -21,6 +22,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [ethereum, setEthereum] = useState<EthereumProvider | undefined>(window.ethereum);
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [walletManager] = useState(() => new WalletManager());
@@ -29,8 +31,10 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const handleAccountsChanged = (accounts: unknown) => {
       if (Array.isArray(accounts) && accounts.length > 0) {
         setAddress(accounts[0] as string);
+        setIsConnected(true);
       } else {
         setAddress(null);
+        setIsConnected(false);
       }
     };
 
@@ -43,6 +47,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const handleDisconnect = () => {
       setAddress(null);
       setChainId(null);
+      setIsConnected(false);
       setError('Wallet disconnected');
     };
 
@@ -87,6 +92,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       if (Array.isArray(accounts) && accounts.length > 0) {
         setAddress(accounts[0] as string);
+        setIsConnected(true);
       }
       if (typeof chainId === 'string') {
         setChainId(chainId);
@@ -103,6 +109,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const disconnect = () => {
     setAddress(null);
     setChainId(null);
+    setIsConnected(false);
   };
 
   const handleSetChainId = (newChainId: string | number) => {
@@ -120,6 +127,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         ethereum,
         address,
         chainId,
+        isConnected,
         loading,
         error,
         connect,
