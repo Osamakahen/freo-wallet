@@ -2,24 +2,32 @@ import { createWalletClient, createPublicClient, custom, getAddress, formatEther
 import { mainnet, goerli, sepolia, Chain } from 'viem/chains';
 import { TransactionRequest } from '../../types/wallet';
 
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 export class EVMAdapter {
   private walletClient: ReturnType<typeof createWalletClient>;
   private publicClient: ReturnType<typeof createPublicClient>;
   private chain: Chain;
+  private ethereum: any;
 
   constructor(chain: Chain = mainnet) {
     if (typeof window === 'undefined' || !window.ethereum) {
       throw new Error('Ethereum provider not found');
     }
 
+    this.ethereum = window.ethereum;
     this.chain = chain;
     this.walletClient = createWalletClient({
       chain,
-      transport: custom(window.ethereum)
+      transport: custom(this.ethereum)
     });
     this.publicClient = createPublicClient({
       chain,
-      transport: custom(window.ethereum)
+      transport: custom(this.ethereum)
     });
   }
 
@@ -34,9 +42,9 @@ export class EVMAdapter {
   }
 
   async sendTransaction(tx: TransactionRequest): Promise<`0x${string}`> {
-    const { hash } = await this.walletClient.sendTransaction({
+    const hash = await this.walletClient.sendTransaction({
       to: tx.to,
-      data: tx.data,
+      data: tx.data as `0x${string}` | undefined,
       value: tx.value ? BigInt(tx.value) : undefined,
       gas: tx.gasLimit ? BigInt(tx.gasLimit) : undefined,
       gasPrice: tx.gasPrice ? BigInt(tx.gasPrice) : undefined,
@@ -59,7 +67,7 @@ export class EVMAdapter {
 
   async switchChain(chainId: number): Promise<void> {
     try {
-      await window.ethereum.request({
+      await this.ethereum.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: `0x${chainId.toString(16)}` }]
       });
@@ -75,7 +83,7 @@ export class EVMAdapter {
 
   private async addChain(chainId: number): Promise<void> {
     const chain = this.getChainById(chainId);
-    await window.ethereum.request({
+    await this.ethereum.request({
       method: 'wallet_addEthereumChain',
       params: [
         {
