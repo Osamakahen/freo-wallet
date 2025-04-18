@@ -5,7 +5,6 @@ import {
   BridgeState, 
   BridgeEvents, 
   BridgeConfig,
-  DAppRequest,
   DAppResponse,
   Permission
 } from '../../types/dapp'
@@ -182,8 +181,7 @@ export class DAppBridge {
     try {
       const txHash = await this.transactionManager.sendTransaction(transaction)
       return {
-        result: txHash,
-        id: Date.now() // Using timestamp as a simple unique ID
+        result: txHash
       }
     } catch (error) {
       throw new TransactionError(
