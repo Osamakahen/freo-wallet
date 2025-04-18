@@ -1,10 +1,10 @@
-import { createWalletClient, createPublicClient, custom, getAddress, formatEther, EthereumProvider } from 'viem';
+import { createWalletClient, createPublicClient, custom, getAddress, formatEther, EIP1193Provider } from 'viem';
 import { mainnet, goerli, sepolia, Chain } from 'viem/chains';
 import { TransactionRequest } from '../../types/wallet';
 
 declare global {
   interface Window {
-    ethereum?: EthereumProvider;
+    ethereum?: EIP1193Provider;
   }
 }
 
@@ -12,7 +12,7 @@ export class EVMAdapter {
   private walletClient: ReturnType<typeof createWalletClient>;
   private publicClient: ReturnType<typeof createPublicClient>;
   private chain: Chain;
-  private ethereum: EthereumProvider;
+  private ethereum: EIP1193Provider;
 
   constructor(chain: Chain = mainnet) {
     if (typeof window === 'undefined' || !window.ethereum) {
@@ -51,7 +51,7 @@ export class EVMAdapter {
       maxFeePerGas: tx.maxFeePerGas ? BigInt(tx.maxFeePerGas) : undefined,
       maxPriorityFeePerGas: tx.maxPriorityFeePerGas ? BigInt(tx.maxPriorityFeePerGas) : undefined,
       nonce: tx.nonce,
-      chainId: this.chain.id
+      chain: this.chain
     });
 
     return hash;
