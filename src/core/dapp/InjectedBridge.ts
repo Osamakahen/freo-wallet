@@ -10,13 +10,15 @@ import { WalletError } from '../error/ErrorHandler';
 
 type EventListener = (data?: unknown) => void;
 
+interface EthereumProvider {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+  on: (event: EthereumEvent, callback: EthereumCallback) => void;
+  removeListener: (event: EthereumEvent, callback: EthereumCallback) => void;
+}
+
 declare global {
   interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-      on: (event: EthereumEvent, callback: EthereumCallback) => void;
-      removeListener: (event: EthereumEvent, callback: EthereumCallback) => void;
-    };
+    ethereum?: EthereumProvider;
   }
 }
 
@@ -40,21 +42,21 @@ export class InjectedBridge {
   public async request(method: string, params?: unknown[]): Promise<DAppResponse> {
     switch (method) {
       case 'eth_requestAccounts':
-        return { success: true, result: [this.bridge.getState().address] };
+        return { result: [this.bridge.getState().address], id: Date.now() };
       case 'eth_accounts':
-        return { success: true, result: [this.bridge.getState().address] };
+        return { result: [this.bridge.getState().address], id: Date.now() };
       case 'eth_chainId':
-        return { success: true, result: this.bridge.getState().chainId };
+        return { result: this.bridge.getState().chainId, id: Date.now() };
       case 'eth_sendTransaction':
         if (!params?.[0]) {
           throw new WalletError('Missing transaction parameters', 'INVALID_PARAMS');
         }
-        return { success: true, result: await this.bridge.sendTransaction(params[0] as TransactionRequest) };
+        return { result: await this.bridge.sendTransaction(params[0] as TransactionRequest), id: Date.now() };
       case 'eth_sign':
         if (!params?.[0] || !params?.[1]) {
           throw new WalletError('Missing sign parameters', 'INVALID_PARAMS');
         }
-        return { success: true, result: await this.bridge.signMessage(params[0] as string) };
+        return { result: await this.bridge.signMessage(params[0] as string), id: Date.now() };
       default:
         throw new WalletError('Unsupported method', 'UNSUPPORTED_METHOD');
     }
