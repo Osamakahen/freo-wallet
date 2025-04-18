@@ -175,20 +175,18 @@ export class DAppBridge {
     }
 
     try {
-      const txHash = await this.transactionManager.sendTransaction(transaction)
-      return {
-        result: txHash,
-        id: Date.now()
-      }
+      const txHash = await this.transactionManager.sendTransaction(transaction);
+      return { success: true, txHash };
     } catch (error) {
       throw new TransactionError(
         error instanceof Error ? error.message : 'Failed to send transaction',
         {
+          error: new Error(error instanceof Error ? error.message : String(error)),
           method: 'sendTransaction',
           transaction,
           originalError: error
         }
-      )
+      );
     }
   }
 
