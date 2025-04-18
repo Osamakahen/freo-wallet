@@ -5,16 +5,11 @@ import {
   BridgeState, 
   BridgeEvents, 
   BridgeConfig,
-  DAppRequest,
   DAppResponse,
   Permission
 } from '../../types/dapp'
 import { TransactionRequest } from '../../types/wallet'
 import { WalletError, DAppError, TransactionError } from '../error/ErrorHandler'
-import { ErrorCorrelator } from '../error/ErrorCorrelator'
-import { PermissionManager } from '../security/PermissionManager'
-import { type Address } from 'viem'
-import { DAppMessage } from '../../types/dapp'
 
 export class DAppBridge {
   private static instance: DAppBridge | null = null;
@@ -25,9 +20,6 @@ export class DAppBridge {
   private events: BridgeEvents;
   private dAppInfo: DAppInfo | null = null;
   private connectedAccount: string | null = null;
-  private isConnected: boolean = false;
-  private currentAddress: Address | null = null;
-  private currentChainId: number | null = null;
 
   constructor(
     sessionManager: SessionManager,
@@ -139,7 +131,7 @@ export class DAppBridge {
   }
 
   public async requestAccounts(): Promise<string[]> {
-    if (!this.isConnected) {
+    if (!this.state.isConnected) {
       throw new WalletError('Not connected to DApp')
     }
     return this.connectedAccount ? [this.connectedAccount] : []
@@ -172,7 +164,7 @@ export class DAppBridge {
   }
 
   public async sendTransaction(transaction: TransactionRequest): Promise<DAppResponse> {
-    if (!this.isConnected) {
+    if (!this.state.isConnected) {
       throw new DAppError('Wallet is not connected', {
         method: 'sendTransaction',
         connectionStatus: false
