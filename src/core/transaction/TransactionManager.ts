@@ -76,7 +76,11 @@ export class TransactionManager {
       };
     } catch (error) {
       throw new TransactionError(
-        `Failed to get gas settings: ${error instanceof Error ? error.message : 'Unknown error'}`
+        'Failed to get gas settings',
+        {
+          error: new Error(error instanceof Error ? error.message : String(error)),
+          method: 'getGasSettings'
+        }
       );
     }
   }

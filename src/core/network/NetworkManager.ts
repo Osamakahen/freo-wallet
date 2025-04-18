@@ -20,15 +20,22 @@ export class NetworkManager {
       const network = await this.provider.getNetwork();
       if (network.chainId !== this.config.chainId) {
         throw new NetworkError(
-          `Network mismatch: expected chainId ${this.config.chainId}, got ${network.chainId}`,
-          network.chainId
+          'Network mismatch',
+          {
+            error: new Error(`Expected chainId ${this.config.chainId}, got ${network.chainId}`),
+            chainId: network.chainId,
+            expectedChainId: this.config.chainId
+          }
         );
       }
     } catch (error) {
       if (error instanceof NetworkError) throw error;
       throw new NetworkError(
-        `Failed to connect to network: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        this.config.chainId
+        'Failed to connect to network',
+        {
+          error: new Error(error instanceof Error ? error.message : String(error)),
+          chainId: this.config.chainId
+        }
       );
     }
   }
@@ -41,8 +48,11 @@ export class NetworkManager {
       await this.connect();
     } catch (error) {
       throw new NetworkError(
-        `Failed to switch network: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        config.chainId
+        'Failed to switch network',
+        {
+          error: new Error(error instanceof Error ? error.message : String(error)),
+          chainId: config.chainId
+        }
       );
     }
   }
