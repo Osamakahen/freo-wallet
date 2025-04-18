@@ -10,7 +10,7 @@ export class EVMAdapter extends ChainAdapter {
 
   constructor(config: ChainConfig) {
     super(config);
-    this.chain = new EVMChain(config.chainId);
+    this.chain = new EVMChain(config.chainId, config.rpcUrl, config.name);
     this.chainConfig = {
       id: config.chainId,
       name: config.name,
@@ -47,7 +47,10 @@ export class EVMAdapter extends ChainAdapter {
   }
 
   async getBalance(address: Address): Promise<bigint> {
-    return await this.publicClient.getBalance({ address })
+    return await this.publicClient.getBalance({
+      address,
+      blockTag: 'latest'
+    })
   }
 
   async prepareTransaction(tx: TransactionDetails): Promise<TransactionRequest> {

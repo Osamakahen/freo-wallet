@@ -9,7 +9,7 @@ import { FaEthereum, FaArrowRight } from 'react-icons/fa'
 interface Token {
   address: Address
   symbol: string
-  balance: bigint
+  balance: string
   price?: number
 }
 
@@ -46,7 +46,7 @@ export function PortfolioView({ address, network }: PortfolioViewProps) {
       setTokens([{
         address: commonTokens[0],
         symbol: tokenInfo.symbol || 'UNKNOWN',
-        balance: 0n,
+        balance: '0',
         price: 0,
       }])
       setIsLoading(false)
@@ -109,7 +109,7 @@ export function PortfolioView({ address, network }: PortfolioViewProps) {
               <div>
                 <p className="font-medium">{token.symbol}</p>
                 <p className="text-sm text-gray-500">
-                  Balance: {token.balance.toString()}
+                  Balance: {token.balance}
                 </p>
               </div>
               <div className="text-right">

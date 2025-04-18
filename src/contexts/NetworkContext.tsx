@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { ethers } from 'ethers';
 import { mainnet } from 'viem/chains';
-import type { EthereumCallback } from '../types/ethereum';
+import { Address } from 'viem';
 
 interface NetworkState {
   chainId: number;
@@ -9,6 +9,9 @@ interface NetworkState {
   symbol: string;
   rpcUrl: string;
   explorer?: string;
+  address: Address | null;
+  isConnected: boolean;
+  error: string | null;
 }
 
 interface NetworkError {
@@ -23,31 +26,34 @@ interface NetworkResponse<T = unknown> {
   error?: NetworkError;
 }
 
-export interface NetworkContextType {
-  network: NetworkState;
-  chainId: number;
+export interface NetworkContextType extends NetworkState {
+  setChainId: (chainId: number) => void;
+  setAddress: (address: Address | null) => void;
+  setIsConnected: (isConnected: boolean) => void;
+  setError: (error: string | null) => void;
   switchNetwork: (chainId: string | number) => Promise<void>;
   loading: boolean;
-  error: string | null;
 }
 
 const NetworkContext = createContext<NetworkContextType | undefined>(undefined);
 
-export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function NetworkProvider({ children }: { children: ReactNode }) {
   const [network, setNetwork] = useState<NetworkState>({
     chainId: mainnet.id,
     networkName: mainnet.name,
     symbol: mainnet.nativeCurrency.symbol,
     rpcUrl: mainnet.rpcUrls.default.http[0],
-    explorer: mainnet.blockExplorers?.default.url
+    explorer: mainnet.blockExplorers?.default.url,
+    address: null,
+    isConnected: false,
+    error: null
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const updateNetwork = useCallback(async (chainId: number) => {
     try {
       setLoading(true);
-      setError(null);
+      setNetwork(prev => ({ ...prev, error: null }));
 
       if (!window.ethereum) {
         throw new Error("Ethereum provider not found");
@@ -61,10 +67,13 @@ export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({ child
         networkName: network.name || `Chain ${network.chainId}`,
         symbol: mainnet.nativeCurrency.symbol,
         rpcUrl: mainnet.rpcUrls.default.http[0],
-        explorer: mainnet.blockExplorers?.default.url
+        explorer: mainnet.blockExplorers?.default.url,
+        address: null,
+        isConnected: true,
+        error: null
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update network');
+      setNetwork(prev => ({ ...prev, error: err instanceof Error ? err.message : 'Failed to update network' }));
     } finally {
       setLoading(false);
     }
@@ -73,7 +82,7 @@ export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     if (!window.ethereum) return;
 
-    const handleChainChanged: EthereumCallback = (params: unknown) => {
+    const handleChainChanged = (params: unknown) => {
       const chainId = typeof params === 'string' ? params : 
                      typeof params === 'object' && params !== null && 'chainId' in params ? 
                      (params as { chainId: string }).chainId : 
@@ -92,7 +101,7 @@ export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const switchNetwork = useCallback(async (chainId: string | number) => {
     try {
       setLoading(true);
-      setError(null);
+      setNetwork(prev => ({ ...prev, error: null }));
 
       if (!window.ethereum) {
         throw new Error("Ethereum provider not found");
@@ -106,29 +115,49 @@ export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       await updateNetwork(typeof chainId === 'string' ? parseInt(chainId, 16) : chainId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to switch network');
+      setNetwork(prev => ({ ...prev, error: err instanceof Error ? err.message : 'Failed to switch network' }));
     } finally {
       setLoading(false);
     }
   }, [updateNetwork]);
 
+  const setChainId = (chainId: number) => {
+    setNetwork(prev => ({ ...prev, chainId }));
+  };
+
+  const setAddress = (address: Address | null) => {
+    setNetwork(prev => ({ ...prev, address }));
+  };
+
+  const setIsConnected = (isConnected: boolean) => {
+    setNetwork(prev => ({ ...prev, isConnected }));
+  };
+
+  const setError = (error: string | null) => {
+    setNetwork(prev => ({ ...prev, error }));
+  };
+
   return (
-    <NetworkContext.Provider value={{ 
-      network, 
-      chainId: network.chainId,
-      switchNetwork, 
-      loading, 
-      error 
-    }}>
+    <NetworkContext.Provider
+      value={{
+        ...network,
+        setChainId,
+        setAddress,
+        setIsConnected,
+        setError,
+        switchNetwork,
+        loading
+      }}
+    >
       {children}
     </NetworkContext.Provider>
   );
-};
+}
 
-export const useNetwork = () => {
+export function useNetwork() {
   const context = useContext(NetworkContext);
   if (context === undefined) {
     throw new Error('useNetwork must be used within a NetworkProvider');
   }
   return context;
-}; 
+} 
