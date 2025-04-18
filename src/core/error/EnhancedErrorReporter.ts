@@ -10,9 +10,9 @@ interface DeviceInfo {
 }
 
 interface SystemMetrics {
-  memoryUsage: PerformanceMemory | null;
+  memoryUsage: number;
   cpuUsage: number;
-  networkStatus: 'online' | 'offline';
+  networkStatus: string;
   browserInfo: string;
 }
 
@@ -106,8 +106,9 @@ export class EnhancedErrorReporter {
   }
 
   private async getSystemMetrics(): Promise<SystemMetrics> {
+    const performanceMemory = (performance as any).memory;
     return {
-      memoryUsage: this.getMemoryInfo(),
+      memoryUsage: performanceMemory?.usedJSHeapSize || 0,
       cpuUsage: 0, // Browser doesn't provide direct CPU usage
       networkStatus: navigator.onLine ? 'online' : 'offline',
       browserInfo: navigator.userAgent

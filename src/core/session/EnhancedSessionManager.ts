@@ -1,10 +1,52 @@
-import { SessionMetrics, SessionAuditLog, SessionStats, SecurityAlert, SessionReport, PermissionChange } from '../../types/session';
+import { 
+  SessionMetrics, 
+  SessionAuditLog, 
+  SessionStats, 
+  SessionReport, 
+  PermissionChange,
+  Session,
+  SessionConfig,
+  DeviceChange,
+  DeviceInfo
+} from '../../types/session';
 import { SessionManager } from './SessionManager';
-import { AnalyticsService } from '../../services/AnalyticsService';
+import AnalyticsService from '../../services/AnalyticsService';
 import { SecurityManager } from '../security/SecurityManager';
-import { Session } from '../../types/session';
-import { WalletError } from '../error/ErrorHandler';
-import { ErrorCorrelator } from '../error/ErrorCorrelator';
+import { SecurityAlert } from '../../types/security';
+import { v4 as uuidv4 } from 'uuid';
+
+interface SessionMetrics {
+  id: string;
+  duration: number;
+  operations: number;
+  securityScore: number;
+  deviceChanges: DeviceChange[];
+  permissionChanges: PermissionChange[];
+}
+
+interface SessionAuditLog {
+  id: string;
+  timestamp: number;
+  operations: string[];
+  securityEvents: SecurityAlert[];
+  deviceChanges: DeviceChange[];
+}
+
+interface SessionStats {
+  totalSessions: number;
+  activeSessions: number;
+  averageDuration: number;
+  securityScore: number;
+}
+
+interface SessionReport {
+  id: string;
+  timestamp: number;
+  metrics: SessionMetrics;
+  auditLog: SessionAuditLog;
+  stats: SessionStats;
+  alerts: SecurityAlert[];
+}
 
 export class EnhancedSessionManager extends SessionManager {
   private analyticsService: AnalyticsService;
@@ -13,44 +55,54 @@ export class EnhancedSessionManager extends SessionManager {
   private auditLogs: Map<string, SessionAuditLog[]> = new Map();
 
   constructor(config: Partial<SessionConfig> = {}) {
-    super(config);
+    super();
     this.analyticsService = new AnalyticsService();
     this.securityManager = new SecurityManager();
   }
 
   public async trackSessionMetrics(): Promise<SessionMetrics> {
-    const sessionId = this.activeSessionId;
-    if (!sessionId) {
+    const activeSession = this.getActiveSession();
+    if (!activeSession) {
       throw new Error('No active session');
     }
 
     const metrics: SessionMetrics = {
-      sessionId,
-      duration: Date.now() - (this.sessions.get(sessionId)?.createdAt || 0),
+      sessionId: activeSession.id,
+      duration: Date.now() - activeSession.timestamp,
       operations: this.getSessionOperations(),
       lastActivity: Date.now(),
       deviceInfo: this.getDeviceInfo(),
       ipAddress: await this.securityManager.getIPAddress(),
-      securityScore: await this.securityManager.calculateSecurityScore(sessionId)
+      securityScore: await this.securityManager.calculateSecurityScore(activeSession.id)
     };
 
-    this.sessionMetrics.set(sessionId, metrics);
+    this.sessionMetrics.set(activeSession.id, metrics);
     await this.analyticsService.track('session_metrics', metrics);
     return metrics;
   }
 
   public async auditSession(sessionId: string): Promise<SessionAuditLog> {
-    const session = this.sessions.get(sessionId);
+    const session = await this.getSessions().then(sessions => 
+      sessions.find(s => s.id === sessionId)
+    );
+    
     if (!session) {
       throw new Error('Session not found');
     }
+
+    const deviceChanges: DeviceChange[] = (await this.securityManager.getDeviceChanges(sessionId)).map(change => ({
+      timestamp: Date.now(),
+      type: 'device',
+      oldValue: JSON.stringify(change),
+      newValue: JSON.stringify(this.getDeviceInfo())
+    }));
 
     const auditLog: SessionAuditLog = {
       sessionId,
       timestamp: Date.now(),
       operations: this.getSessionOperations(),
       securityEvents: await this.securityManager.getSecurityEvents(sessionId),
-      deviceChanges: await this.securityManager.getDeviceChanges(sessionId),
+      deviceChanges,
       permissionChanges: this.getPermissionChanges()
     };
 
@@ -61,42 +113,66 @@ export class EnhancedSessionManager extends SessionManager {
     return auditLog;
   }
 
-  public async monitorActiveSessions(): Promise<SessionStats> {
+  public async monitorActiveSessions(): Promise<void> {
+    const sessions = await this.getSessions();
+    const activeSessions = sessions.filter(session => session.isActive);
+    
     const stats: SessionStats = {
-      totalSessions: this.sessions.size,
-      activeSessions: Array.from(this.sessions.values()).filter(s => s.expiresAt > Date.now()).length,
-      averageDuration: this.calculateAverageDuration(),
-      securityAlerts: await this.detectAnomalies(),
-      permissionUsage: this.analyzePermissionUsage()
+      totalSessions: sessions.length,
+      activeSessions: activeSessions.length,
+      averageDuration: this.calculateAverageDuration(activeSessions),
+      securityScore: this.calculateSecurityScore(activeSessions)
     };
 
-    await this.analyticsService.track('session_stats', stats);
-    return stats;
+    await AnalyticsService.trackSessionStats(stats);
+  }
+
+  private calculateAverageDuration(sessions: Session[]): number {
+    if (sessions.length === 0) return 0;
+    
+    const totalDuration = sessions.reduce((sum, session) => {
+      return sum + (Date.now() - session.timestamp);
+    }, 0);
+    
+    return totalDuration / sessions.length;
+  }
+
+  private calculateSecurityScore(sessions: Session[]): number {
+    if (sessions.length === 0) return 100;
+    
+    const totalScore = sessions.reduce((sum, session) => {
+      const deviceChanges = session.deviceChanges?.length || 0;
+      const permissionChanges = session.permissionChanges?.length || 0;
+      return sum + (100 - (deviceChanges * 10 + permissionChanges * 5));
+    }, 0);
+    
+    return Math.max(0, Math.min(100, totalScore / sessions.length));
   }
 
   public async detectAnomalies(): Promise<SecurityAlert[]> {
     const alerts: SecurityAlert[] = [];
+    const sessions = await this.getSessions();
     
-    for (const [sessionId] of this.sessions) {
-      const metrics = this.sessionMetrics.get(sessionId);
+    for (const session of sessions) {
+      const metrics = this.sessionMetrics.get(session.id);
       if (!metrics) continue;
 
       // Check for unusual activity
       if (metrics.operations > 1000) {
         alerts.push({
           type: 'HIGH_OPERATION_COUNT',
-          sessionId,
+          sessionId: session.id,
           severity: 'WARNING',
           message: 'Unusually high number of operations detected'
         });
       }
 
       // Check for multiple device changes
-      const deviceChanges = await this.securityManager.getDeviceChanges(sessionId);
+      const deviceChanges = await this.securityManager.getDeviceChanges(session.id);
       if (deviceChanges.length > 3) {
         alerts.push({
           type: 'MULTIPLE_DEVICE_CHANGES',
-          sessionId,
+          sessionId: session.id,
           severity: 'CRITICAL',
           message: 'Multiple device changes detected'
         });
@@ -106,7 +182,7 @@ export class EnhancedSessionManager extends SessionManager {
       if (metrics.securityScore < 0.7) {
         alerts.push({
           type: 'LOW_SECURITY_SCORE',
-          sessionId,
+          sessionId: session.id,
           severity: 'WARNING',
           message: 'Low security score detected'
         });
@@ -147,12 +223,6 @@ export class EnhancedSessionManager extends SessionManager {
     return []; // Placeholder
   }
 
-  private calculateAverageDuration(): number {
-    const durations = Array.from(this.sessions.values())
-      .map(s => s.expiresAt - s.createdAt);
-    return durations.reduce((a, b) => a + b, 0) / durations.length;
-  }
-
   private analyzePermissionUsage(): Map<string, number> {
     const usage = new Map<string, number>();
     // Implementation to analyze permission usage
@@ -171,5 +241,20 @@ export class EnhancedSessionManager extends SessionManager {
     }
     
     return recommendations;
+  }
+
+  private async auditSession(sessionId: string): Promise<void> {
+    const session = this.getActiveSession();
+    if (!session) return;
+
+    const auditLog: SessionAuditLog = {
+      id: sessionId,
+      timestamp: Date.now(),
+      operations: [],
+      securityEvents: [],
+      deviceChanges: session.deviceChanges || []
+    };
+
+    await AnalyticsService.trackSessionAudit(auditLog);
   }
 } 

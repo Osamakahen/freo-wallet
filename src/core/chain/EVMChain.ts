@@ -1,33 +1,45 @@
-import { ChainConfig } from '../config/ChainConfig';
+import { Chain, Transaction, TransactionStatus } from '../../types/chain';
+import { Address } from 'viem';
 import { WalletError } from '../error/ErrorHandler';
-import { type TransactionRequest } from 'viem';
 import { TransactionReceipt } from '../types/transaction';
 
-export class EVMChain {
-  private config: ChainConfig;
+export class EVMChain implements Chain {
+  private chainId: number;
+  private rpcUrl: string;
+  private name: string;
 
-  constructor(chainId: number) {
-    this.config = {
-      chainId,
-      rpcUrl: '', // This will be set by the adapter
-      name: '',
-      symbol: '',
-    };
+  constructor(chainId: number, rpcUrl: string, name: string) {
+    this.chainId = chainId;
+    this.rpcUrl = rpcUrl;
+    this.name = name;
+  }
+
+  async getBalance(address: Address): Promise<bigint> {
+    // Implementation for getting balance
+    return 0n;
+  }
+
+  async sendTransaction(tx: Transaction): Promise<string> {
+    // Implementation for sending transaction
+    return '';
+  }
+
+  async getTransactionStatus(txHash: string): Promise<TransactionStatus> {
+    // Implementation for getting transaction status
+    return 'pending';
+  }
+
+  async estimateGas(tx: Transaction): Promise<bigint> {
+    // Implementation for estimating gas
+    return 0n;
   }
 
   getChainId(): number {
-    return this.config.chainId;
+    return this.chainId;
   }
 
-  async sendTransaction(tx: TransactionRequest): Promise<string> {
-    try {
-      // This is a placeholder implementation
-      // The actual implementation will be provided by the adapter
-      console.log('Sending transaction:', tx);
-      throw new Error('Not implemented');
-    } catch (error) {
-      throw new WalletError('Failed to send transaction', 'TRANSACTION_ERROR', { error });
-    }
+  getName(): string {
+    return this.name;
   }
 
   async getTransactionReceipt(txHash: string): Promise<TransactionReceipt> {

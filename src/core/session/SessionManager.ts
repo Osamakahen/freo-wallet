@@ -1,6 +1,6 @@
 import { Address } from 'viem';
 import { encrypt, decrypt } from '../../utils/crypto';
-import { SessionKey, SessionToken, SessionState, DeviceInfo, SessionConfig, Session } from '../../types/session';
+import { Session, SessionConfig, DeviceInfo, DeviceChange, PermissionChange } from '../../types/session';
 import { generateRandomBytes } from '../../utils/crypto';
 import { SessionPermissions } from '../../types/dapp';
 import { SessionKeyManager } from './SessionKeyManager';
@@ -16,50 +16,34 @@ import { EnhancedSessionManager } from './EnhancedSessionManager';
 import { AnalyticsService } from '../../services/AnalyticsService';
 import { DeviceFingerprint } from '../security/DeviceFingerprint';
 
-interface ISession {
-  id: string;
-  address: Address;
-  chainId: number;
-  permissions: SessionPermissions;
-  createdAt: Date;
-  expiresAt: Date;
-  deviceInfo?: DeviceInfo;
-  lastActivity?: number;
-}
-
 export class SessionManager {
   private sessions: Map<string, Session> = new Map();
   private keyManager: SessionKeyManager;
   private tokenManager: SessionTokenManager;
   private enhancedManager: EnhancedSessionManager;
-  private config: SessionConfig & { sessionDuration: number };
-  private recoveryTokens: Map<string, string> = new Map();
+  private config: SessionConfig;
   private storage: Storage;
-  private state: SessionState;
   private deviceInfo: DeviceInfo;
   private activeSessionId: string | null = null;
   private readonly STORAGE_KEY = 'freo_sessions';
   private analytics: SessionAnalytics;
-  private errorCorrelator: ErrorCorrelator;
   private securityService: SecurityService;
+  private errorCorrelator: ErrorCorrelator;
 
   constructor() {
-    this.keyManager = new SessionKeyManager();
-    this.tokenManager = new SessionTokenManager();
+    this.keyManager = SessionKeyManager.getInstance();
+    this.tokenManager = SessionTokenManager.getInstance();
     this.enhancedManager = new EnhancedSessionManager();
     this.config = {
-      sessionDuration: 300000 // 5 minutes in milliseconds
+      sessionDuration: 24 * 60 * 60 * 1000, // 24 hours
+      tokenDuration: 1 * 60 * 60 * 1000, // 1 hour
+      deviceVerification: true
     };
     this.storage = window.localStorage;
-    this.state = {
-      isActive: false,
-      lastActivity: Date.now(),
-      permissions: new Set()
-    };
     this.deviceInfo = this.getDeviceInfo();
     this.analytics = new SessionAnalytics();
+    this.securityService = SecurityService.getInstance();
     this.errorCorrelator = ErrorCorrelator.getInstance();
-    this.securityService = new SecurityService();
     this.loadSessions();
   }
 
@@ -69,18 +53,22 @@ export class SessionManager {
       try {
         const rawSessions = JSON.parse(stored);
         this.sessions = new Map(
-          Object.entries(rawSessions.sessions).map(([id, session]: [string, any]) => [
+          Object.entries(rawSessions).map(([id, session]: [string, any]) => [
             id,
             {
-              ...session,
-              createdAt: new Date(session.createdAt),
-              expiresAt: new Date(session.expiresAt),
+              id,
+              timestamp: session.timestamp || Date.now(),
+              deviceInfo: session.deviceInfo || this.deviceInfo,
+              deviceChanges: session.deviceChanges || [],
+              permissionChanges: session.permissionChanges || [],
+              isActive: session.isActive || false,
+              lastActivity: session.lastActivity || Date.now(),
               address: session.address as Address,
               chainId: session.chainId,
               permissions: session.permissions || {
                 read: true,
-                write: false,
-                sign: false,
+                write: true,
+                sign: true,
                 connect: true,
                 disconnect: true
               }
@@ -103,12 +91,13 @@ export class SessionManager {
 
   private getDeviceInfo(): DeviceInfo {
     return {
-      userAgent: navigator.userAgent,
+      browser: navigator.userAgent,
+      os: navigator.platform,
+      platform: navigator.platform,
+      deviceType: /Mobile|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
       screenResolution: `${window.screen.width}x${window.screen.height}`,
-      colorDepth: window.screen.colorDepth,
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      language: navigator.language,
-      platform: navigator.platform
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      language: navigator.language
     };
   }
 
@@ -117,14 +106,24 @@ export class SessionManager {
     return createHash('sha256').update(deviceString).digest('hex');
   }
 
-  async createSession(options: { chainId: number; address: string }): Promise<Session> {
+  async createSession(options: { chainId: number; address: Address }): Promise<Session> {
     const session: Session = {
       id: crypto.randomUUID(),
-      chainId: options.chainId,
+      timestamp: Date.now(),
+      deviceInfo: this.deviceInfo,
+      deviceChanges: [],
+      permissionChanges: [],
+      isActive: true,
+      lastActivity: Date.now(),
       address: options.address,
-      createdAt: Date.now(),
-      lastActive: Date.now(),
-      status: 'active'
+      chainId: options.chainId,
+      permissions: {
+        read: true,
+        write: true,
+        sign: true,
+        connect: true,
+        disconnect: true
+      }
     };
 
     await this.keyManager.generateSessionKey(session.id);
