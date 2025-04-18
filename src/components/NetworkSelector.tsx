@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useWallet } from '../contexts/WalletContext';
 import { Select, Space, Typography } from 'antd';
 import { GlobalOutlined } from '@ant-design/icons';
@@ -38,14 +38,16 @@ const NetworkSelector: React.FC = () => {
   const { chainId, setChainId } = useWallet();
 
   const handleNetworkChange = (newChainId: number) => {
-    setChainId(newChainId);
+    setChainId(newChainId.toString());
   };
+
+  const currentChainId = chainId ? parseInt(chainId) : undefined;
 
   return (
     <Space>
       <GlobalOutlined />
       <Select
-        value={chainId}
+        value={currentChainId}
         onChange={handleNetworkChange}
         style={{ width: 200 }}
       >
