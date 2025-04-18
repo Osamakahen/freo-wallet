@@ -1,19 +1,19 @@
 import { SignClient } from '@walletconnect/sign-client';
 import { SessionTypes } from '@walletconnect/types';
-import { Web3Modal } from '@web3modal/standalone';
+import { WalletConnectModal } from '@walletconnect/modal';
 import { NetworkManager } from '../network/NetworkManager';
 import { WalletError } from '../error/ErrorHandler';
 
 export class WalletConnectBridge {
-  private signClient: SignClient | null = null;
-  private web3Modal: Web3Modal | null = null;
+  private signClient: InstanceType<typeof SignClient> | null = null;
+  private web3Modal: WalletConnectModal | null = null;
   private session: SessionTypes.Struct | null = null;
 
   constructor(private networkManager: NetworkManager) {}
 
   async initialize() {
     try {
-      this.signClient = await SignClient.init({
+      const client = await SignClient.init({
         projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
         metadata: {
           name: 'Freo Wallet',
@@ -23,20 +23,24 @@ export class WalletConnectBridge {
         }
       });
 
-      this.web3Modal = new Web3Modal({
+      this.signClient = client;
+
+      this.web3Modal = new WalletConnectModal({
         projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
-        walletConnectVersion: 2,
-        themeMode: 'dark'
+        themeMode: 'dark',
+        chains: [`eip155:${this.networkManager.getCurrentNetwork().chainId}`]
       });
 
       // Handle session events
-      this.signClient.on('session_event', (event) => {
-        console.log('Session event:', event);
-      });
+      if (this.signClient) {
+        this.signClient.on('session_event', (event: { params: { event: { name: string; data: any } } }) => {
+          console.log('Session event:', event);
+        });
 
-      this.signClient.on('session_delete', () => {
-        this.session = null;
-      });
+        this.signClient.on('session_delete', () => {
+          this.session = null;
+        });
+      }
     } catch (error) {
       throw new WalletError('Failed to initialize WalletConnect', 'WALLETCONNECT_INIT_ERROR', { error });
     }
