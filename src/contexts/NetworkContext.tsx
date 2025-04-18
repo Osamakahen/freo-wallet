@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { mainnet } from 'viem/chains';
-import { EthereumProvider, EthereumEvent, EthereumCallback } from '../types/ethereum';
+import type { EthereumCallback } from '../types/ethereum';
 
 interface NetworkState {
   chainId: number;
