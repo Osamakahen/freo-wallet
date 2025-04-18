@@ -5,7 +5,7 @@ import {
   BridgeState,
   DAppResponse
 } from '../../types/dapp';
-import { EthereumEvent, EthereumCallback, EthereumProvider } from '../../types/ethereum';
+import { EthereumCallback, EthereumProvider } from '../../types/ethereum';
 import { WalletError } from '../error/ErrorHandler';
 import { TransactionRequest } from '../../types/wallet';
 
