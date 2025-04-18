@@ -49,7 +49,8 @@
     "tailwind-merge": "^3.2.0",
     "viem": "^2.26.3",
     "wagmi": "^2.14.16",
-    "web3": "^4.16.0"
+    "web3": "^4.16.0",
+    "ws": "^8.18.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.0.0",
