@@ -95,7 +95,7 @@ export class BiometricAuth {
       throw new WalletError(
         'Failed to register biometric credentials',
         'BIOMETRIC_REGISTRATION_ERROR',
-        { error: error instanceof Error ? error.message : String(error) }
+        { error: new Error(error instanceof Error ? error.message : String(error)) }
       );
     }
   }
@@ -134,7 +134,7 @@ export class BiometricAuth {
       throw new WalletError(
         'Failed to verify biometric',
         'BIOMETRIC_VERIFICATION_ERROR',
-        { error: error instanceof Error ? error.message : String(error) }
+        { error: new Error(error instanceof Error ? error.message : String(error)) }
       );
     }
   }
