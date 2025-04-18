@@ -182,7 +182,8 @@ export class DAppBridge {
     try {
       const txHash = await this.transactionManager.sendTransaction(transaction)
       return {
-        result: txHash
+        result: txHash,
+        id: Date.now() // Using timestamp as a simple unique ID
       }
     } catch (error) {
       throw new TransactionError(
