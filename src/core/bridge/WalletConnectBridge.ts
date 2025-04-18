@@ -1,60 +1,100 @@
-import { WalletConnect } from '@walletconnect/client';
-import { BridgeConfig, TransactionRequest } from '../../types/dapp';
+import { SignClient } from '@walletconnect/sign-client';
+import { SessionTypes } from '@walletconnect/types';
+import { Web3Modal } from '@web3modal/standalone';
+import { NetworkManager } from '../network/NetworkManager';
 import { WalletError } from '../error/ErrorHandler';
 
 export class WalletConnectBridge {
-  private connector: WalletConnect;
-  private config: BridgeConfig;
-  private connectedAccount: string | null = null;
-  private isConnected: boolean = false;
+  private signClient: SignClient | null = null;
+  private web3Modal: Web3Modal | null = null;
+  private session: SessionTypes.Struct | null = null;
 
-  constructor(config: BridgeConfig) {
-    this.config = config;
-    this.connector = new WalletConnect({
-      bridge: config.rpcUrl,
-      qrcodeModal: config.qrcodeModal
-    });
-  }
+  constructor(private networkManager: NetworkManager) {}
 
-  async connect(): Promise<void> {
+  async initialize() {
     try {
-      this.isConnected = true;
-      this.connectedAccount = '0x123...'; // Mock implementation
+      this.signClient = await SignClient.init({
+        projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
+        metadata: {
+          name: 'Freo Wallet',
+          description: 'A secure and user-friendly Ethereum wallet',
+          url: 'https://freo-wallet.vercel.app',
+          icons: ['https://freo-wallet.vercel.app/logo.png']
+        }
+      });
+
+      this.web3Modal = new Web3Modal({
+        projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
+        walletConnectVersion: 2,
+        themeMode: 'dark'
+      });
+
+      // Handle session events
+      this.signClient.on('session_event', (event) => {
+        console.log('Session event:', event);
+      });
+
+      this.signClient.on('session_delete', () => {
+        this.session = null;
+      });
     } catch (error) {
-      throw new WalletError('Failed to connect to wallet');
+      throw new WalletError('Failed to initialize WalletConnect', 'WALLETCONNECT_INIT_ERROR', { error });
     }
   }
 
-  async disconnect(): Promise<void> {
-    this.isConnected = false;
-    this.connectedAccount = null;
-  }
-
-  async requestAccounts(): Promise<string[]> {
-    if (!this.isConnected) {
-      throw new WalletError('Not connected to wallet');
+  async connect() {
+    if (!this.signClient) {
+      throw new WalletError('WalletConnect not initialized', 'WALLETCONNECT_NOT_INITIALIZED');
     }
-    if (!this.connectedAccount) {
-      throw new WalletError('No account connected');
-    }
-    return [this.connectedAccount];
-  }
 
-  async signTransaction(request: TransactionRequest): Promise<string> {
     try {
-      const result = await this.connector.signTransaction(request);
-      return result as string;
+      const { uri, approval } = await this.signClient.connect({
+        requiredNamespaces: {
+          eip155: {
+            methods: ['eth_sendTransaction', 'eth_signTransaction', 'eth_sign', 'personal_sign'],
+            chains: [`eip155:${this.networkManager.getCurrentNetwork().chainId}`],
+            events: ['chainChanged', 'accountsChanged']
+          }
+        }
+      });
+
+      if (uri) {
+        this.web3Modal?.openModal({ uri });
+      }
+
+      this.session = await approval();
+      this.web3Modal?.closeModal();
+
+      return this.session;
     } catch (error) {
-      throw new Error(`Failed to sign transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new WalletError('Failed to connect with WalletConnect', 'WALLETCONNECT_CONNECT_ERROR', { error });
     }
   }
 
-  async signMessage(message: string): Promise<string> {
-    try {
-      const result = await this.connector.signMessage(message);
-      return result as string;
-    } catch (error) {
-      throw new Error(`Failed to sign message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  async disconnect() {
+    if (!this.signClient || !this.session) {
+      throw new WalletError('No active WalletConnect session', 'WALLETCONNECT_NO_SESSION');
     }
+
+    try {
+      await this.signClient.disconnect({
+        topic: this.session.topic,
+        reason: {
+          code: 6000,
+          message: 'User disconnected'
+        }
+      });
+      this.session = null;
+    } catch (error) {
+      throw new WalletError('Failed to disconnect WalletConnect', 'WALLETCONNECT_DISCONNECT_ERROR', { error });
+    }
+  }
+
+  getSession(): SessionTypes.Struct | null {
+    return this.session;
+  }
+
+  isConnected(): boolean {
+    return !!this.session;
   }
 } 
