@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { EVMAdapter } from '../core/evm/EVMAdapter';
+import { WalletAdapter } from '../core/evm/WalletAdapter';
 import { mainnet, goerli, sepolia } from 'viem/chains';
 
 interface NetworkSwitcherProps {
-  evmAdapter: EVMAdapter;
+  evmAdapter: WalletAdapter;
 }
 
 export const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({ evmAdapter }) => {

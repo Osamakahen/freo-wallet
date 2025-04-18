@@ -3,15 +3,15 @@ import { mainnet } from 'viem/chains';
 import { ERC20_ABI } from './abi/ERC20';
 import { TokenBalance, TokenInfo } from '../../types/token';
 import { TransactionRequest } from '../../types/wallet';
-import { EVMAdapter } from '../evm/EVMAdapter';
+import { WalletAdapter } from '../evm/WalletAdapter';
 
 export class TokenManager {
   private publicClient: ReturnType<typeof createPublicClient>;
-  private evmAdapter: EVMAdapter;
+  private evmAdapter: WalletAdapter;
   private priceCache: Map<string, { price: number; timestamp: number }>;
   private readonly PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  constructor(evmAdapter: EVMAdapter) {
+  constructor(evmAdapter: WalletAdapter) {
     this.evmAdapter = evmAdapter;
     this.publicClient = createPublicClient({
       chain: mainnet,

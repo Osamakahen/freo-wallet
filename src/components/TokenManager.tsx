@@ -4,7 +4,7 @@ import { TokenManager as TokenManagerCore } from '../core/token/TokenManager';
 import { Card, Table, Button, Space, Typography, Input, Modal, Form, message } from 'antd';
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { formatEther } from 'viem';
-import { EVMAdapter } from '../core/evm/EVMAdapter';
+import { WalletAdapter } from '../core/evm/WalletAdapter';
 import { mainnet } from 'viem/chains';
 import debounce from 'lodash/debounce';
 import { TokenInfo } from '../types/token';
@@ -26,7 +26,7 @@ const TokenManager: React.FC = () => {
   const [form] = Form.useForm();
 
   // Initialize tokenManager with current chain
-  const [tokenManager] = useState(() => new TokenManagerCore(new EVMAdapter(mainnet)));
+  const [tokenManager] = useState(() => new TokenManagerCore(new WalletAdapter(mainnet)));
 
   const loadTokens = useCallback(async () => {
     if (!address || !isConnected) return;
