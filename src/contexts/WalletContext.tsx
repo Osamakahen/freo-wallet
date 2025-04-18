@@ -1,7 +1,31 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { WalletManager } from '../core/wallet/WalletManager';
-import { toast } from 'react-toastify';
-import { EthereumEvent, EthereumCallback, EthereumProvider } from '../types/ethereum';
+
+type EthereumEvent = 'accountsChanged' | 'disconnect';
+type EthereumCallback = 
+  | ((accounts: string[]) => void)
+  | ((error: { code: number; message: string }) => void);
+
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on: (event: EthereumEvent, callback: EthereumCallback) => void;
+      removeListener: (event: EthereumEvent, callback: EthereumCallback) => void;
+    };
+  }
+}
+
+interface WalletError {
+  code: number;
+  message: string;
+  details?: unknown;
+}
+
+interface WalletState {
+  address: string | null;
+  isConnected: boolean;
+  chainId: number;
+}
 
 interface WalletContextType {
   walletManager: WalletManager;
@@ -12,9 +36,18 @@ interface WalletContextType {
   error: string | null;
   connect: () => Promise<void>;
   disconnect: () => void;
+  setChainId: (chainId: string) => void;
 }
 
-const WalletContext = createContext<WalletContextType | undefined>(undefined);
+export const WalletContext = createContext<WalletContextType | undefined>(undefined);
+
+export const useWallet = () => {
+  const context = useContext(WalletContext);
+  if (!context) {
+    throw new Error('useWallet must be used within a WalletProvider');
+  }
+  return context;
+};
 
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [ethereum, setEthereum] = useState<EthereumProvider | undefined>(window.ethereum);
@@ -24,84 +57,103 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [error, setError] = useState<string | null>(null);
   const [walletManager] = useState(() => new WalletManager());
 
-  useEffect(() => {
-    const handleAccountsChanged = (accounts: unknown) => {
-      if (Array.isArray(accounts) && accounts.length > 0) {
-        setAddress(accounts[0] as string);
-      } else {
-        setAddress(null);
-      }
-    };
-
-    const handleChainChanged = (newChainId: unknown) => {
-      if (typeof newChainId === 'string') {
-        setChainId(newChainId);
-      }
-    };
-
-    const handleDisconnect = () => {
-      setAddress(null);
-      setChainId(null);
-      setError('Wallet disconnected');
-    };
-
-    if (ethereum) {
-      ethereum.on('accountsChanged', handleAccountsChanged);
-      ethereum.on('chainChanged', handleChainChanged);
-      ethereum.on('disconnect', handleDisconnect);
-
-      // Get initial chain ID
-      ethereum.request({ method: 'eth_chainId' })
-        .then((id) => {
-          if (typeof id === 'string') {
-            setChainId(id);
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to get chain ID:', err);
-        });
-
-      return () => {
-        ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        ethereum.removeListener('chainChanged', handleChainChanged);
-        ethereum.removeListener('disconnect', handleDisconnect);
+  const handleError = (error: unknown): WalletError => {
+    if (error instanceof Error) {
+      return {
+        code: 500,
+        message: error.message
       };
     }
-  }, [ethereum]);
+    return {
+      code: 500,
+      message: 'Unknown error occurred'
+    };
+  };
 
-  const connect = async () => {
-    if (!ethereum) {
-      setError('No Ethereum provider found. Please install MetaMask.');
+  useEffect(() => {
+    const checkConnection = async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' }) as string[];
+          const chainId = await window.ethereum.request({ method: 'eth_chainId' }) as string;
+          
+          if (accounts.length > 0) {
+            setAddress(accounts[0]);
+            setChainId(chainId);
+          }
+        } catch (err) {
+          console.error('Error checking wallet connection:', err);
+        }
+      }
+    };
+
+    checkConnection();
+  }, []);
+
+  useEffect(() => {
+    if (window.ethereum) {
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (accounts.length === 0) {
+          setAddress(null);
+          setChainId(null);
+        } else {
+          setAddress(accounts[0]);
+          setChainId(accounts[0]);
+        }
+      };
+
+      const handleDisconnect = (error: { code: number; message: string }) => {
+        setAddress(null);
+        setChainId(null);
+        setError(error.message);
+      };
+
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      window.ethereum.on('disconnect', handleDisconnect);
+
+      return () => {
+        window.ethereum?.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum?.removeListener('disconnect', handleDisconnect);
+      };
+    }
+  }, []);
+
+  const connect = async (): Promise<void> => {
+    if (!window.ethereum) {
+      const error = handleError(new Error('No Ethereum wallet found. Please install MetaMask.'));
+      setError(error.message);
       return;
     }
 
     try {
-      setLoading(true);
-      setError(null);
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }) as string[];
+      const chainId = await window.ethereum.request({ method: 'eth_chainId' }) as string;
       
-      const [accounts, chainId] = await Promise.all([
-        ethereum.request({ method: 'eth_requestAccounts' }),
-        ethereum.request({ method: 'eth_chainId' })
-      ]);
-
-      if (Array.isArray(accounts) && accounts.length > 0) {
-        setAddress(accounts[0] as string);
-      }
-      if (typeof chainId === 'string') {
-        setChainId(chainId);
-      }
-    } catch (err) {
-      const error = err as Error;
-      setError(error.message || 'Failed to connect wallet');
-      toast.error(error.message || 'Failed to connect wallet');
-    } finally {
-      setLoading(false);
+      setAddress(accounts[0]);
+      setChainId(chainId);
+    } catch (error) {
+      const walletError = handleError(error);
+      setError(walletError.message);
+      throw error;
     }
   };
 
-  const disconnect = () => {
-    setAddress(null);
-    setChainId(null);
+  const disconnect = async (): Promise<void> => {
+    try {
+      if (window.ethereum) {
+        await window.ethereum.request({ method: 'wallet_revokePermissions' });
+      }
+      setAddress(null);
+      setChainId(null);
+    } catch (error) {
+      const walletError = handleError(error);
+      setError(walletError.message);
+      throw error;
+    }
+  };
+
+  const handleSetChainId = (newChainId: string) => {
+    setChainId(newChainId);
   };
 
   return (
@@ -114,18 +166,11 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         loading,
         error,
         connect,
-        disconnect
+        disconnect,
+        setChainId: handleSetChainId
       }}
     >
       {children}
     </WalletContext.Provider>
   );
-};
-
-export const useWallet = () => {
-  const context = useContext(WalletContext);
-  if (!context) {
-    throw new Error('useWallet must be used within a WalletProvider');
-  }
-  return context;
 }; 
