@@ -168,9 +168,10 @@ export class DAppBridge {
   public async sendTransaction(transaction: TransactionRequest): Promise<DAppResponse> {
     if (!this.isConnected) {
       throw new DAppError('Wallet is not connected', {
+        error: new Error('Wallet is not connected'),
         method: 'sendTransaction',
         connectionStatus: false
-      })
+      });
     }
 
     try {
@@ -183,7 +184,6 @@ export class DAppBridge {
       throw new TransactionError(
         error instanceof Error ? error.message : 'Failed to send transaction',
         {
-          error: new Error(error instanceof Error ? error.message : String(error)),
           method: 'sendTransaction',
           transaction,
           originalError: error
