@@ -1,22 +1,19 @@
 import { DAppBridge } from './DAppBridge';
 import { 
-  TransactionRequest, 
+  TransactionRequest as DAppTransactionRequest, 
   DAppInfo, 
   BridgeState,
   DAppResponse
 } from '../../types/dapp';
-import { EthereumEvent, EthereumCallback } from '../../types/ethereum';
+import { EthereumEvent, EthereumCallback, EthereumProvider } from '../../types/ethereum';
 import { WalletError } from '../error/ErrorHandler';
+import { TransactionRequest } from '../../types/wallet';
 
 type EventListener = (data?: unknown) => void;
 
 declare global {
   interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-      on: (event: EthereumEvent, callback: EthereumCallback) => void;
-      removeListener: (event: EthereumEvent, callback: EthereumCallback) => void;
-    };
+    ethereum?: EthereumProvider;
   }
 }
 
@@ -37,6 +34,19 @@ export class InjectedBridge {
     this.bridge.on('message', (message: string) => this.emit('message', message));
   }
 
+  private convertToWalletTransaction(dappTx: DAppTransactionRequest): TransactionRequest {
+    return {
+      from: this.bridge.getState().address as `0x${string}`,
+      to: dappTx.to as `0x${string}`,
+      value: dappTx.value || '0',
+      data: dappTx.data,
+      nonce: dappTx.nonce,
+      maxFeePerGas: dappTx.maxFeePerGas,
+      maxPriorityFeePerGas: dappTx.maxPriorityFeePerGas,
+      gasLimit: dappTx.gasLimit
+    };
+  }
+
   public async request(method: string, params?: unknown[]): Promise<DAppResponse> {
     switch (method) {
       case 'eth_requestAccounts':
@@ -49,7 +59,8 @@ export class InjectedBridge {
         if (!params?.[0]) {
           throw new WalletError('Missing transaction parameters', 'INVALID_PARAMS');
         }
-        return { result: await this.bridge.sendTransaction(params[0] as TransactionRequest), id: Date.now() };
+        const walletTx = this.convertToWalletTransaction(params[0] as DAppTransactionRequest);
+        return { result: await this.bridge.sendTransaction(walletTx), id: Date.now() };
       case 'eth_sign':
         if (!params?.[0] || !params?.[1]) {
           throw new WalletError('Missing sign parameters', 'INVALID_PARAMS');
