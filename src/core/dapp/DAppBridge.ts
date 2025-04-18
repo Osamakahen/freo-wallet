@@ -5,6 +5,7 @@ import {
   BridgeState, 
   BridgeEvents, 
   BridgeConfig,
+  DAppRequest,
   DAppResponse,
   Permission
 } from '../../types/dapp'
@@ -181,7 +182,8 @@ export class DAppBridge {
     try {
       const txHash = await this.transactionManager.sendTransaction(transaction)
       return {
-        result: txHash
+        result: txHash,
+        id: Date.now()
       }
     } catch (error) {
       throw new TransactionError(
@@ -238,5 +240,4 @@ export class DAppBridge {
   public getDAppInfo(): DAppInfo | null {
     return this.dAppInfo
   }
-} 
 } 
