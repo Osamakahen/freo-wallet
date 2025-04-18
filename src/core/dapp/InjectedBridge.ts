@@ -1,12 +1,13 @@
 import { DAppBridge } from './DAppBridge';
 import { 
-  TransactionRequest, 
+  TransactionRequest as DAppTransactionRequest, 
   DAppInfo, 
   BridgeState,
   DAppResponse
 } from '../../types/dapp';
 import { EthereumEvent, EthereumCallback } from '../../types/ethereum';
-import { WalletError } from '../../types/wallet';
+import { WalletError } from '../error/ErrorHandler';
+import { TransactionRequest } from '../../types/wallet';
 
 type EventListener = (data?: unknown) => void;
 

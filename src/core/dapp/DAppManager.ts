@@ -1,7 +1,6 @@
 import { type DAppManifest, DAppPermission } from '../../types/dapp';
 import { type EVMAdapter } from '../chain/EVMAdapter';
 import { type SessionManager } from '../session/SessionManager';
-import { type SecurityManager } from '../security/SecurityManager';
 import { WalletError } from '../error/ErrorHandler';
 import { type TransactionRequest } from '../../types/wallet';
 import { type Address } from 'viem';
@@ -10,16 +9,13 @@ export class DAppManager {
   private sessions: Map<string, DAppManifest> = new Map();
   private readonly adapter: EVMAdapter;
   private readonly sessionManager: SessionManager;
-  private readonly securityManager: SecurityManager;
 
   constructor(
     adapter: EVMAdapter,
-    sessionManager: SessionManager,
-    securityManager: SecurityManager
+    sessionManager: SessionManager
   ) {
     this.adapter = adapter;
     this.sessionManager = sessionManager;
-    this.securityManager = securityManager;
     this.loadRegisteredDApps();
   }
 
@@ -35,47 +31,62 @@ export class DAppManager {
       throw new WalletError('DApp not found', 'DAPP_NOT_FOUND');
     }
 
-    const session = await this.sessionManager.createSession(
-      await this.adapter.getAddress(),
-      this.adapter.getChain().id
-    );
+    const client = this.adapter.getClient();
+    if (!client) {
+      throw new WalletError('Wallet client not set', 'CLIENT_NOT_SET');
+    }
+
+    const address = await client.getAddresses().then((addrs: Address[]) => addrs[0]);
+    const chainId = this.adapter.getChainId();
+    
+    const session = await this.sessionManager.createSession({
+      address,
+      chainId
+    });
 
     if (!session) {
       throw new WalletError('Failed to create session', 'SESSION_CREATION_FAILED');
     }
 
-    return session.token.toString();
+    return session.id;
   }
 
   async signMessage(dappId: string, message: string): Promise<string> {
-    await this.hasPermission(dappId, DAppPermission.MESSAGE_SIGN);
+    await this.hasPermission(dappId, 'MESSAGE_SIGN');
     const session = await this.sessionManager.getActiveSession();
     if (!session) {
       throw new WalletError('Session not found', 'SESSION_NOT_FOUND');
     }
 
-    return this.adapter.signMessage(message);
+    const client = this.adapter.getClient();
+    if (!client) {
+      throw new WalletError('Wallet client not set', 'CLIENT_NOT_SET');
+    }
+
+    const address = await client.getAddresses().then((addrs: Address[]) => addrs[0]);
+    return client.signMessage({ account: address, message });
   }
 
   async sendTransaction(dappId: string, tx: TransactionRequest): Promise<string> {
-    await this.hasPermission(dappId, DAppPermission.TRANSACTION);
+    await this.hasPermission(dappId, 'TRANSACTION');
     const session = await this.sessionManager.getActiveSession();
     if (!session) {
       throw new WalletError('Session not found', 'SESSION_NOT_FOUND');
     }
 
-    const txDetails = {
+    // Convert our TransactionRequest to viem's TransactionRequest
+    const viemTx = {
       to: tx.to as Address,
       value: BigInt(tx.value || '0'),
       data: tx.data as `0x${string}`,
-      gasLimit: tx.gasLimit ? BigInt(tx.gasLimit) : undefined,
+      gas: tx.gasLimit ? BigInt(tx.gasLimit) : undefined,
       maxFeePerGas: tx.maxFeePerGas ? BigInt(tx.maxFeePerGas) : undefined,
       maxPriorityFeePerGas: tx.maxPriorityFeePerGas ? BigInt(tx.maxPriorityFeePerGas) : undefined,
-      nonce: tx.nonce
+      nonce: tx.nonce,
+      type: 'eip1559' as const
     };
 
-    const preparedTx = await this.adapter.prepareTransaction(txDetails);
-    return this.adapter.broadcastTransaction(preparedTx as `0x${string}`);
+    return this.adapter.sendTransaction(viemTx);
   }
 
   private validateManifest(manifest: DAppManifest): void {
@@ -91,7 +102,7 @@ export class DAppManager {
       throw new WalletError('DApp manifest must include supported chains', 'INVALID_MANIFEST');
     }
 
-    const currentChainId = this.adapter.getChain().id;
+    const currentChainId = this.adapter.getChainId();
     if (!manifest.chains.includes(currentChainId)) {
       throw new WalletError(`Chain ${currentChainId} not supported by DApp`, 'UNSUPPORTED_CHAIN');
     }
@@ -111,19 +122,30 @@ export class DAppManager {
   }
 
   async disconnect(dappId: string): Promise<void> {
-    await this.sessionManager.revokeSession();
+    const session = await this.sessionManager.getActiveSession();
+    if (session) {
+      await this.sessionManager.revokeSession(session.id);
+    }
     this.sessions.delete(dappId);
     this.saveRegisteredDApps();
   }
 
-  async hasPermission(dappId: string, permission: DAppPermission): Promise<boolean> {
+  async hasPermission(dappId: string, permission: string): Promise<boolean> {
     const manifest = this.sessions.get(dappId);
     if (!manifest) {
       throw new WalletError(`DApp not found: ${dappId}`, 'DAPP_NOT_FOUND');
     }
 
-    if (!manifest.permissions.includes(permission)) {
+    if (!manifest.permissions.includes(permission as DAppPermission)) {
       throw new WalletError(`DApp ${dappId} does not have permission: ${permission}`, 'PERMISSION_DENIED');
+    }
+
+    const session = await this.sessionManager.getActiveSession();
+    if (session) {
+      // Basic session validation
+      if (session.expiresAt.getTime() < Date.now()) {
+        throw new WalletError('Session expired', 'SESSION_EXPIRED');
+      }
     }
 
     return true;
