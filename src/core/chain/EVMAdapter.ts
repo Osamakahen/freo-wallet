@@ -1,18 +1,17 @@
-import { createPublicClient, http, type Address, type Hash, type TransactionRequest, type WalletClient, type Chain, type PublicClient } from 'viem'
+import { createPublicClient, http, type Address, type Hash, type TransactionRequest, type WalletClient, type Chain, type PublicClient, type TransactionReceipt, type SendTransactionParameters } from 'viem'
 import { ChainAdapter, type TransactionDetails } from './ChainAdapter'
 import { ChainConfig } from '../config/ChainConfig'
 import { EVMChain } from './EVMChain'
-import { WalletError } from '../error/ErrorHandler'
 
 export class EVMAdapter extends ChainAdapter {
   protected publicClient: PublicClient;
   protected chain: EVMChain;
-  protected client: WalletClient | null = null;
+  protected chainConfig: Chain;
 
   constructor(config: ChainConfig) {
     super(config);
     this.chain = new EVMChain(config.chainId);
-    const chainConfig = {
+    this.chainConfig = {
       id: config.chainId,
       name: config.name,
       nativeCurrency: {
@@ -30,13 +29,13 @@ export class EVMAdapter extends ChainAdapter {
     } satisfies Chain;
 
     this.publicClient = createPublicClient({
-      chain: chainConfig,
+      chain: this.chainConfig,
       transport: http(config.rpcUrl)
     });
   }
 
   setClient(client: WalletClient): void {
-    this.client = client;
+    super.setClient(client);
   }
 
   getChainId(): number {
@@ -98,32 +97,40 @@ export class EVMAdapter extends ChainAdapter {
     // EIP-1559 gas calculation
     const baseFee = block.baseFeePerGas ?? 0n
     const priorityFee = 1500000000n // 1.5 gwei priority fee
-    const maxPriorityFeePerGas = priorityFee
-    const maxFeePerGas = baseFee * 2n + priorityFee
+    const maxFeePerGas = baseFee + priorityFee
 
     return {
       maxFeePerGas,
-      maxPriorityFeePerGas
+      maxPriorityFeePerGas: priorityFee
     }
   }
 
   async sendTransaction(tx: TransactionRequest): Promise<string> {
-    try {
-      return await this.chain.sendTransaction(tx)
-    } catch (error) {
-      throw new WalletError('Failed to send transaction', 'TRANSACTION_ERROR', { error })
+    if (!this.client) throw new Error('Wallet client not set')
+    const address = await this.client.getAddresses().then((addrs: Address[]) => addrs[0])
+    
+    const params: SendTransactionParameters = {
+      chain: this.chainConfig,
+      account: address,
+      to: tx.to,
+      value: tx.value,
+      data: tx.data,
+      nonce: tx.nonce,
+      gas: tx.gas,
+      maxFeePerGas: tx.maxFeePerGas,
+      maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
+      type: 'eip1559'
     }
+    
+    const hash = await this.client.sendTransaction(params)
+    return hash
   }
 
-  async getTransactionReceipt(txHash: string): Promise<any> {
-    try {
-      return await this.chain.getTransactionReceipt(txHash)
-    } catch (error) {
-      throw new WalletError('Failed to get transaction receipt', 'RECEIPT_FETCH_ERROR', { error })
-    }
+  async getTransactionReceipt(txHash: string): Promise<TransactionReceipt | null> {
+    return await this.publicClient.getTransactionReceipt({ hash: txHash as Hash })
   }
 
   getExplorer(): string | undefined {
-    return this.config.blockExplorer || this.config.explorer;
+    return this.config.blockExplorer
   }
 } 

@@ -79,18 +79,23 @@ export const TokenProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [address, isConnected, tokenManager, tokens]);
 
-  // Debounce refreshBalances to prevent too many calls
+  // Create a stable debounced function
   const debouncedRefresh = useCallback(
-    debounce(() => {
-      refreshBalances();
-    }, 1000),
-    [refreshBalances, debounce]
+    () => {
+      const debounced = debounce(() => {
+        refreshBalances();
+      }, 1000);
+      return debounced;
+    },
+    [refreshBalances]
   );
 
   // Refresh balances when address or tokens change
   useEffect(() => {
     if (address && isConnected) {
-      debouncedRefresh();
+      const debounced = debouncedRefresh();
+      debounced();
+      return () => debounced.cancel();
     }
   }, [address, isConnected, debouncedRefresh]);
 
@@ -110,20 +115,20 @@ export const TokenProvider = ({ children }: { children: ReactNode }) => {
     return tokens.find(token => token.tokenAddress === address);
   }, [tokens]);
 
+  const value = {
+    tokens,
+    addToken,
+    removeToken,
+    updateToken,
+    getToken,
+    balances,
+    refreshBalances,
+    isLoading,
+    error
+  };
+
   return (
-    <TokenContext.Provider
-      value={{
-        tokens,
-        addToken,
-        removeToken,
-        updateToken,
-        getToken,
-        balances,
-        refreshBalances,
-        isLoading,
-        error
-      }}
-    >
+    <TokenContext.Provider value={value}>
       {children}
     </TokenContext.Provider>
   );

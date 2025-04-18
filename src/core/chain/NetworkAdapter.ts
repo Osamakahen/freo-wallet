@@ -1,4 +1,9 @@
-import { ethers } from 'ethers';
+import { 
+  TransactionResponse, 
+  TransactionReceipt, 
+  Block, 
+  BigNumberish 
+} from 'ethers';
 
 export interface NetworkAdapter {
   /**
@@ -27,17 +32,17 @@ export interface NetworkAdapter {
   /**
    * Gets a transaction by hash
    */
-  getTransaction(hash: string): Promise<ethers.providers.TransactionResponse | null>;
+  getTransaction(hash: string): Promise<TransactionResponse | null>;
 
   /**
    * Gets a transaction receipt
    */
-  getTransactionReceipt(hash: string): Promise<ethers.providers.TransactionReceipt | null>;
+  getTransactionReceipt(hash: string): Promise<TransactionReceipt | null>;
 
   /**
    * Gets a block
    */
-  getBlock(blockHashOrNumber: string | number): Promise<ethers.providers.Block>;
+  getBlock(blockHashOrNumber: string | number): Promise<Block>;
 
   /**
    * Estimates gas for a transaction
@@ -52,10 +57,10 @@ export interface NetworkAdapter {
   /**
    * Gets the current gas price
    */
-  getGasPrice(): Promise<ethers.BigNumber>;
+  getGasPrice(): Promise<BigNumberish>;
 
   /**
    * Waits for a transaction to be mined
    */
-  waitForTransaction(hash: string): Promise<ethers.providers.TransactionReceipt>;
+  waitForTransaction(hash: string): Promise<TransactionReceipt>;
 } 

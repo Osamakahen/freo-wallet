@@ -4,6 +4,11 @@ import { WalletConnectModal } from '@walletconnect/modal';
 import { NetworkManager } from '../network/NetworkManager';
 import { WalletError } from '../error/ErrorHandler';
 
+interface SessionEventData {
+  name: string;
+  data: unknown;
+}
+
 export class WalletConnectBridge {
   private signClient: InstanceType<typeof SignClient> | null = null;
   private web3Modal: WalletConnectModal | null = null;
@@ -33,7 +38,7 @@ export class WalletConnectBridge {
 
       // Handle session events
       if (this.signClient) {
-        this.signClient.on('session_event', (event: { params: { event: { name: string; data: any } } }) => {
+        this.signClient.on('session_event', (event: { params: { event: SessionEventData } }) => {
           console.log('Session event:', event);
         });
 
@@ -96,9 +101,5 @@ export class WalletConnectBridge {
 
   getSession(): SessionTypes.Struct | null {
     return this.session;
-  }
-
-  isConnected(): boolean {
-    return !!this.session;
   }
 } 
