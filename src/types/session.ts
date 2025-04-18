@@ -98,6 +98,9 @@ export interface Session {
   permissionChanges: PermissionChange[];
   isActive: boolean;
   lastActivity: number;
+  address: Address;
+  chainId: number;
+  permissions: DAppSessionPermissions;
 }
 
 export interface SessionMetrics {

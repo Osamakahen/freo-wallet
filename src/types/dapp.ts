@@ -68,7 +68,12 @@ export interface BridgeState {
   isConnected: boolean;
   address: Address | null;
   chainId: number | null;
-  permissions: SessionPermissions | null;
+  permissions: {
+    read: boolean;
+    write: boolean;
+    sign: boolean;
+    nft: boolean;
+  } | null;
   error: string | null;
 }
 
