@@ -1,9 +1,10 @@
-import { createWalletClient, custom, getAddress, formatEther } from 'viem';
+import { createWalletClient, createPublicClient, custom, getAddress, formatEther } from 'viem';
 import { mainnet, goerli, sepolia, Chain } from 'viem/chains';
 import { TransactionRequest } from '../../types/wallet';
 
 export class EVMAdapter {
-  private client: ReturnType<typeof createWalletClient>;
+  private walletClient: ReturnType<typeof createWalletClient>;
+  private publicClient: ReturnType<typeof createPublicClient>;
   private chain: Chain;
 
   constructor(chain: Chain = mainnet) {
@@ -12,24 +13,28 @@ export class EVMAdapter {
     }
 
     this.chain = chain;
-    this.client = createWalletClient({
+    this.walletClient = createWalletClient({
+      chain,
+      transport: custom(window.ethereum)
+    });
+    this.publicClient = createPublicClient({
       chain,
       transport: custom(window.ethereum)
     });
   }
 
   async getAddress(): Promise<`0x${string}`> {
-    const [address] = await this.client.getAddresses();
+    const [address] = await this.walletClient.getAddresses();
     return getAddress(address);
   }
 
   async getBalance(address: `0x${string}`): Promise<string> {
-    const balance = await this.client.getBalance({ address });
+    const balance = await this.publicClient.getBalance({ address });
     return formatEther(balance);
   }
 
   async sendTransaction(tx: TransactionRequest): Promise<`0x${string}`> {
-    const { hash } = await this.client.sendTransaction({
+    const { hash } = await this.walletClient.sendTransaction({
       to: tx.to,
       data: tx.data,
       value: tx.value ? BigInt(tx.value) : undefined,
@@ -46,7 +51,7 @@ export class EVMAdapter {
 
   async signMessage(message: string): Promise<`0x${string}`> {
     const address = await this.getAddress();
-    return this.client.signMessage({
+    return this.walletClient.signMessage({
       account: address,
       message
     });
