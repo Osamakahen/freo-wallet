@@ -7,6 +7,7 @@ interface WalletContextType {
   walletManager: WalletManager;
   ethereum: EthereumProvider | undefined;
   address: string | null;
+  chainId: string | null;
   loading: boolean;
   error: string | null;
   connect: () => Promise<void>;
@@ -18,6 +19,7 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [ethereum, setEthereum] = useState<EthereumProvider | undefined>(window.ethereum);
   const [address, setAddress] = useState<string | null>(null);
+  const [chainId, setChainId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [walletManager] = useState(() => new WalletManager());
@@ -31,17 +33,37 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     };
 
+    const handleChainChanged = (newChainId: unknown) => {
+      if (typeof newChainId === 'string') {
+        setChainId(newChainId);
+      }
+    };
+
     const handleDisconnect = () => {
       setAddress(null);
+      setChainId(null);
       setError('Wallet disconnected');
     };
 
     if (ethereum) {
       ethereum.on('accountsChanged', handleAccountsChanged);
+      ethereum.on('chainChanged', handleChainChanged);
       ethereum.on('disconnect', handleDisconnect);
+
+      // Get initial chain ID
+      ethereum.request({ method: 'eth_chainId' })
+        .then((id) => {
+          if (typeof id === 'string') {
+            setChainId(id);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to get chain ID:', err);
+        });
 
       return () => {
         ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        ethereum.removeListener('chainChanged', handleChainChanged);
         ethereum.removeListener('disconnect', handleDisconnect);
       };
     }
@@ -57,12 +79,16 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setLoading(true);
       setError(null);
       
-      const accounts = await ethereum.request({
-        method: 'eth_requestAccounts'
-      });
+      const [accounts, chainId] = await Promise.all([
+        ethereum.request({ method: 'eth_requestAccounts' }),
+        ethereum.request({ method: 'eth_chainId' })
+      ]);
 
       if (Array.isArray(accounts) && accounts.length > 0) {
         setAddress(accounts[0] as string);
+      }
+      if (typeof chainId === 'string') {
+        setChainId(chainId);
       }
     } catch (err) {
       const error = err as Error;
@@ -75,6 +101,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const disconnect = () => {
     setAddress(null);
+    setChainId(null);
   };
 
   return (
@@ -83,6 +110,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         walletManager,
         ethereum,
         address,
+        chainId,
         loading,
         error,
         connect,
