@@ -1,5 +1,15 @@
 export type EthereumEvent = 'chainChanged' | 'accountsChanged' | 'connect' | 'disconnect';
-export type EthereumCallback = (params?: unknown) => void;
+
+export type ChainChangedCallback = (chainId: string) => void;
+export type AccountsChangedCallback = (accounts: string[]) => void;
+export type ConnectCallback = (connectInfo: { chainId: string }) => void;
+export type DisconnectCallback = (error: { code: number; message: string }) => void;
+
+export type EthereumCallback = 
+  | ChainChangedCallback 
+  | AccountsChangedCallback 
+  | ConnectCallback 
+  | DisconnectCallback;
 
 export interface EthereumProvider {
   isMetaMask?: boolean;
