@@ -4,7 +4,13 @@ import { TransactionRequest } from '../../types/wallet';
 
 declare global {
   interface Window {
-    ethereum?: EIP1193Provider;
+    ethereum?: any;
+  }
+}
+
+export class EVMAdapter extends WalletAdapter {
+  constructor(chain: Chain) {
+    super(chain);
   }
 }
 
