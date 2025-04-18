@@ -1,6 +1,7 @@
 import { ChainConfig } from '../config/ChainConfig';
 import { WalletError } from '../error/ErrorHandler';
 import { type TransactionRequest } from 'viem';
+import { TransactionReceipt } from '../types/transaction';
 
 export class EVMChain {
   private config: ChainConfig;
@@ -29,7 +30,7 @@ export class EVMChain {
     }
   }
 
-  async getTransactionReceipt(txHash: string): Promise<any> {
+  async getTransactionReceipt(txHash: string): Promise<TransactionReceipt> {
     try {
       // This is a placeholder implementation
       // The actual implementation will be provided by the adapter

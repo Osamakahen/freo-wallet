@@ -176,6 +176,27 @@ export class SecurityService {
   }
 
   private async validatePassword(password: string): Promise<boolean> {
-    // Implementation
+    try {
+      // Get stored password hash from localStorage
+      const storedHash = localStorage.getItem(`${SecurityService.STORAGE_PREFIX}password_hash`);
+      if (!storedHash) {
+        return false;
+      }
+
+      // Hash the provided password
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      // Compare hashes
+      return hashHex === storedHash;
+    } catch (error) {
+      await this.errorCorrelator.correlateError(
+        new WalletError('Failed to validate password')
+      );
+      return false;
+    }
   }
 } 

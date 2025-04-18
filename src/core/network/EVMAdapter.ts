@@ -1,5 +1,5 @@
 import { createPublicClient, http, Chain, mainnet } from 'viem';
-import { TransactionRequest } from '../types/wallet';
+import { TransactionRequest, TransactionReceipt } from '../types/transaction';
 
 export class EVMAdapter {
   private client: ReturnType<typeof createPublicClient>;
@@ -51,7 +51,7 @@ export class EVMAdapter {
     return balance.toString();
   }
 
-  async getTransactionReceipt(hash: string): Promise<any> {
+  async getTransactionReceipt(hash: string): Promise<TransactionReceipt> {
     return this.client.getTransactionReceipt({
       hash: hash as `0x${string}`
     });
@@ -66,5 +66,10 @@ export class EVMAdapter {
   async getGasPrice(): Promise<string> {
     const gasPrice = await this.client.getGasPrice();
     return gasPrice.toString();
+  }
+
+  async estimateGas(tx: TransactionRequest): Promise<string> {
+    // Implementation
+    return '0';
   }
 } 

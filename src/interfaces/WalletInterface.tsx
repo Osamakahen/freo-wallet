@@ -1,5 +1,6 @@
 import { type Address, type Hash } from 'viem';
 import { type Chain } from 'viem/chains';
+import { EventData } from '../types/events';
 
 export interface WalletState {
   address: Address | null;
@@ -37,6 +38,6 @@ export interface WalletInterface {
   signMessage(message: string): Promise<`0x${string}`>;
   getTransactionHistory(address: Address): Promise<WalletTransaction[]>;
   estimateGas(transaction: Partial<WalletTransaction>): Promise<bigint>;
-  on(event: string, callback: (data: any) => void): void;
-  off(event: string, callback: (data: any) => void): void;
+  on(event: string, callback: (data: EventData) => void): void;
+  off(event: string, callback: (data: EventData) => void): void;
 } 

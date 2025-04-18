@@ -3,6 +3,8 @@ import { SDKConfig, Session, Event, EventHandler, SDKError } from './types';
 import { SessionManager } from '../core/session/SessionManager';
 import { ErrorCorrelator } from '../core/error/ErrorCorrelator';
 import { WalletError } from '../core/errors/WalletErrors';
+import { TransactionRequest } from '../types/transaction';
+import { EthereumError } from '../types/ethereum';
 
 export class FreoWalletSDK {
   private config: SDKConfig;
@@ -94,12 +96,12 @@ export class FreoWalletSDK {
     });
 
     // Listen for disconnect
-    window.ethereum.on('disconnect', (error: any) => {
-      this.handleEvent('disconnect', { error });
+    window.ethereum.on('disconnect', (error: EthereumError) => {
+      this.handleEvent('disconnect', error);
     });
   }
 
-  async signTransaction(transaction: any): Promise<string> {
+  async signTransaction(transaction: TransactionRequest): Promise<string> {
     if (!this.walletClient || !this.session) {
       throw new SDKError('Not connected', 'NOT_CONNECTED');
     }
@@ -145,7 +147,7 @@ export class FreoWalletSDK {
     }
   }
 
-  private handleEvent(type: string, data: any) {
+  private handleEvent(type: string, data: unknown) {
     const event: Event = {
       type,
       data,

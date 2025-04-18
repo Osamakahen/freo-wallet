@@ -7,10 +7,32 @@ export interface DeviceInfo {
   timestamp: number;
 }
 
+export interface SecurityError {
+  code: string;
+  message: string;
+  details?: {
+    timestamp: number;
+    deviceInfo?: {
+      browser: string;
+      os: string;
+      platform: string;
+    };
+    location?: {
+      ip: string;
+      country?: string;
+      city?: string;
+    };
+    action?: string;
+    context?: Record<string, string>;
+  };
+}
+
 export interface SecurityEvent {
-  type: 'SUSPICIOUS_ACTIVITY' | 'MULTIPLE_DEVICES' | 'RATE_LIMIT_EXCEEDED' | 'INVALID_TOKEN' | 'DEVICE_MISMATCH';
+  type: 'login' | 'logout' | 'transaction' | 'permission_change' | 'device_change';
   timestamp: number;
-  details: string;
+  success: boolean;
+  error?: SecurityError;
+  metadata?: Record<string, string>;
 }
 
 export interface SecurityScore {
@@ -29,15 +51,28 @@ export interface SecurityAlert {
   severity: 'INFO' | 'WARNING' | 'CRITICAL';
   message: string;
   timestamp: number;
-  details?: any;
+  details?: {
+    deviceInfo?: DeviceInfo;
+    location?: {
+      ip: string;
+      country?: string;
+      city?: string;
+    };
+    action?: string;
+    context?: Record<string, string>;
+  };
 }
 
 export interface SecurityConfig {
-  rateLimitWindow: number;
-  maxRequests: number;
-  securityScoreThreshold: number;
-  deviceChangeLimit: number;
+  maxFailedAttempts: number;
+  lockoutDuration: number;
   sessionTimeout: number;
+  requireBiometric: boolean;
+  allowedOrigins: string[];
+  rateLimiting: {
+    windowMs: number;
+    maxRequests: number;
+  };
 }
 
 export interface SecurityMetrics {

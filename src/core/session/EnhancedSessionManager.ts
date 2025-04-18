@@ -1,4 +1,4 @@
-import { SessionMetrics, SessionAuditLog, SessionStats, SecurityAlert, SessionReport } from '../../types/session';
+import { SessionMetrics, SessionAuditLog, SessionStats, SecurityAlert, SessionReport, PermissionChange } from '../../types/session';
 import { SessionManager } from './SessionManager';
 import { AnalyticsService } from '../../services/AnalyticsService';
 import { SecurityManager } from '../security/SecurityManager';
@@ -142,7 +142,7 @@ export class EnhancedSessionManager extends SessionManager {
     return 0; // Placeholder
   }
 
-  private getPermissionChanges(): any[] {
+  private getPermissionChanges(): PermissionChange[] {
     // Implementation to track permission changes
     return []; // Placeholder
   }

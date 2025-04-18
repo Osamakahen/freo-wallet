@@ -1,6 +1,6 @@
 import { type SecurityEvent, type SecurityAlert } from './security';
 import { Address } from 'viem';
-import { SessionPermissions } from './dapp';
+import { SessionPermissions as DAppSessionPermissions } from './dapp';
 
 export interface SessionKey {
   id: string;
@@ -23,8 +23,25 @@ export interface SessionState {
 export interface DeviceInfo {
   browser: string;
   os: string;
-  device: string;
-  ip: string;
+  platform: string;
+  deviceType: string;
+  screenResolution: string;
+  timezone: string;
+  language: string;
+}
+
+export interface DeviceChange {
+  timestamp: number;
+  type: 'browser' | 'os' | 'platform' | 'deviceType' | 'screenResolution' | 'timezone' | 'language';
+  oldValue: string;
+  newValue: string;
+}
+
+export interface PermissionChange {
+  timestamp: number;
+  type: 'grant' | 'revoke';
+  permission: string;
+  details?: string;
 }
 
 export interface SessionConfig {
@@ -75,13 +92,12 @@ export interface SessionManager {
 
 export interface Session {
   id: string;
-  address: Address;
-  chainId: number;
-  permissions: SessionPermissions;
-  createdAt: Date;
-  expiresAt: Date;
-  deviceInfo?: DeviceInfo;
-  lastActivity?: number;
+  timestamp: number;
+  deviceInfo: DeviceInfo;
+  deviceChanges: DeviceChange[];
+  permissionChanges: PermissionChange[];
+  isActive: boolean;
+  lastActivity: number;
 }
 
 export interface SessionMetrics {
@@ -89,7 +105,7 @@ export interface SessionMetrics {
   duration: number;
   operations: number;
   lastActivity: number;
-  deviceInfo: any;
+  deviceInfo: DeviceInfo;
   ipAddress: string;
   securityScore: number;
 }
@@ -99,8 +115,8 @@ export interface SessionAuditLog {
   timestamp: number;
   operations: number;
   securityEvents: SecurityEvent[];
-  deviceChanges: any[];
-  permissionChanges: any[];
+  deviceChanges: DeviceChange[];
+  permissionChanges: PermissionChange[];
 }
 
 export interface SessionStats {
