@@ -86,7 +86,7 @@ export class MultiFactorAuth {
       throw new WalletError(
         'Failed to send MFA code',
         'MFA_SEND_ERROR',
-        { error: error instanceof Error ? error.message : String(error) }
+        { error: new Error(error instanceof Error ? error.message : String(error)) }
       );
     }
   }
@@ -125,7 +125,7 @@ export class MultiFactorAuth {
       throw new WalletError(
         'Failed to send email code',
         'EMAIL_SEND_ERROR',
-        { error: error instanceof Error ? error.message : String(error) }
+        { error: new Error(error instanceof Error ? error.message : String(error)) }
       );
     }
   }
@@ -139,7 +139,7 @@ export class MultiFactorAuth {
       throw new WalletError(
         'Failed to send SMS code',
         'SMS_SEND_ERROR',
-        { error: error instanceof Error ? error.message : String(error) }
+        { error: new Error(error instanceof Error ? error.message : String(error)) }
       );
     }
   }
