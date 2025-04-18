@@ -10,15 +10,13 @@ import { WalletError } from '../error/ErrorHandler';
 
 type EventListener = (data?: unknown) => void;
 
-interface EthereumProvider {
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-  on: (event: EthereumEvent, callback: EthereumCallback) => void;
-  removeListener: (event: EthereumEvent, callback: EthereumCallback) => void;
-}
-
 declare global {
   interface Window {
-    ethereum?: EthereumProvider;
+    ethereum?: {
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on: (event: EthereumEvent, callback: EthereumCallback) => void;
+      removeListener: (event: EthereumEvent, callback: EthereumCallback) => void;
+    };
   }
 }
 
