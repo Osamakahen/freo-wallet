@@ -3,7 +3,7 @@ import { DAppManager } from '../../../core/dapp/DAppManager';
 import { ChainConfig } from '../../../types/wallet';
 import { SessionManager } from '../../../core/session/SessionManager';
 import { KeyManager } from '../../../core/keyManagement/KeyManager';
-import { DAppManifest } from '../../../types/dapp';
+import { DAppManifest, DAppPermission } from '../../../types/dapp';
 import { ErrorCorrelator } from '../../../core/error/ErrorCorrelator';
 
 // Mock dependencies

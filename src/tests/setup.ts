@@ -130,8 +130,8 @@ const mockEthereum: EthereumProvider = {
   }),
   on: jest.fn(),
   removeListener: jest.fn(),
-  selectedAddress: null,
-  chainId: null
+  selectedAddress: undefined,
+  chainId: undefined
 };
 
 Object.defineProperty(window, 'ethereum', {

@@ -174,4 +174,8 @@ export class SecurityService {
       throw error;
     }
   }
+
+  private async validatePassword(password: string): Promise<boolean> {
+    // Implementation
+  }
 } 
