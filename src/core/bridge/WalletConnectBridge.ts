@@ -46,8 +46,12 @@ export class WalletConnectBridge {
           this.session = null;
         });
       }
-    } catch (error) {
-      throw new WalletError('Failed to initialize WalletConnect', 'WALLETCONNECT_INIT_ERROR', { error });
+    } catch (error: unknown) {
+      throw new WalletError(
+        'Failed to initialize WalletConnect',
+        'WALLETCONNECT_INIT_ERROR',
+        { error: new Error(error instanceof Error ? error.message : String(error)) }
+      );
     }
   }
 
@@ -75,8 +79,12 @@ export class WalletConnectBridge {
       this.web3Modal?.closeModal();
 
       return this.session;
-    } catch (error) {
-      throw new WalletError('Failed to connect with WalletConnect', 'WALLETCONNECT_CONNECT_ERROR', { error });
+    } catch (error: unknown) {
+      throw new WalletError(
+        'Failed to connect with WalletConnect',
+        'WALLETCONNECT_CONNECT_ERROR',
+        { error: new Error(error instanceof Error ? error.message : String(error)) }
+      );
     }
   }
 
@@ -94,8 +102,12 @@ export class WalletConnectBridge {
         }
       });
       this.session = null;
-    } catch (error) {
-      throw new WalletError('Failed to disconnect WalletConnect', 'WALLETCONNECT_DISCONNECT_ERROR', { error });
+    } catch (error: unknown) {
+      throw new WalletError(
+        'Failed to disconnect WalletConnect',
+        'WALLETCONNECT_DISCONNECT_ERROR',
+        { error: new Error(error instanceof Error ? error.message : String(error)) }
+      );
     }
   }
 
