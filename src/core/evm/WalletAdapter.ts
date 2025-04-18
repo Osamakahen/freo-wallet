@@ -19,7 +19,7 @@ export class WalletAdapter {
       throw new Error('Ethereum provider not found');
     }
 
-    this.ethereum = window.ethereum;
+    this.ethereum = window.ethereum as EIP1193Provider;
     this.chain = chain;
     this.walletClient = createWalletClient({
       chain,
