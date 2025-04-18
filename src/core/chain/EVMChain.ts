@@ -1,14 +1,14 @@
-import { Chain, Transaction, TransactionStatus } from '../../types/chain';
+import { Chain, Transaction, TransactionStatus, ChainId } from '../../types/chain';
 import { Address } from 'viem';
 import { WalletError } from '../error/ErrorHandler';
-import { TransactionReceipt } from '../types/transaction';
+import { TransactionReceipt } from '../../types/transaction';
 
 export class EVMChain implements Chain {
-  private chainId: number;
+  private chainId: ChainId;
   private rpcUrl: string;
   private name: string;
 
-  constructor(chainId: number, rpcUrl: string, name: string) {
+  constructor(chainId: ChainId, rpcUrl: string, name: string) {
     this.chainId = chainId;
     this.rpcUrl = rpcUrl;
     this.name = name;

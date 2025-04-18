@@ -51,11 +51,11 @@ export class EnhancedErrorReporter {
     }
   }
 
-  private async handleWalletError(error: WalletError, context: ErrorContext): Promise<void> {
+  private async handleWalletError(error: Error | WalletError, context: ErrorContext): Promise<void> {
     // Enhanced error handling for wallet-specific errors
     console.error('Wallet Error:', {
-      message: error.message,
-      code: error.code,
+      message: error instanceof WalletError ? error.message : error.message,
+      code: error instanceof WalletError ? error.code : null,
       context: context,
       timestamp: new Date().toISOString()
     });

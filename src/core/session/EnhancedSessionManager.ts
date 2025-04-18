@@ -53,11 +53,13 @@ export class EnhancedSessionManager extends SessionManager {
   private securityManager: SecurityManager;
   private sessionMetrics: Map<string, SessionMetrics> = new Map();
   private auditLogs: Map<string, SessionAuditLog[]> = new Map();
+  private config: SessionConfig;
 
-  constructor(config: Partial<SessionConfig> = {}) {
+  constructor(config: SessionConfig) {
     super();
     this.analyticsService = new AnalyticsService();
     this.securityManager = new SecurityManager();
+    this.config = config;
   }
 
   public async trackSessionMetrics(): Promise<SessionMetrics> {

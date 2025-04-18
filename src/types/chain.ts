@@ -7,6 +7,15 @@ export enum ChainId {
   AVALANCHE = 43114
 }
 
+export interface Chain {
+  getChainId(): number;
+  getName(): string;
+  getBalance(address: string): Promise<bigint>;
+  sendTransaction(tx: Transaction): Promise<string>;
+  getTransactionStatus(txHash: string): Promise<TransactionStatus>;
+  estimateGas(tx: Transaction): Promise<bigint>;
+}
+
 export interface ChainConfig {
   chainId: ChainId;
   name: string;
@@ -26,9 +35,13 @@ export interface GasConfig {
   gasLimit?: string;
 }
 
-export interface TransactionConfig extends GasConfig {
+export interface Transaction extends GasConfig {
   to: string;
   value?: string;
   data?: string;
   nonce?: number;
-} 
+  from?: string;
+  chainId?: number;
+}
+
+export type TransactionStatus = 'pending' | 'success' | 'failed' | 'dropped'; 
