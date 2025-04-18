@@ -10,6 +10,7 @@ import {
 } from '../../types/dapp'
 import { TransactionRequest } from '../../types/wallet'
 import { WalletError, DAppError, TransactionError } from '../error/ErrorHandler'
+import { type Address } from 'viem'
 
 export class DAppBridge {
   private static instance: DAppBridge | null = null;
@@ -20,6 +21,7 @@ export class DAppBridge {
   private events: BridgeEvents;
   private dAppInfo: DAppInfo | null = null;
   private connectedAccount: string | null = null;
+  private isConnected: boolean = false;
 
   constructor(
     sessionManager: SessionManager,
@@ -131,7 +133,7 @@ export class DAppBridge {
   }
 
   public async requestAccounts(): Promise<string[]> {
-    if (!this.state.isConnected) {
+    if (!this.isConnected) {
       throw new WalletError('Not connected to DApp')
     }
     return this.connectedAccount ? [this.connectedAccount] : []
@@ -164,7 +166,7 @@ export class DAppBridge {
   }
 
   public async sendTransaction(transaction: TransactionRequest): Promise<DAppResponse> {
-    if (!this.state.isConnected) {
+    if (!this.isConnected) {
       throw new DAppError('Wallet is not connected', {
         method: 'sendTransaction',
         connectionStatus: false
@@ -178,14 +180,12 @@ export class DAppBridge {
         id: Date.now()
       }
     } catch (error) {
-      throw new TransactionError(
-        error instanceof Error ? error.message : 'Failed to send transaction',
-        {
-          method: 'sendTransaction',
-          transaction,
-          originalError: error
-        }
-      )
+      throw new TransactionError('Failed to send transaction', {
+        error: new Error(error instanceof Error ? error.message : String(error)),
+        method: 'sendTransaction',
+        transaction,
+        originalError: error
+      })
     }
   }
 
