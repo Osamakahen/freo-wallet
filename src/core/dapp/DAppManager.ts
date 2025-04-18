@@ -143,7 +143,8 @@ export class DAppManager {
     const session = await this.sessionManager.getActiveSession();
     if (session) {
       // Basic session validation
-      if (session.expiresAt.getTime() < Date.now()) {
+      const sessionDuration = Date.now() - session.lastActivity;
+      if (sessionDuration > 24 * 60 * 60 * 1000) { // 24 hours
         throw new WalletError('Session expired', 'SESSION_EXPIRED');
       }
     }
