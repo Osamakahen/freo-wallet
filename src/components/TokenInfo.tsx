@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { TokenManager } from '../core/token/TokenManager';
 import { TokenBalance } from '../types/token';
-import { EVMAdapter } from '../core/evm/EVMAdapter';
 import { WalletAdapter } from '../core/evm/WalletAdapter';
 import { mainnet } from 'viem/chains';
 
