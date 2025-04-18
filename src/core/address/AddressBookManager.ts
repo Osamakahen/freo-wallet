@@ -32,7 +32,17 @@ export class AddressBookManager {
       throw new Error('Address already exists');
     }
 
-    this.addresses.push({ address, name, label });
+    const entry: AddressBookEntry = {
+      address,
+      name,
+      label,
+      chainId: 1, // Default to mainnet
+      tags: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    this.addresses.push(entry);
     this.saveAddresses();
   }
 
