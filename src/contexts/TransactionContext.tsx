@@ -116,10 +116,27 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setLoading(true);
       setError(null);
       const history = await transactionManager.getTransactionHistory(address as `0x${string}`);
+      
       const receipts = await Promise.all(
         history.map(async (tx) => {
-          if (tx.hash) {
-            const receipt = await transactionManager.getTransactionReceipt(tx.hash);
+          // Find the pending transaction that matches this transaction's properties
+          const pendingTxs = transactionManager.getPendingTransactions();
+          const pendingTx = pendingTxs.find(pending => 
+            pending.from === tx.from &&
+            pending.to === tx.to &&
+            pending.value === tx.value &&
+            pending.nonce === tx.nonce
+          );
+          
+          if (!pendingTx) return null;
+          
+          // Get the transaction details from the transaction manager
+          const txDetails = await transactionManager.getTransactionDetails(tx.from + '_' + tx.nonce);
+          if (!txDetails) return null;
+
+          const status = await transactionManager.getTransactionStatus(tx.from + '_' + tx.nonce);
+          if (status === 'confirmed') {
+            const receipt = await transactionManager.getTransactionReceipt(tx.from + '_' + tx.nonce);
             return receipt;
           }
           return null;
