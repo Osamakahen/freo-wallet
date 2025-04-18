@@ -5,12 +5,12 @@ import { NetworkError } from '../errors/WalletErrors';
 
 export class NetworkManager {
   private adapter: EVMAdapter;
-  private provider: ethers.providers.JsonRpcProvider;
+  private provider: ethers.JsonRpcProvider;
   private config: WalletConfig;
 
   constructor(config: WalletConfig) {
     this.config = config;
-    this.provider = new ethers.providers.JsonRpcProvider(config.rpcUrl);
+    this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
     this.adapter = new EVMAdapter(config);
   }
 
@@ -20,22 +20,15 @@ export class NetworkManager {
       const network = await this.provider.getNetwork();
       if (network.chainId !== this.config.chainId) {
         throw new NetworkError(
-          'Network mismatch',
-          {
-            error: new Error(`Expected chainId ${this.config.chainId}, got ${network.chainId}`),
-            chainId: network.chainId,
-            expectedChainId: this.config.chainId
-          }
+          `Network mismatch: Expected chainId ${this.config.chainId}, got ${network.chainId}`,
+          network.chainId
         );
       }
     } catch (error) {
       if (error instanceof NetworkError) throw error;
       throw new NetworkError(
-        'Failed to connect to network',
-        {
-          error: new Error(error instanceof Error ? error.message : String(error)),
-          chainId: this.config.chainId
-        }
+        `Failed to connect to network: ${error instanceof Error ? error.message : String(error)}`,
+        this.config.chainId
       );
     }
   }
@@ -43,16 +36,13 @@ export class NetworkManager {
   async switchNetwork(config: WalletConfig): Promise<void> {
     try {
       this.config = config;
-      this.provider = new ethers.providers.JsonRpcProvider(config.rpcUrl);
+      this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
       this.adapter = new EVMAdapter(config);
       await this.connect();
     } catch (error) {
       throw new NetworkError(
-        'Failed to switch network',
-        {
-          error: new Error(error instanceof Error ? error.message : String(error)),
-          chainId: config.chainId
-        }
+        `Failed to switch network: ${error instanceof Error ? error.message : String(error)}`,
+        config.chainId
       );
     }
   }
@@ -61,7 +51,7 @@ export class NetworkManager {
     return this.adapter;
   }
 
-  getProvider(): ethers.providers.JsonRpcProvider {
+  getProvider(): ethers.JsonRpcProvider {
     return this.provider;
   }
 

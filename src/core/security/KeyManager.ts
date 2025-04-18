@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { encrypt, decrypt } from '../../utils/crypto';
 
 export class KeyManager {
-  private wallet: ethers.Wallet | null = null;
+  private wallet: ethers.HDNodeWallet | null = null;
   private encryptedMnemonic: string | null = null;
 
   async initialize(mnemonic: string, password: string): Promise<void> {
@@ -10,7 +10,7 @@ export class KeyManager {
     this.encryptedMnemonic = await encrypt(mnemonic, password);
     
     // Create wallet from mnemonic
-    this.wallet = ethers.Wallet.fromPhrase(mnemonic);
+    this.wallet = ethers.HDNodeWallet.fromPhrase(mnemonic);
   }
 
   async getAddress(): Promise<string> {
