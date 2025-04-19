@@ -37,22 +37,22 @@ export class InjectedBridge {
     let tx: TransactionRequest;
     switch (method) {
       case 'eth_requestAccounts':
-        return { result: [this.bridge.getState().address] };
+        return { result: [this.bridge.getState().address], id: 0 };
       case 'eth_accounts':
-        return { result: [this.bridge.getState().address] };
+        return { result: [this.bridge.getState().address], id: 0 };
       case 'eth_chainId':
-        return { result: this.bridge.getState().chainId };
+        return { result: this.bridge.getState().chainId, id: 0 };
       case 'eth_sendTransaction':
         if (!params?.[0]) {
           throw new WalletError('Missing transaction parameters', 'INVALID_PARAMS');
         }
         tx = params[0] as TransactionRequest;
-        return { result: await this.bridge.sendTransaction(tx) };
+        return { result: await this.bridge.sendTransaction(tx), id: 0 };
       case 'eth_sign':
         if (!params?.[0] || !params?.[1]) {
           throw new WalletError('Missing sign parameters', 'INVALID_PARAMS');
         }
-        return { result: await this.bridge.signMessage(params[0] as string) };
+        return { result: await this.bridge.signMessage(params[0] as string), id: 0 };
       default:
         throw new WalletError('Unsupported method', 'UNSUPPORTED_METHOD');
     }
