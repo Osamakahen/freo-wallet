@@ -55,22 +55,30 @@ export class SessionAnalytics {
     metrics.chainSwitches++;
 
     if (newSessionId) {
-      await this.analytics.trackEvent('session_migrated', {
-        oldSessionId,
-        newSessionId
+      await this.analytics.trackEvent({
+        type: 'custom',
+        name: 'session_migrated',
+        data: { oldSessionId, newSessionId },
+        timestamp: Date.now()
       });
     }
   }
 
   async trackSessionCreation(sessionId: string): Promise<void> {
-    await this.analytics.trackEvent('session_created', {
-      sessionId
+    await this.analytics.trackEvent({
+      type: 'custom',
+      name: 'session_created',
+      data: { sessionId },
+      timestamp: Date.now()
     });
   }
 
   async trackSessionError(sessionId: string): Promise<void> {
-    await this.analytics.trackError('session_error', {
-      sessionId
+    await this.analytics.trackEvent({
+      type: 'error',
+      name: 'session_error',
+      data: { sessionId },
+      timestamp: Date.now()
     });
   }
 
