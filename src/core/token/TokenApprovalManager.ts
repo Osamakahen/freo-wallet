@@ -1,7 +1,7 @@
 import { createWalletClient, custom, parseUnits, formatUnits, createPublicClient, http, Address, getContract, encodeFunctionData } from 'viem';
 import { mainnet } from 'viem/chains';
 import { WebSocketTransactionMonitor } from '../transaction/WebSocketTransactionMonitor';
-import { TokenMetadata } from '../types/wallet';
+import { TokenMetadata } from '../../types/wallet';
 import { ApprovalTransaction } from '../../types/token';
 import { TransactionManager } from '../transaction/TransactionManager';
 import { KeyManager } from '../keyManagement/KeyManager';
@@ -23,15 +23,6 @@ export interface ApprovalStatus {
 export interface GasEstimate {
   gasLimit: bigint;
   estimatedCost: string;
-}
-
-export interface ApprovalTransaction {
-  hash: `0x${string}`;
-  status: 'pending' | 'confirmed' | 'failed';
-  timestamp: number;
-  type: 'approve' | 'approveMax' | 'revoke';
-  amount?: string;
-  gasEstimate?: string;
 }
 
 export class TokenApprovalManager {
@@ -131,7 +122,8 @@ export class TokenApprovalManager {
         account: from,
         to: tx.to,
         data: approveData,
-        value: 0n
+        value: 0n,
+        chain: mainnet
       });
 
       // Add to transaction history
@@ -167,7 +159,8 @@ export class TokenApprovalManager {
         account: from,
         to: tx.to,
         data: tx.data as `0x${string}`,
-        value: 0n
+        value: 0n,
+        chain: mainnet
       });
 
       const transaction: ApprovalTransaction = {
@@ -260,17 +253,6 @@ export class TokenApprovalManager {
       return allowance;
     } catch (error) {
       throw new Error('Failed to get allowance');
-    }
-  }
-
-  async getTransactionHistory(tokenAddress: Address, owner: Address): Promise<ApprovalTransaction[]> {
-    try {
-      // In a real implementation, this would query the blockchain for approval events
-      // For now, we'll return an empty array
-      return [];
-    } catch (error) {
-      console.error('Error getting transaction history:', error);
-      throw new Error('Failed to get transaction history');
     }
   }
 
