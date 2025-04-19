@@ -26,7 +26,7 @@ export interface TransactionRequest {
   from: `0x${string}`;
   to: `0x${string}`;
   value: string;
-  data?: string;
+  data?: `0x${string}`;
   gasLimit?: string;
   gasPrice?: string;
   maxFeePerGas?: string;
