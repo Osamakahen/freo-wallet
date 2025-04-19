@@ -26,13 +26,14 @@ export class EVMAdapter {
     return {
       ...tx,
       gasPrice,
-      gasLimit
+      gasLimit,
+      data: tx.data as `0x${string}` | undefined
     };
   }
 
   async sendTransaction(tx: TransactionRequest): Promise<string> {
     const preparedTx = await this.prepareTransaction(tx);
-    const transaction = {
+    return this.walletClient.sendTransaction({
       chain: this.chain,
       account: preparedTx.from as `0x${string}`,
       to: preparedTx.to as `0x${string}`,
@@ -41,8 +42,7 @@ export class EVMAdapter {
       gas: preparedTx.gasLimit ? BigInt(preparedTx.gasLimit) : undefined,
       maxFeePerGas: preparedTx.gasPrice ? BigInt(preparedTx.gasPrice) : undefined,
       nonce: preparedTx.nonce
-    };
-    return this.walletClient.sendTransaction(transaction);
+    });
   }
 
   async getNonce(address: string): Promise<number> {
