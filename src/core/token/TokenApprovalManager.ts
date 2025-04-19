@@ -7,7 +7,6 @@ import { TransactionManager } from '../transaction/TransactionManager';
 import { KeyManager } from '../keyManagement/KeyManager';
 import { ERC20_ABI } from '../../constants/abis';
 import { WalletError } from '../error/ErrorHandler';
-import { WalletClient } from '../wallet/WalletClient';
 import { WalletAdapter } from '../evm/WalletAdapter';
 
 export interface ApprovalRequest {
@@ -27,8 +26,17 @@ export interface GasEstimate {
   estimatedCost: string;
 }
 
+export interface ApprovalTransaction {
+  hash: `0x${string}`;
+  status: 'pending' | 'confirmed' | 'failed';
+  timestamp: number;
+  type: 'approve' | 'approveMax' | 'revoke';
+  amount?: string;
+  gasEstimate?: string;
+}
+
 export class TokenApprovalManager {
-  private walletClient: WalletAdapter;
+  private walletClient: ReturnType<typeof createWalletClient>;
   private publicClient: ReturnType<typeof createPublicClient>;
   private transactionMonitor: WebSocketTransactionMonitor;
   private transactionHistory: ApprovalTransaction[] = [];
@@ -36,28 +44,25 @@ export class TokenApprovalManager {
   private keyManager: KeyManager;
   private tokenAddress: `0x${string}`;
 
-  constructor(
-    walletClient: WalletAdapter,
-    transactionManager: TransactionManager,
-    transactionMonitor: WebSocketTransactionMonitor,
-    tokenAddress: `0x${string}`,
-    rpcUrl: string
-  ) {
+  constructor(tokenAddress: `0x${string}`, rpcUrl: string) {
     if (!window.ethereum) {
       throw new Error('Ethereum provider not found');
     }
 
-    this.walletClient = walletClient;
-    this.transactionManager = transactionManager;
-    this.transactionMonitor = transactionMonitor;
-    this.tokenAddress = tokenAddress;
+    this.walletClient = createWalletClient({
+      chain: mainnet,
+      transport: custom(window.ethereum)
+    });
 
     this.publicClient = createPublicClient({
       chain: mainnet,
       transport: http()
     });
 
+    this.transactionMonitor = new WebSocketTransactionMonitor();
     this.keyManager = new KeyManager();
+    this.transactionManager = new TransactionManager(rpcUrl, this.keyManager);
+    this.tokenAddress = tokenAddress;
   }
 
   async checkApproval(tokenAddress: `0x${string}`, owner: `0x${string}`, spender: `0x${string}`): Promise<ApprovalStatus> {
@@ -112,18 +117,17 @@ export class TokenApprovalManager {
   async approveToken(amount: string): Promise<string> {
     try {
       const [from] = await this.walletClient.getAddresses();
-      const amountBigInt = BigInt(amount);
       const tx = await this.transactionManager.createTransaction({
         from,
         to: this.tokenAddress,
-        data: this.encodeApproveData(this.tokenAddress, amountBigInt.toString()),
+        data: this.encodeApproveData(this.tokenAddress, amount),
         value: 0n
       });
 
       const hash = await this.walletClient.sendTransaction({
         account: from,
         to: tx.to,
-        data: tx.data as `0x${string}`,
+        data: tx.data,
         value: 0n
       });
       return hash;
@@ -137,19 +141,18 @@ export class TokenApprovalManager {
     try {
       const [from] = await this.walletClient.getAddresses();
       const maxAmount = 2n ** 256n - 1n;
-      const gasEstimate = await this.estimateGas({
-        ...request,
-        amount: maxAmount.toString()
+      const tx = await this.transactionManager.createTransaction({
+        from,
+        to: request.tokenAddress,
+        data: this.encodeApproveData(request.spender, maxAmount.toString()),
+        value: 0n
       });
 
-      const hash = await this.walletClient.writeContract({
+      const hash = await this.walletClient.sendTransaction({
         account: from,
-        chain: mainnet,
-        address: request.tokenAddress,
-        abi: ERC20_ABI,
-        functionName: 'approve',
-        args: [request.spender, maxAmount],
-        gas: gasEstimate.gasLimit
+        to: tx.to,
+        data: tx.data,
+        value: 0n
       });
 
       const transaction: ApprovalTransaction = {
@@ -161,8 +164,6 @@ export class TokenApprovalManager {
       };
 
       this.transactionHistory.push(transaction);
-      this.transactionMonitor.monitorTransaction(hash);
-
       return transaction;
     } catch (error) {
       console.error('Error approving max token:', error);
@@ -173,40 +174,29 @@ export class TokenApprovalManager {
   async revokeApproval(tokenAddress: `0x${string}`, spender: `0x${string}`): Promise<ApprovalTransaction> {
     try {
       const [from] = await this.walletClient.getAddresses();
-      const gasEstimate = await this.estimateGas({
-        tokenAddress,
-        spender,
-        amount: '0',
-        tokenMetadata: {
-          address: tokenAddress,
-          name: '',
-          symbol: '',
-          balance: '0',
-          decimals: 18
-        }
+      const tx = await this.transactionManager.createTransaction({
+        from,
+        to: tokenAddress,
+        data: this.encodeApproveData(spender, '0'),
+        value: 0n
       });
 
-      const hash = await this.walletClient.writeContract({
+      const hash = await this.walletClient.sendTransaction({
         account: from,
-        chain: mainnet,
-        address: tokenAddress,
-        abi: ERC20_ABI,
-        functionName: 'approve',
-        args: [spender, 0n],
-        gas: gasEstimate.gasLimit
+        to: tx.to,
+        data: tx.data,
+        value: 0n
       });
 
       const transaction: ApprovalTransaction = {
         hash,
         status: 'pending',
         timestamp: Date.now(),
-        type: 'revoke',
+        type: 'approve',
         amount: '0'
       };
 
       this.transactionHistory.push(transaction);
-      this.transactionMonitor.monitorTransaction(hash);
-
       return transaction;
     } catch (error) {
       console.error('Error revoking approval:', error);
@@ -288,13 +278,6 @@ export class TokenApprovalManager {
     } catch (error) {
       console.error('Error revoking approval:', error);
       throw new Error('Failed to revoke approval');
-    }
-  }
-
-  private async updateTransactionStatus(hash: `0x${string}`, status: 'confirmed' | 'failed'): Promise<void> {
-    const transaction = this.transactionHistory.find(tx => tx.hash === hash);
-    if (transaction) {
-      transaction.status = status;
     }
   }
 } 
