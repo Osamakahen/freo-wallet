@@ -3,7 +3,17 @@ import { ErrorCorrelator } from '../error/ErrorCorrelator';
 import { AnalyticsService } from '../../services/AnalyticsService';
 
 export class SessionTokenManager {
+  private static instance: SessionTokenManager;
   private tokens: Map<string, string> = new Map();
+
+  private constructor() {}
+
+  static getInstance(): SessionTokenManager {
+    if (!SessionTokenManager.instance) {
+      SessionTokenManager.instance = new SessionTokenManager();
+    }
+    return SessionTokenManager.instance;
+  }
 
   async createSessionToken(sessionId: string): Promise<string> {
     const token = crypto.randomUUID();
