@@ -1,16 +1,10 @@
-import { createWalletClient, createPublicClient, custom, getAddress, formatEther, EIP1193Provider, EthereumProvider } from 'viem';
+import { createWalletClient, createPublicClient, custom, getAddress, formatEther, EIP1193Provider } from 'viem';
 import { mainnet, goerli, sepolia, Chain } from 'viem/chains';
 import { TransactionRequest } from '../../types/wallet';
 
 declare global {
   interface Window {
-    ethereum?: EthereumProvider;
-  }
-}
-
-export class EVMAdapter extends WalletAdapter {
-  constructor(chain: Chain) {
-    super(chain);
+    ethereum?: EIP1193Provider;
   }
 }
 
@@ -53,7 +47,6 @@ export class WalletAdapter {
       data: tx.data as `0x${string}` | undefined,
       value: tx.value ? BigInt(tx.value) : undefined,
       gas: tx.gasLimit ? BigInt(tx.gasLimit) : undefined,
-      gasPrice: tx.gasPrice ? BigInt(tx.gasPrice) : undefined,
       maxFeePerGas: tx.maxFeePerGas ? BigInt(tx.maxFeePerGas) : undefined,
       maxPriorityFeePerGas: tx.maxPriorityFeePerGas ? BigInt(tx.maxPriorityFeePerGas) : undefined,
       nonce: tx.nonce,
@@ -121,5 +114,11 @@ export class WalletAdapter {
 
   getChain(): Chain {
     return this.chain;
+  }
+}
+
+export class EVMAdapter extends WalletAdapter {
+  constructor(chain: Chain) {
+    super(chain);
   }
 } 
