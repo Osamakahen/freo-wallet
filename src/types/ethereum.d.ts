@@ -1,26 +1,11 @@
-export type EthereumEvent = 'chainChanged' | 'accountsChanged' | 'connect' | 'disconnect';
+import { EIP1193Provider } from 'viem';
 
-export type ChainChangedCallback = (chainId: string) => void;
-export type AccountsChangedCallback = (accounts: string[]) => void;
-export type ConnectCallback = (connectInfo: { chainId: string }) => void;
-export type DisconnectCallback = (error: { code: number; message: string }) => void;
-
-export type EthereumCallback = 
-  | ChainChangedCallback 
-  | AccountsChangedCallback 
-  | ConnectCallback 
-  | DisconnectCallback;
-
-export interface EthereumProvider {
+export interface EthereumProvider extends EIP1193Provider {
   isMetaMask?: boolean;
-  chainId: string;
-  selectedAddress: string | null;
-  networkVersion: string;
-  isConnected(): boolean;
-  request(args: { method: string; params?: unknown[] }): Promise<unknown>;
-  on(event: EthereumEvent, callback: EthereumCallback): void;
-  removeListener(event: EthereumEvent, callback: EthereumCallback): void;
-  removeAllListeners(event?: EthereumEvent): void;
+  chainId?: string;
+  selectedAddress?: string;
+  on(event: string, callback: (...args: any[]) => void): void;
+  removeListener(event: string, callback: (...args: any[]) => void): void;
 }
 
 declare global {
