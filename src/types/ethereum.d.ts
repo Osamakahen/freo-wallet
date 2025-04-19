@@ -1,11 +1,24 @@
 import { EIP1193Provider, EIP1193EventMap, EIP1193RequestFn } from 'viem';
 
+export type EthereumEvent = 
+  | 'accountsChanged'
+  | 'chainChanged'
+  | 'connect'
+  | 'disconnect'
+  | 'message';
+
 export interface EthereumProvider extends EIP1193Provider {
   isMetaMask?: boolean;
   chainId?: string;
   selectedAddress?: string;
-  on: <event extends keyof EIP1193EventMap>(event: event, listener: EIP1193EventMap[event]) => void;
-  removeListener: <event extends keyof EIP1193EventMap>(event: event, listener: EIP1193EventMap[event]) => void;
+  on: <event extends keyof EIP1193EventMap | EthereumEvent>(
+    event: event,
+    listener: event extends keyof EIP1193EventMap ? EIP1193EventMap[event] : (...args: any[]) => void
+  ) => void;
+  removeListener: <event extends keyof EIP1193EventMap | EthereumEvent>(
+    event: event,
+    listener: event extends keyof EIP1193EventMap ? EIP1193EventMap[event] : (...args: any[]) => void
+  ) => void;
   request: EIP1193RequestFn;
 }
 
