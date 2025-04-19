@@ -19,13 +19,6 @@ export interface GasOptimizationOptions {
   maxGasLimit?: string;
 }
 
-interface GasEstimate {
-  gasLimit: number;
-  gasPrice: number;
-  maxFeePerGas: number;
-  maxPriorityFeePerGas: number;
-}
-
 export class GasManager extends EventEmitter {
   private client: ReturnType<typeof createPublicClient>;
   private readonly DEFAULT_GAS_LIMIT = '21000';
