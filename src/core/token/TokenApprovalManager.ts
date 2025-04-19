@@ -114,7 +114,8 @@ export class TokenApprovalManager {
         value: '0x0'
       });
 
-      return tx.hash;
+      const hash = await this.walletClient.sendTransaction(tx);
+      return hash;
     } catch (error) {
       console.error('Error approving token:', error);
       throw new Error('Failed to approve token');
