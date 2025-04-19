@@ -106,15 +106,20 @@ export class TokenApprovalManager {
 
   async approveToken(amount: string): Promise<string> {
     try {
-      const from = await this.walletClient.getAddresses();
+      const [from] = await this.walletClient.getAddresses();
       const tx = await this.transactionManager.createTransaction({
-        from: from[0],
+        from,
         to: this.tokenAddress,
         data: this.encodeApproveData(this.tokenAddress, amount),
         value: '0x0'
       });
 
-      const hash = await this.walletClient.sendTransaction(tx);
+      const hash = await this.walletClient.sendTransaction({
+        account: from,
+        to: tx.to,
+        data: tx.data,
+        value: tx.value
+      });
       return hash;
     } catch (error) {
       console.error('Error approving token:', error);
