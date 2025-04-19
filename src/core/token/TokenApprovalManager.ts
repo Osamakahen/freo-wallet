@@ -141,29 +141,32 @@ export class TokenApprovalManager {
     try {
       const [from] = await this.walletClient.getAddresses();
       const maxAmount = 2n ** 256n - 1n;
-      const tx = await this.transactionManager.createTransaction({
-        from,
-        to: request.tokenAddress,
-        data: this.encodeApproveData(request.spender, maxAmount.toString()),
-        value: 0n
+      const gasEstimate = await this.estimateGas({
+        ...request,
+        amount: maxAmount.toString()
       });
 
-      const hash = await this.walletClient.sendTransaction({
+      const hash = await this.walletClient.writeContract({
         account: from,
-        to: tx.to,
-        data: tx.data,
-        value: 0n
+        chain: mainnet,
+        address: request.tokenAddress,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [request.spender, maxAmount],
+        gas: gasEstimate.gasLimit
       });
 
       const transaction: ApprovalTransaction = {
         hash,
         status: 'pending',
         timestamp: Date.now(),
-        type: 'approve',
-        amount: maxAmount.toString()
+        type: 'approveMax',
+        gasEstimate: gasEstimate.estimatedCost
       };
 
       this.transactionHistory.push(transaction);
+      this.transactionMonitor.monitorTransaction(hash);
+
       return transaction;
     } catch (error) {
       console.error('Error approving max token:', error);
