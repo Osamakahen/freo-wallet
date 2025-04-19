@@ -41,6 +41,15 @@ class AnalyticsService {
     // TODO: Implement actual analytics tracking
   }
 
+  public track(eventName: string, data: any): void {
+    this.trackEvent({
+      type: 'custom',
+      name: eventName,
+      data,
+      timestamp: Date.now()
+    });
+  }
+
   public trackError(error: AnalyticsError): void {
     const errorWithContext = {
       ...error,

@@ -15,25 +15,6 @@ import { SecurityManager } from '../security/SecurityManager';
 import { SecurityAlert } from '../../types/security';
 import { v4 as uuidv4 } from 'uuid';
 
-// AnalyticsService implementation
-class AnalyticsService {
-  private static instance: AnalyticsService;
-  
-  private constructor() {}
-  
-  public static getInstance(): AnalyticsService {
-    if (!AnalyticsService.instance) {
-      AnalyticsService.instance = new AnalyticsService();
-    }
-    return AnalyticsService.instance;
-  }
-  
-  public async track(event: string, data: any): Promise<void> {
-    // Implementation for tracking analytics
-    console.log(`Tracking ${event}:`, data);
-  }
-}
-
 export class EnhancedSessionManager extends SessionManager {
   private analyticsService: AnalyticsService;
   private securityManager: SecurityManager;
@@ -52,7 +33,7 @@ export class EnhancedSessionManager extends SessionManager {
       throw new Error('No active session');
     }
 
-    const deviceInfo = this.getDeviceInfo();
+    const deviceInfo = this.getEnhancedDeviceInfo();
     const metrics: SessionMetrics = {
       sessionId: activeSession.id,
       duration: Date.now() - activeSession.timestamp,
@@ -81,7 +62,7 @@ export class EnhancedSessionManager extends SessionManager {
       timestamp: Date.now(),
       type: 'browser' as const,
       oldValue: JSON.stringify(change),
-      newValue: JSON.stringify(this.getDeviceInfo())
+      newValue: JSON.stringify(this.getEnhancedDeviceInfo())
     }));
 
     const auditLog: SessionAuditLog = {
@@ -100,7 +81,7 @@ export class EnhancedSessionManager extends SessionManager {
     return auditLog;
   }
 
-  public async monitorActiveSessions(): Promise<SessionStats> {
+  public async monitorActiveSessions(): Promise<void> {
     const sessions = await this.getSessions();
     const activeSessions = sessions.filter(session => session.isActive);
     
@@ -108,12 +89,10 @@ export class EnhancedSessionManager extends SessionManager {
       totalSessions: sessions.length,
       activeSessions: activeSessions.length,
       averageDuration: this.calculateAverageDuration(activeSessions),
-      securityAlerts: await this.detectAnomalies(),
-      permissionUsage: this.analyzePermissionUsage()
+      securityScore: this.calculateSecurityScore(activeSessions)
     };
 
-    await this.analyticsService.track('session_stats', stats);
-    return stats;
+    await AnalyticsService.trackSessionStats(stats);
   }
 
   private calculateAverageDuration(sessions: Session[]): number {
@@ -235,7 +214,7 @@ export class EnhancedSessionManager extends SessionManager {
     return recommendations;
   }
 
-  private getDeviceInfo(): DeviceInfo {
+  private getEnhancedDeviceInfo(): DeviceInfo {
     return {
       browser: navigator.userAgent,
       os: navigator.platform,
@@ -259,12 +238,40 @@ export class EnhancedSessionManager extends SessionManager {
   }
 
   private async getIPAddress(): Promise<string> {
+    return '';
+  }
+
+  public async initializeSession(): Promise<void> {
     try {
-      const response = await fetch('https://api.ipify.org?format=json');
-      const data = await response.json();
-      return data.ip;
+      const session = await this.createSession();
+      const deviceInfo = this.getEnhancedDeviceInfo();
+      const ipAddress = await this.getIPAddress();
+
+      // Initialize session metrics
+      const metrics: SessionMetrics = {
+        sessionId: session.id,
+        duration: 0,
+        operations: 0,
+        lastActivity: Date.now(),
+        deviceInfo,
+        ipAddress,
+        securityScore: 100 // Start with maximum security score
+      };
+
+      this.sessionMetrics.set(session.id, metrics);
+
+      // Initialize audit logs
+      this.auditLogs.set(session.id, []);
+
+      // Track session initialization
+      await this.analyticsService.track('session_initialized', {
+        sessionId: session.id,
+        deviceInfo,
+        ipAddress
+      });
     } catch (error) {
-      return '';
+      console.error('Failed to initialize session:', error);
+      throw error;
     }
   }
 } 
