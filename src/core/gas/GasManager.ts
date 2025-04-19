@@ -203,21 +203,24 @@ export class GasManager extends EventEmitter {
     try {
       const currentBlock = await this.client.getBlockNumber();
       const prices: GasPriceUpdate[] = [];
+      const timestamps: number[] = [];
 
       for (let i = 0; i < limit; i++) {
         const block = await this.client.getBlock({ blockNumber: currentBlock - BigInt(i) });
         if (!block.baseFeePerGas) continue;
 
         const baseFee = block.baseFeePerGas;
+        const timestamp = Number(block.timestamp) * 1000;
         prices.push({
-          timestamp: Number(block.timestamp) * 1000,
+          timestamp,
           baseFee: formatGwei(baseFee),
           maxFeePerGas: formatGwei(baseFee * 12n / 10n),
           maxPriorityFeePerGas: formatGwei(baseFee * 13n / 10n)
         });
+        timestamps.push(timestamp);
       }
 
-      return { prices };
+      return { prices, timestamps };
     } catch (error) {
       throw new Error(`Failed to get gas history: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
