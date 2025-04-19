@@ -1,19 +1,20 @@
 import { createWalletClient, createPublicClient, custom, getAddress, formatEther, EIP1193Provider } from 'viem';
 import { mainnet, goerli, sepolia, Chain } from 'viem/chains';
 import { TransactionRequest } from '../../types/wallet';
+import { EthereumProvider } from '../../types/ethereum';
 
 export class WalletAdapter {
   private walletClient: ReturnType<typeof createWalletClient>;
   private publicClient: ReturnType<typeof createPublicClient>;
   private chain: Chain;
-  private ethereum: EIP1193Provider;
+  private ethereum: EthereumProvider;
 
   constructor(chain: Chain = mainnet) {
     if (typeof window === 'undefined' || !window.ethereum) {
       throw new Error('Ethereum provider not found');
     }
 
-    this.ethereum = window.ethereum as EIP1193Provider;
+    this.ethereum = window.ethereum as EthereumProvider;
     this.chain = chain;
     this.walletClient = createWalletClient({
       chain,
