@@ -22,14 +22,14 @@ export class SecurityManager {
     // Deduct points for security events
     events.forEach(event => {
       switch (event.type) {
-        case 'SUSPICIOUS_ACTIVITY':
+        case 'transaction':
+          score -= 0.1;
+          break;
+        case 'permission_change':
           score -= 0.2;
           break;
-        case 'MULTIPLE_DEVICES':
+        case 'device_change':
           score -= 0.3;
-          break;
-        case 'RATE_LIMIT_EXCEEDED':
-          score -= 0.1;
           break;
       }
     });
@@ -66,9 +66,13 @@ export class SecurityManager {
     
     if (limit.count >= this.MAX_REQUESTS) {
       this.logSecurityEvent(sessionId, {
-        type: 'RATE_LIMIT_EXCEEDED',
+        type: 'transaction',
         timestamp: now,
-        details: 'Too many requests in a short time period'
+        success: false,
+        error: {
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: 'Too many requests in a short time period'
+        }
       });
       return false;
     }
