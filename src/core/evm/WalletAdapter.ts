@@ -1,10 +1,10 @@
-import { createWalletClient, createPublicClient, custom, getAddress, formatEther, EIP1193Provider } from 'viem';
+import { createWalletClient, createPublicClient, custom, getAddress, formatEther, EIP1193Provider, EthereumProvider } from 'viem';
 import { mainnet, goerli, sepolia, Chain } from 'viem/chains';
 import { TransactionRequest } from '../../types/wallet';
 
 declare global {
   interface Window {
-    ethereum?: EIP1193Provider;
+    ethereum?: EthereumProvider;
   }
 }
 
