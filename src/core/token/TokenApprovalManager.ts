@@ -127,7 +127,7 @@ export class TokenApprovalManager {
       const hash = await this.walletClient.sendTransaction({
         account: from,
         to: tx.to,
-        data: tx.data,
+        data: tx.data as `0x${string}`,
         value: 0n
       });
       return hash;
@@ -160,8 +160,8 @@ export class TokenApprovalManager {
         hash,
         status: 'pending',
         timestamp: Date.now(),
-        type: 'approveMax',
-        gasEstimate: gasEstimate.estimatedCost
+        type: 'approve',
+        amount: maxAmount.toString()
       };
 
       this.transactionHistory.push(transaction);
@@ -177,29 +177,40 @@ export class TokenApprovalManager {
   async revokeApproval(tokenAddress: `0x${string}`, spender: `0x${string}`): Promise<ApprovalTransaction> {
     try {
       const [from] = await this.walletClient.getAddresses();
-      const tx = await this.transactionManager.createTransaction({
-        from,
-        to: tokenAddress,
-        data: this.encodeApproveData(spender, '0'),
-        value: 0n
+      const gasEstimate = await this.estimateGas({
+        tokenAddress,
+        spender,
+        amount: '0',
+        tokenMetadata: {
+          address: tokenAddress,
+          name: '',
+          symbol: '',
+          balance: '0',
+          decimals: 18
+        }
       });
 
-      const hash = await this.walletClient.sendTransaction({
+      const hash = await this.walletClient.writeContract({
         account: from,
-        to: tx.to,
-        data: tx.data,
-        value: 0n
+        chain: mainnet,
+        address: tokenAddress,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [spender, 0n],
+        gas: gasEstimate.gasLimit
       });
 
       const transaction: ApprovalTransaction = {
         hash,
         status: 'pending',
         timestamp: Date.now(),
-        type: 'approve',
+        type: 'revoke',
         amount: '0'
       };
 
       this.transactionHistory.push(transaction);
+      this.transactionMonitor.monitorTransaction(hash);
+
       return transaction;
     } catch (error) {
       console.error('Error revoking approval:', error);
@@ -281,6 +292,13 @@ export class TokenApprovalManager {
     } catch (error) {
       console.error('Error revoking approval:', error);
       throw new Error('Failed to revoke approval');
+    }
+  }
+
+  private async updateTransactionStatus(hash: `0x${string}`, status: 'confirmed' | 'failed'): Promise<void> {
+    const transaction = this.transactionHistory.find(tx => tx.hash === hash);
+    if (transaction) {
+      transaction.status = status;
     }
   }
 } 
