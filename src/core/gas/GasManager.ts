@@ -51,7 +51,7 @@ export class GasManager extends EventEmitter {
 
   static getInstance(): GasManager {
     if (!GasManager.instance) {
-      GasManager.instance = new GasManager('https://rpc.ankr.com/eth', new ErrorCorrelator());
+      GasManager.instance = new GasManager('https://rpc.ankr.com/eth', ErrorCorrelator.getInstance());
     }
     return GasManager.instance;
   }
