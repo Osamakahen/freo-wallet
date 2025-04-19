@@ -9,12 +9,23 @@ import { v4 as uuidv4 } from 'uuid';
 import { WalletError } from '../error/ErrorHandler';
 import { SessionAnalytics } from './SessionAnalytics';
 import { SecurityService } from '../../services/SecurityService';
-import { KeyManager } from '../keyManagement/KeyManager';
+import { KeyManager } from '../key/KeyManager';
 import { ErrorCorrelator } from '../error/ErrorCorrelator';
 import { SessionTokenManager } from './SessionTokenManager';
 import { EnhancedSessionManager } from './EnhancedSessionManager';
-import AnalyticsService from '../../services/AnalyticsService';
+import { AnalyticsService } from '../../services/AnalyticsService';
 import { DeviceFingerprint } from '../security/DeviceFingerprint';
+
+interface ISession {
+  id: string;
+  address: Address;
+  chainId: number;
+  permissions: SessionPermissions;
+  createdAt: Date;
+  expiresAt: Date;
+  deviceInfo?: DeviceInfo;
+  lastActivity?: number;
+}
 
 export class SessionManager {
   private sessions: Map<string, Session> = new Map();
@@ -106,14 +117,22 @@ export class SessionManager {
     return createHash('sha256').update(deviceString).digest('hex');
   }
 
-  async createSession(options: { chainId: number; address: string }): Promise<Session> {
+  async createSession(options: { chainId: number; address: Address }): Promise<Session> {
     const session: Session = {
       id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      deviceInfo: this.deviceInfo,
+      deviceChanges: [],
+      permissionChanges: [],
+      isActive: true,
+      lastActivity: Date.now(),
       chainId: options.chainId,
-      address: options.address,
-      createdAt: Date.now(),
-      lastActive: Date.now(),
-      status: 'active'
+      permissions: {
+        read: true,
+        write: false,
+        sign: false,
+        nft: false
+      }
     };
 
     await this.keyManager.generateSessionKey(session.id);
