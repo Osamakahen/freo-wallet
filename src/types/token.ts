@@ -25,9 +25,10 @@ export interface TokenApproval {
 }
 
 export interface ApprovalTransaction {
-  type: 'approve' | 'revoke';
-  amount: bigint;
-  status: 'pending' | 'success' | 'failed';
+  type: 'approve' | 'approveMax' | 'revoke';
+  amount?: string;
+  status: 'pending' | 'confirmed' | 'failed';
   timestamp: number;
   hash: `0x${string}`;
+  gasEstimate?: string;
 } 

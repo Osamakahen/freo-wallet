@@ -26,15 +26,6 @@ export interface GasEstimate {
   estimatedCost: string;
 }
 
-export interface ApprovalTransaction {
-  hash: `0x${string}`;
-  status: 'pending' | 'confirmed' | 'failed';
-  timestamp: number;
-  type: 'approve' | 'approveMax' | 'revoke';
-  amount?: string;
-  gasEstimate?: string;
-}
-
 export class TokenApprovalManager {
   private walletClient: ReturnType<typeof createWalletClient>;
   private publicClient: ReturnType<typeof createPublicClient>;
@@ -114,14 +105,18 @@ export class TokenApprovalManager {
     });
   }
 
-  async approveToken(amount: string): Promise<string> {
+  async approveToken(amount: string, tokenAddress?: Address, spender?: Address): Promise<string> {
     try {
       const [from] = await this.walletClient.getAddresses();
+      const targetTokenAddress = tokenAddress || this.tokenAddress;
+      const targetSpender = spender || this.tokenAddress;
+      
+      const approveData = this.encodeApproveData(targetSpender, amount);
       const tx = await this.transactionManager.createTransaction({
         from,
-        to: this.tokenAddress,
-        data: this.encodeApproveData(this.tokenAddress, amount),
-        value: 0n
+        to: targetTokenAddress,
+        data: approveData as `0x${string}`,
+        value: '0'
       });
 
       const hash = await this.walletClient.sendTransaction({
@@ -130,6 +125,17 @@ export class TokenApprovalManager {
         data: tx.data,
         value: 0n
       });
+
+      // Add to transaction history
+      this.transactionHistory.push({
+        type: 'approve',
+        amount,
+        status: 'pending',
+        timestamp: Date.now(),
+        hash,
+        gasEstimate: undefined
+      });
+
       return hash;
     } catch (error) {
       console.error('Error approving token:', error);
@@ -141,11 +147,12 @@ export class TokenApprovalManager {
     try {
       const [from] = await this.walletClient.getAddresses();
       const maxAmount = 2n ** 256n - 1n;
+      const approveData = this.encodeApproveData(request.spender, maxAmount.toString());
       const tx = await this.transactionManager.createTransaction({
         from,
         to: request.tokenAddress,
-        data: this.encodeApproveData(request.spender, maxAmount.toString()),
-        value: 0n
+        data: approveData as `0x${string}`,
+        value: '0'
       });
 
       const hash = await this.walletClient.sendTransaction({
@@ -248,15 +255,35 @@ export class TokenApprovalManager {
     }
   }
 
-  async getTransactionHistory(tokenAddress: Address, owner: Address): Promise<ApprovalTransaction[]> {
-    try {
-      // In a real implementation, this would query the blockchain for approval events
-      // For now, we'll return an empty array
-      return [];
-    } catch (error) {
-      console.error('Error getting transaction history:', error);
-      throw new Error('Failed to get transaction history');
+  async getTransactionHistory(tokenAddress?: Address, owner?: Address): Promise<ApprovalTransaction[]> {
+    if (!tokenAddress && !owner) {
+      return this.transactionHistory;
     }
+
+    if (!tokenAddress || !owner) {
+      throw new Error('Both tokenAddress and owner must be provided when filtering transactions');
+    }
+
+    const contract = getContract({
+      address: tokenAddress,
+      abi: ERC20_ABI,
+      client: this.publicClient
+    });
+
+    const filter = await contract.createEventFilter.Approval({
+      owner,
+      spender: this.tokenAddress
+    });
+
+    const logs = await this.publicClient.getFilterLogs({ filter });
+    return logs.map(log => ({
+      type: 'approve',
+      amount: log.args.value?.toString() || '0',
+      status: 'confirmed',
+      timestamp: Date.now(),
+      hash: log.transactionHash,
+      gasEstimate: undefined
+    }));
   }
 
   async approve(tokenAddress: Address, spender: Address, amount: bigint): Promise<void> {
@@ -272,9 +299,7 @@ export class TokenApprovalManager {
 
   async revoke(tokenAddress: Address, spender: Address): Promise<void> {
     try {
-      // In a real implementation, this would send a transaction to revoke approval
-      // For now, we'll just simulate the revocation
-      console.log(`Revoking approval for ${spender}`);
+      await this.approveToken('0', tokenAddress, spender);
     } catch (error) {
       console.error('Error revoking approval:', error);
       throw new Error('Failed to revoke approval');
