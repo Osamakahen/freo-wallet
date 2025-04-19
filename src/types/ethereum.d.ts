@@ -7,17 +7,19 @@ export type EthereumEvent =
   | 'disconnect'
   | 'message';
 
+export type EthereumCallback = (...args: any[]) => void;
+
 export interface EthereumProvider extends EIP1193Provider {
   isMetaMask?: boolean;
   chainId?: string;
   selectedAddress?: string;
   on: <event extends keyof EIP1193EventMap | EthereumEvent>(
     event: event,
-    listener: event extends keyof EIP1193EventMap ? EIP1193EventMap[event] : (...args: any[]) => void
+    listener: event extends keyof EIP1193EventMap ? EIP1193EventMap[event] : EthereumCallback
   ) => void;
   removeListener: <event extends keyof EIP1193EventMap | EthereumEvent>(
     event: event,
-    listener: event extends keyof EIP1193EventMap ? EIP1193EventMap[event] : (...args: any[]) => void
+    listener: event extends keyof EIP1193EventMap ? EIP1193EventMap[event] : EthereumCallback
   ) => void;
   request: EIP1193RequestFn;
 }
