@@ -1,22 +1,28 @@
 import { Address } from 'viem';
 import { encrypt, decrypt } from '../../utils/crypto';
-import { Session, SessionConfig, DeviceInfo, DeviceChange, PermissionChange, SessionPermissions } from '../../types/session';
+import { SessionKey, SessionToken, SessionState, DeviceInfo, SessionConfig, Session } from '../../types/session';
 import { generateRandomBytes } from '../../utils/crypto';
+import { SessionPermissions } from '../../types/dapp';
 import { SessionKeyManager } from './SessionKeyManager';
 import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { WalletError } from '../error/ErrorHandler';
 import { SessionAnalytics } from './SessionAnalytics';
 import { SecurityService } from '../../services/SecurityService';
+import { KeyManager } from '../key/KeyManager';
 import { ErrorCorrelator } from '../error/ErrorCorrelator';
 import { SessionTokenManager } from './SessionTokenManager';
 import { EnhancedSessionManager } from './EnhancedSessionManager';
-import AnalyticsService from '../../services/AnalyticsService';
+import { AnalyticsService } from '../../services/AnalyticsService';
 import { DeviceFingerprint } from '../security/DeviceFingerprint';
 
-interface SessionKey {
-  key: string;
-  expiresAt: number;
+interface SessionState {
+  isActive: boolean;
+  lastActivity: number;
+  permissions: Set<string>;
+  address?: Address;
+  chainId?: number;
+  error?: Error;
 }
 
 export class SessionManager {
@@ -28,7 +34,7 @@ export class SessionManager {
   private config: SessionConfig;
   private storage: Storage;
   private deviceInfo: DeviceInfo;
-  private activeSessionId: string | null = null;
+  private state: SessionState;
   private readonly STORAGE_KEY = 'freo_sessions';
   private analytics: SessionAnalytics;
   private securityService: SecurityService;
@@ -49,74 +55,58 @@ export class SessionManager {
     };
     this.storage = window.localStorage;
     this.deviceInfo = this.getDeviceInfo();
+    this.state = {
+      isActive: false,
+      lastActivity: Date.now(),
+      permissions: new Set()
+    };
     this.analytics = new SessionAnalytics();
     this.securityService = SecurityService.getInstance();
     this.errorCorrelator = ErrorCorrelator.getInstance();
     this.loadSessions();
   }
 
-  private loadSessions(): void {
-    const stored = this.storage.getItem(this.STORAGE_KEY);
-    if (stored) {
-      try {
-        const rawSessions = JSON.parse(stored);
-        this.sessions = new Map(
-          Object.entries(rawSessions.sessions).map(([id, session]: [string, any]) => [
-            id,
-            {
-              ...session,
-              createdAt: new Date(session.createdAt),
-              expiresAt: new Date(session.expiresAt),
-              address: session.address as Address,
-              chainId: session.chainId,
-              permissions: session.permissions || {
-                read: true,
-                write: false,
-                sign: false,
-                connect: true,
-                disconnect: true
-              }
-            }
-          ])
-        );
-      } catch (error) {
-        console.error('Failed to parse sessions from storage', error);
-        this.sessions = new Map();
-      }
-    }
-  }
-
-  private saveSessions(): void {
-      const data = {
-      sessions: Object.fromEntries(this.sessions)
-      };
-    this.storage.setItem(this.STORAGE_KEY, JSON.stringify(data));
-  }
-
   private getDeviceInfo(): DeviceInfo {
     return {
-      userAgent: navigator.userAgent,
+      browser: navigator.userAgent,
+      os: navigator.platform,
+      platform: navigator.platform,
+      deviceType: this.getDeviceType(),
       screenResolution: `${window.screen.width}x${window.screen.height}`,
-      colorDepth: window.screen.colorDepth,
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      language: navigator.language,
-      platform: navigator.platform
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      language: navigator.language
     };
   }
 
-  private generateDeviceFingerprint(): string {
-    const deviceString = JSON.stringify(this.deviceInfo);
-    return createHash('sha256').update(deviceString).digest('hex');
+  private getDeviceType(): string {
+    const ua = navigator.userAgent;
+    if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
+      return 'tablet';
+    }
+    if (/Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) {
+      return 'mobile';
+    }
+    return 'desktop';
   }
 
-  async createSession(options: { chainId: number; address: string }): Promise<Session> {
+  async createSession(options: { chainId: number; address: Address }): Promise<Session> {
     const session: Session = {
       id: crypto.randomUUID(),
       chainId: options.chainId,
       address: options.address,
-      createdAt: Date.now(),
-      lastActive: Date.now(),
-      status: 'active'
+      timestamp: Date.now(),
+      deviceInfo: this.deviceInfo,
+      deviceChanges: [],
+      permissionChanges: [],
+      isActive: true,
+      lastActivity: Date.now(),
+      permissions: {
+        read: true,
+        write: false,
+        sign: false,
+        connect: true,
+        disconnect: true
+      }
     };
 
     await this.keyManager.generateSessionKey(session.id);
@@ -129,7 +119,7 @@ export class SessionManager {
   }
 
   async endSession(sessionId: string): Promise<void> {
-    await this.keyManager.deleteSessionKey(sessionId);
+    await this.keyManager.revokeSessionKey(sessionId);
     await this.tokenManager.revokeSessionToken(sessionId);
     await this.enhancedManager.endSession(sessionId);
     this.sessions.delete(sessionId);
@@ -141,8 +131,7 @@ export class SessionManager {
     if (!session) return null;
 
     if (this.config.deviceVerification) {
-      // Verify device info matches
-      const deviceMatches = this.verifyDeviceInfo(session.deviceInfo!, deviceInfo);
+      const deviceMatches = this.verifyDeviceInfo(session.deviceInfo, deviceInfo);
       if (!deviceMatches) {
         throw new Error('Device verification failed');
       }
@@ -150,7 +139,6 @@ export class SessionManager {
 
     const updatedSession: Session = {
       ...session,
-      expiresAt: new Date(Date.now() + this.config.tokenDuration * 1000),
       lastActivity: Date.now()
     };
 
@@ -161,16 +149,16 @@ export class SessionManager {
 
   private verifyDeviceInfo(stored: DeviceInfo, current: DeviceInfo): boolean {
     return (
-      stored.userAgent === current.userAgent &&
+      stored.browser === current.browser &&
       stored.platform === current.platform &&
       stored.language === current.language
     );
   }
 
   public getActiveSession(): Session | null {
-    const now = new Date();
+    const now = Date.now();
     for (const session of this.sessions.values()) {
-      if (session.expiresAt > now) {
+      if (session.isActive) {
         return session;
       }
     }
@@ -189,10 +177,11 @@ export class SessionManager {
     const token = crypto.randomUUID();
     this.recoveryTokens.set(token, sessionId);
     
-    // Set expiry for recovery token
-    setTimeout(() => {
-      this.recoveryTokens.delete(token);
-    }, this.config.recoveryTokenDuration * 1000);
+    if (this.config.recoveryTokenDuration) {
+      setTimeout(() => {
+        this.recoveryTokens.delete(token);
+      }, this.config.recoveryTokenDuration * 1000);
+    }
     
     return token;
   }
@@ -234,45 +223,21 @@ export class SessionManager {
 
   public async generateSessionKey(password: string): Promise<SessionKey> {
     try {
-      const key = generateRandomBytes(32);
-      const salt = generateRandomBytes(16);
+      const key = crypto.getRandomValues(new Uint8Array(32));
       const now = Date.now();
 
       const sessionKey: SessionKey = {
-        key: key.toString('hex'),
-        salt: salt.toString('hex'),
-        createdAt: now,
+        key: Array.from(key).map(b => b.toString(16).padStart(2, '0')).join(''),
         expiresAt: now + this.config.tokenDuration
       };
 
-      // Encrypt session key before storing
-      const encryptedKey = await encrypt(JSON.stringify(sessionKey), password);
-      this.storage.setItem('sessionKey', encryptedKey);
-
       return sessionKey;
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Failed to generate session key: ${errorMessage}`);
-    }
-  }
-
-  public async getSessionKey(password: string): Promise<SessionKey | null> {
-    try {
-      const encryptedKey = this.storage.getItem('sessionKey');
-      if (!encryptedKey) return null;
-
-      const decryptedKey = await decrypt(encryptedKey, password);
-      const sessionKey: SessionKey = JSON.parse(decryptedKey);
-
-      if (Date.now() > sessionKey.expiresAt) {
-        this.storage.removeItem('sessionKey');
-        return null;
-      }
-
-      return sessionKey;
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Failed to retrieve session key: ${errorMessage}`);
+    } catch (error) {
+      throw new WalletError(
+        'Failed to generate session key',
+        'SESSION_KEY_ERROR',
+        { error: error instanceof Error ? error : new Error(String(error)) }
+      );
     }
   }
 
@@ -282,17 +247,20 @@ export class SessionManager {
       isActive: true,
       address,
       chainId,
-      error: null
+      error: undefined
     };
   }
 
   public async revokeAllSessions(): Promise<void> {
     try {
       this.sessions.clear();
-      this.activeSessionId = null;
       this.saveSessions();
     } catch (error) {
-      throw new Error(`Failed to revoke all sessions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new WalletError(
+        'Failed to revoke all sessions',
+        'SESSION_REVOCATION_ERROR',
+        { error: error instanceof Error ? error : new Error(String(error)) }
+      );
     }
   }
 
@@ -300,21 +268,25 @@ export class SessionManager {
     try {
       return Array.from(this.sessions.values());
     } catch (error) {
-      throw new Error(`Failed to get sessions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new WalletError(
+        'Failed to get sessions',
+        'SESSION_RETRIEVAL_ERROR',
+        { error: error instanceof Error ? error : new Error(String(error)) }
+      );
     }
   }
 
   public async migrateSession(oldSessionId: string, newChainId: number): Promise<Session> {
     const session = this.sessions.get(oldSessionId);
     if (!session) {
-      throw new WalletError('Session not found');
+      throw new WalletError('Session not found', 'SESSION_NOT_FOUND');
     }
 
     const newSession: Session = {
       ...session,
       chainId: newChainId,
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + this.config.sessionDuration)
+      timestamp: Date.now(),
+      lastActivity: Date.now()
     };
 
     this.sessions.set(newSession.id, newSession);
@@ -324,5 +296,23 @@ export class SessionManager {
 
   async getSessionAnalytics(sessionId: string) {
     return this.analytics.getSessionMetrics(sessionId);
+  }
+
+  private saveSessions(): void {
+    const sessions = Array.from(this.sessions.entries());
+    this.storage.setItem(this.STORAGE_KEY, JSON.stringify(sessions));
+  }
+
+  private loadSessions(): void {
+    const stored = this.storage.getItem(this.STORAGE_KEY);
+    if (stored) {
+      try {
+        const sessions = JSON.parse(stored);
+        this.sessions = new Map(sessions);
+      } catch (error) {
+        console.error('Failed to load sessions:', error);
+        this.sessions = new Map();
+      }
+    }
   }
 }
