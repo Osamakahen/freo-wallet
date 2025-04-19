@@ -90,7 +90,9 @@ export class EnhancedSessionManager {
     const stats: SessionStats = {
       totalSessions: sessions.length,
       activeSessions: activeSessions.length,
-      averageDuration: this.calculateAverageDuration(activeSessions)
+      averageDuration: this.calculateAverageDuration(activeSessions),
+      securityAlerts: await this.detectAnomalies(),
+      permissionUsage: this.analyzePermissionUsage()
     };
 
     return stats;
@@ -260,5 +262,19 @@ export class EnhancedSessionManager {
   public async endSession(sessionId: string): Promise<void> {
     this.sessionMetrics.delete(sessionId);
     this.auditLogs.delete(sessionId);
+  }
+
+  private analyzePermissionUsage(): Map<string, number> {
+    const usage = new Map<string, number>();
+    const sessions = Array.from(this.sessionMetrics.values());
+    
+    for (const session of sessions) {
+      const operations = session.operations;
+      if (operations > 0) {
+        usage.set(session.sessionId, operations);
+      }
+    }
+    
+    return usage;
   }
 } 
