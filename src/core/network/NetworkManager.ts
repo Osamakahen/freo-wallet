@@ -4,6 +4,13 @@ import { EVMAdapter } from '../chain/EVMAdapter';
 import { NetworkError } from '../errors/WalletErrors';
 import { mainnet } from 'viem/chains';
 
+interface ChainConfig {
+  chainId: number;
+  rpcUrl: string;
+  symbol: string;
+  name: string;
+}
+
 export class NetworkManager {
   private adapter: EVMAdapter;
   private provider: ethers.JsonRpcProvider;
@@ -12,7 +19,15 @@ export class NetworkManager {
   constructor(config: WalletConfig) {
     this.config = config;
     this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
-    this.adapter = new EVMAdapter(mainnet);
+    
+    const chainConfig: ChainConfig = {
+      chainId: config.chainId,
+      rpcUrl: config.rpcUrl,
+      symbol: 'ETH',
+      name: 'Ethereum'
+    };
+    
+    this.adapter = new EVMAdapter(chainConfig);
   }
 
   async connect(): Promise<void> {
@@ -38,7 +53,15 @@ export class NetworkManager {
     try {
       this.config = config;
       this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
-      this.adapter = new EVMAdapter(mainnet);
+      
+      const chainConfig: ChainConfig = {
+        chainId: config.chainId,
+        rpcUrl: config.rpcUrl,
+        symbol: 'ETH',
+        name: 'Ethereum'
+      };
+      
+      this.adapter = new EVMAdapter(chainConfig);
       await this.connect();
     } catch (error) {
       throw new NetworkError(
