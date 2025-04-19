@@ -1,4 +1,4 @@
-import { createPublicClient, http, getContract, formatUnits, parseUnits } from 'viem';
+import { createPublicClient, http, getContract, formatUnits, parseUnits, type PublicClient } from 'viem';
 import { mainnet } from 'viem/chains';
 import { ERC20_ABI } from './abi/ERC20';
 import { TokenBalance, TokenInfo } from '../../types/token';
@@ -6,7 +6,7 @@ import { TransactionRequest } from '../../types/wallet';
 import { WalletAdapter } from '../evm/WalletAdapter';
 
 export class TokenManager {
-  private publicClient: ReturnType<typeof createPublicClient>;
+  private publicClient: PublicClient;
   private evmAdapter: WalletAdapter;
   private priceCache: Map<string, { price: number; timestamp: number }>;
   private readonly PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -24,7 +24,7 @@ export class TokenManager {
     const contract = getContract({
       address: tokenAddress,
       abi: ERC20_ABI,
-      publicClient: this.publicClient
+      client: this.publicClient
     });
 
     const [name, symbol, decimals] = await Promise.all([
@@ -35,9 +35,9 @@ export class TokenManager {
 
     return {
       address: tokenAddress,
-      name,
-      symbol,
-      decimals
+      name: name as string,
+      symbol: symbol as string,
+      decimals: decimals as number
     };
   }
 
@@ -48,17 +48,18 @@ export class TokenManager {
     const contract = getContract({
       address: tokenAddress,
       abi: ERC20_ABI,
-      publicClient: this.publicClient
+      client: this.publicClient
     });
 
-    const balance = await contract.read.balanceOf([walletAddress]);
-    const decimals = await contract.read.decimals();
-    const formattedBalance = formatUnits(balance, decimals);
+    const [balance, decimals] = await Promise.all([
+      contract.read.balanceOf([walletAddress]),
+      contract.read.decimals()
+    ]);
 
     return {
       tokenAddress,
-      balance: formattedBalance,
-      decimals
+      balance: formatUnits(balance as bigint, decimals as number),
+      decimals: decimals as number
     };
   }
 
@@ -70,15 +71,19 @@ export class TokenManager {
     const contract = getContract({
       address: tokenAddress,
       abi: ERC20_ABI,
-      publicClient: this.publicClient
+      client: this.publicClient
     });
 
     const decimals = await contract.read.decimals();
-    const amountInWei = parseUnits(amount, decimals);
+    const amountInWei = parseUnits(amount, decimals as number);
+
+    const data = contract.write.approve.data([spender, amountInWei]);
 
     const tx: TransactionRequest = {
+      from: await this.evmAdapter.getAddress(),
       to: tokenAddress,
-      data: contract.interface.encodeFunctionData('approve', [spender, amountInWei])
+      value: '0',
+      data
     };
 
     return this.evmAdapter.sendTransaction(tx);
@@ -92,12 +97,15 @@ export class TokenManager {
     const contract = getContract({
       address: tokenAddress,
       abi: ERC20_ABI,
-      publicClient: this.publicClient
+      client: this.publicClient
     });
 
-    const allowance = await contract.read.allowance([owner, spender]);
-    const decimals = await contract.read.decimals();
-    return formatUnits(allowance, decimals);
+    const [allowance, decimals] = await Promise.all([
+      contract.read.allowance([owner, spender]),
+      contract.read.decimals()
+    ]);
+
+    return formatUnits(allowance as bigint, decimals as number);
   }
 
   async getTokenPrice(tokenAddress: `0x${string}`): Promise<number> {
@@ -152,20 +160,22 @@ export class TokenManager {
     const contract = getContract({
       address: tokenAddress,
       abi: ERC20_ABI,
-      publicClient: this.publicClient
+      client: this.publicClient
     });
 
-    return contract.read.balanceOf([owner]);
+    const balance = await contract.read.balanceOf([owner]);
+    return balance as bigint;
   }
 
   async getDecimals(tokenAddress: `0x${string}`): Promise<number> {
     const contract = getContract({
       address: tokenAddress,
       abi: ERC20_ABI,
-      publicClient: this.publicClient
+      client: this.publicClient
     });
 
-    return contract.read.decimals();
+    const decimals = await contract.read.decimals();
+    return decimals as number;
   }
 
   async getTokenList(): Promise<`0x${string}`[]> {
@@ -184,12 +194,16 @@ export class TokenManager {
     const contract = getContract({
       address: tokenAddress,
       abi: ERC20_ABI,
-      publicClient: this.publicClient
+      client: this.publicClient
     });
 
+    const data = contract.write.approve.data([spender, amount]);
+
     const tx: TransactionRequest = {
+      from: await this.evmAdapter.getAddress(),
       to: tokenAddress,
-      data: contract.interface.encodeFunctionData('approve', [spender, amount])
+      value: '0',
+      data
     };
 
     return this.evmAdapter.sendTransaction(tx);

@@ -1,31 +1,12 @@
-import { createWalletClient, custom, parseUnits, formatUnits, createPublicClient, http, Address } from 'viem';
+import { createWalletClient, custom, parseUnits, formatUnits, createPublicClient, http, Address, getContract } from 'viem';
 import { mainnet } from 'viem/chains';
 import { WebSocketTransactionMonitor } from '../transaction/WebSocketTransactionMonitor';
-import { TokenMetadata } from '../types/wallet';
+import { TokenMetadata } from '../../types/wallet';
 import { ApprovalTransaction } from '../../types/token';
-
-const ERC20_ABI = [
-  {
-    constant: false,
-    inputs: [
-      { name: '_spender', type: 'address' },
-      { name: '_value', type: 'uint256' }
-    ],
-    name: 'approve',
-    outputs: [{ name: '', type: 'bool' }],
-    type: 'function'
-  },
-  {
-    constant: true,
-    inputs: [
-      { name: '_owner', type: 'address' },
-      { name: '_spender', type: 'address' }
-    ],
-    name: 'allowance',
-    outputs: [{ name: '', type: 'uint256' }],
-    type: 'function'
-  }
-] as const;
+import { TransactionManager } from '../transaction/TransactionManager';
+import { KeyManager } from '../keyManagement/KeyManager';
+import { ERC20_ABI } from '../../constants/abis';
+import { WalletError } from '../error/ErrorHandler';
 
 export interface ApprovalRequest {
   tokenAddress: `0x${string}`;
@@ -58,8 +39,11 @@ export class TokenApprovalManager {
   private publicClient: ReturnType<typeof createPublicClient>;
   private transactionMonitor: WebSocketTransactionMonitor;
   private transactionHistory: ApprovalTransaction[] = [];
+  private transactionManager: TransactionManager;
+  private keyManager: KeyManager;
+  private tokenAddress: `0x${string}`;
 
-  constructor() {
+  constructor(tokenAddress: `0x${string}`, rpcUrl: string) {
     if (!window.ethereum) {
       throw new Error('Ethereum provider not found');
     }
@@ -75,6 +59,9 @@ export class TokenApprovalManager {
     });
 
     this.transactionMonitor = new WebSocketTransactionMonitor();
+    this.keyManager = new KeyManager();
+    this.transactionManager = new TransactionManager(rpcUrl, this.keyManager);
+    this.tokenAddress = tokenAddress;
   }
 
   async checkApproval(tokenAddress: `0x${string}`, owner: `0x${string}`, spender: `0x${string}`): Promise<ApprovalStatus> {
@@ -84,7 +71,7 @@ export class TokenApprovalManager {
         abi: ERC20_ABI,
         functionName: 'allowance',
         args: [owner, spender]
-      });
+      }) as bigint;
 
       return {
         isApproved: allowance > 0n,
@@ -118,20 +105,30 @@ export class TokenApprovalManager {
     }
   }
 
+  private encodeApproveData(amount: string): `0x${string}` {
+    const contract = getContract({
+      address: this.tokenAddress,
+      abi: ERC20_ABI,
+      client: this.publicClient
+    });
+
+    return contract.interface.encodeFunctionData('approve', [this.tokenAddress, BigInt(amount)]) as `0x${string}`;
+  }
+
   async approveToken(amount: string): Promise<string> {
     try {
+      const from = await this.walletClient.getAddresses();
       const tx = await this.transactionManager.createTransaction({
+        from: from[0],
         to: this.tokenAddress,
         data: this.encodeApproveData(amount),
         value: '0x0'
       });
-      
-      return await this.transactionManager.sendTransaction(tx);
+
+      return tx.hash;
     } catch (error) {
-      await this.errorCorrelator.correlateError(
-        new WalletError('Failed to approve token', 'TOKEN_APPROVAL_ERROR', { error })
-      );
-      throw error;
+      console.error('Error approving token:', error);
+      throw new Error('Failed to approve token');
     }
   }
 
@@ -144,6 +141,7 @@ export class TokenApprovalManager {
       });
 
       const hash = await this.walletClient.writeContract({
+        chain: mainnet,
         address: request.tokenAddress,
         abi: ERC20_ABI,
         functionName: 'approve',
@@ -160,7 +158,7 @@ export class TokenApprovalManager {
       };
 
       this.transactionHistory.push(transaction);
-      this.transactionMonitor.startMonitoring(hash);
+      this.transactionMonitor.monitorTransaction(hash);
 
       return transaction;
     } catch (error) {
@@ -174,10 +172,16 @@ export class TokenApprovalManager {
         tokenAddress,
         spender,
         amount: '0',
-        tokenMetadata: { decimals: 18, symbol: '' }
+        tokenMetadata: {
+          address: tokenAddress,
+          name: '',
+          symbol: '',
+          balance: '0'
+        }
       });
 
       const hash = await this.walletClient.writeContract({
+        chain: mainnet,
         address: tokenAddress,
         abi: ERC20_ABI,
         functionName: 'approve',
@@ -194,7 +198,7 @@ export class TokenApprovalManager {
       };
 
       this.transactionHistory.push(transaction);
-      this.transactionMonitor.startMonitoring(hash);
+      this.transactionMonitor.monitorTransaction(hash);
 
       return transaction;
     } catch (error) {
@@ -203,7 +207,7 @@ export class TokenApprovalManager {
   }
 
   subscribeToTransactionUpdates(hash: `0x${string}`, callback: (status: 'pending' | 'confirmed' | 'failed') => void): () => void {
-    return this.transactionMonitor.subscribeToTransactionUpdates(hash, (status) => {
+    return this.transactionMonitor.monitorTransaction(hash, (status) => {
       const transaction = this.transactionHistory.find(tx => tx.hash === hash);
       if (transaction) {
         transaction.status = status;
@@ -238,11 +242,10 @@ export class TokenApprovalManager {
         ],
         functionName: 'allowance',
         args: [owner, spender]
-      });
+      }) as bigint;
 
-      return allowance as bigint;
+      return allowance;
     } catch (error) {
-      console.error('Error getting allowance:', error);
       throw new Error('Failed to get allowance');
     }
   }
