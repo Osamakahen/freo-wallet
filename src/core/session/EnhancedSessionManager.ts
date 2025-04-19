@@ -15,6 +15,25 @@ import { SecurityManager } from '../security/SecurityManager';
 import { SecurityAlert } from '../../types/security';
 import { v4 as uuidv4 } from 'uuid';
 
+// AnalyticsService implementation
+class AnalyticsService {
+  private static instance: AnalyticsService;
+  
+  private constructor() {}
+  
+  public static getInstance(): AnalyticsService {
+    if (!AnalyticsService.instance) {
+      AnalyticsService.instance = new AnalyticsService();
+    }
+    return AnalyticsService.instance;
+  }
+  
+  public async track(event: string, data: any): Promise<void> {
+    // Implementation for tracking analytics
+    console.log(`Tracking ${event}:`, data);
+  }
+}
+
 export class EnhancedSessionManager extends SessionManager {
   private analyticsService: AnalyticsService;
   private securityManager: SecurityManager;
@@ -23,7 +42,7 @@ export class EnhancedSessionManager extends SessionManager {
 
   constructor(config: SessionConfig) {
     super(config);
-    this.analyticsService = new AnalyticsService();
+    this.analyticsService = AnalyticsService.getInstance();
     this.securityManager = new SecurityManager();
   }
 
@@ -33,12 +52,13 @@ export class EnhancedSessionManager extends SessionManager {
       throw new Error('No active session');
     }
 
+    const deviceInfo = this.getDeviceInfo();
     const metrics: SessionMetrics = {
       sessionId: activeSession.id,
       duration: Date.now() - activeSession.timestamp,
       operations: this.getSessionOperations(),
       lastActivity: Date.now(),
-      deviceInfo: this.getDeviceInfo(),
+      deviceInfo,
       ipAddress: await this.securityManager.getIPAddress(),
       securityScore: await this.securityManager.calculateSecurityScore(activeSession.id)
     };
@@ -59,7 +79,7 @@ export class EnhancedSessionManager extends SessionManager {
 
     const deviceChanges: DeviceChange[] = (await this.securityManager.getDeviceChanges(sessionId)).map(change => ({
       timestamp: Date.now(),
-      type: 'device',
+      type: 'browser' as const,
       oldValue: JSON.stringify(change),
       newValue: JSON.stringify(this.getDeviceInfo())
     }));
@@ -80,7 +100,7 @@ export class EnhancedSessionManager extends SessionManager {
     return auditLog;
   }
 
-  public async monitorActiveSessions(): Promise<void> {
+  public async monitorActiveSessions(): Promise<SessionStats> {
     const sessions = await this.getSessions();
     const activeSessions = sessions.filter(session => session.isActive);
     
@@ -88,10 +108,12 @@ export class EnhancedSessionManager extends SessionManager {
       totalSessions: sessions.length,
       activeSessions: activeSessions.length,
       averageDuration: this.calculateAverageDuration(activeSessions),
-      securityScore: this.calculateSecurityScore(activeSessions)
+      securityAlerts: await this.detectAnomalies(),
+      permissionUsage: this.analyzePermissionUsage()
     };
 
-    await AnalyticsService.trackSessionStats(stats);
+    await this.analyticsService.track('session_stats', stats);
+    return stats;
   }
 
   private calculateAverageDuration(sessions: Session[]): number {
@@ -130,7 +152,8 @@ export class EnhancedSessionManager extends SessionManager {
           type: 'HIGH_OPERATION_COUNT',
           sessionId: session.id,
           severity: 'WARNING',
-          message: 'Unusually high number of operations detected'
+          message: 'Unusually high number of operations detected',
+          timestamp: Date.now()
         });
       }
 
@@ -141,7 +164,8 @@ export class EnhancedSessionManager extends SessionManager {
           type: 'MULTIPLE_DEVICE_CHANGES',
           sessionId: session.id,
           severity: 'CRITICAL',
-          message: 'Multiple device changes detected'
+          message: 'Multiple device changes detected',
+          timestamp: Date.now()
         });
       }
 
@@ -151,7 +175,8 @@ export class EnhancedSessionManager extends SessionManager {
           type: 'LOW_SECURITY_SCORE',
           sessionId: session.id,
           severity: 'WARNING',
-          message: 'Low security score detected'
+          message: 'Low security score detected',
+          timestamp: Date.now()
         });
       }
     }
@@ -210,19 +235,36 @@ export class EnhancedSessionManager extends SessionManager {
     return recommendations;
   }
 
-  private async getDeviceInfo(): Promise<DeviceInfo> {
+  private getDeviceInfo(): DeviceInfo {
     return {
-      browser: '',
-      os: '',
-      platform: '',
-      deviceType: '',
-      screenResolution: '',
-      timezone: '',
-      language: ''
+      browser: navigator.userAgent,
+      os: navigator.platform,
+      platform: navigator.platform,
+      deviceType: this.getDeviceType(),
+      screenResolution: `${window.screen.width}x${window.screen.height}`,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      language: navigator.language
     };
   }
 
+  private getDeviceType(): string {
+    const ua = navigator.userAgent;
+    if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
+      return 'tablet';
+    }
+    if (/Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) {
+      return 'mobile';
+    }
+    return 'desktop';
+  }
+
   private async getIPAddress(): Promise<string> {
-    return '';
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip;
+    } catch (error) {
+      return '';
+    }
   }
 } 
