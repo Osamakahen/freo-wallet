@@ -49,22 +49,22 @@ export class SessionAnalytics {
     metrics.deviceChanges++;
   }
 
-  trackSessionMigration(oldSessionId: string) {
+  async trackSessionMigration(oldSessionId: string, newSessionId?: string): Promise<void> {
     this.initializeMetrics(oldSessionId);
     const metrics = this.metrics.get(oldSessionId)!;
     metrics.chainSwitches++;
+
+    if (newSessionId) {
+      await this.analytics.trackEvent('session_migrated', {
+        oldSessionId,
+        newSessionId
+      });
+    }
   }
 
   async trackSessionCreation(sessionId: string): Promise<void> {
     await this.analytics.trackEvent('session_created', {
       sessionId
-    });
-  }
-
-  async trackSessionMigration(oldSessionId: string, newSessionId: string): Promise<void> {
-    await this.analytics.trackEvent('session_migrated', {
-      oldSessionId,
-      newSessionId
     });
   }
 

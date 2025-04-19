@@ -1,20 +1,23 @@
 import { Address } from 'viem';
 import { encrypt, decrypt } from '../../utils/crypto';
-import { Session, SessionConfig, DeviceInfo, DeviceChange, PermissionChange } from '../../types/session';
+import { Session, SessionConfig, DeviceInfo, DeviceChange, PermissionChange, SessionPermissions } from '../../types/session';
 import { generateRandomBytes } from '../../utils/crypto';
-import { SessionPermissions } from '../../types/dapp';
 import { SessionKeyManager } from './SessionKeyManager';
 import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { WalletError } from '../error/ErrorHandler';
 import { SessionAnalytics } from './SessionAnalytics';
 import { SecurityService } from '../../services/SecurityService';
-import { KeyManager } from '../key/KeyManager';
 import { ErrorCorrelator } from '../error/ErrorCorrelator';
 import { SessionTokenManager } from './SessionTokenManager';
 import { EnhancedSessionManager } from './EnhancedSessionManager';
-import { AnalyticsService } from '../../services/AnalyticsService';
+import AnalyticsService from '../../services/AnalyticsService';
 import { DeviceFingerprint } from '../security/DeviceFingerprint';
+
+interface SessionKey {
+  key: string;
+  expiresAt: number;
+}
 
 export class SessionManager {
   private sessions: Map<string, Session> = new Map();
@@ -33,11 +36,15 @@ export class SessionManager {
 
   constructor() {
     this.keyManager = SessionKeyManager.getInstance();
-    this.tokenManager = SessionTokenManager.getInstance();
-    this.enhancedManager = new EnhancedSessionManager();
+    this.tokenManager = new SessionTokenManager();
+    this.enhancedManager = new EnhancedSessionManager({
+      tokenDuration: 3600000, // 1 hour
+      maxSessions: 5,
+      deviceVerification: true
+    }, this);
     this.config = {
-      sessionDuration: 24 * 60 * 60 * 1000, // 24 hours
-      tokenDuration: 1 * 60 * 60 * 1000, // 1 hour
+      tokenDuration: 3600000, // 1 hour
+      maxSessions: 5,
       deviceVerification: true
     };
     this.storage = window.localStorage;
@@ -54,22 +61,18 @@ export class SessionManager {
       try {
         const rawSessions = JSON.parse(stored);
         this.sessions = new Map(
-          Object.entries(rawSessions).map(([id, session]: [string, any]) => [
+          Object.entries(rawSessions.sessions).map(([id, session]: [string, any]) => [
             id,
             {
-              id,
-              timestamp: session.timestamp || Date.now(),
-              deviceInfo: session.deviceInfo || this.deviceInfo,
-              deviceChanges: session.deviceChanges || [],
-              permissionChanges: session.permissionChanges || [],
-              isActive: session.isActive || false,
-              lastActivity: session.lastActivity || Date.now(),
+              ...session,
+              createdAt: new Date(session.createdAt),
+              expiresAt: new Date(session.expiresAt),
               address: session.address as Address,
               chainId: session.chainId,
               permissions: session.permissions || {
                 read: true,
-                write: true,
-                sign: true,
+                write: false,
+                sign: false,
                 connect: true,
                 disconnect: true
               }
@@ -92,13 +95,12 @@ export class SessionManager {
 
   private getDeviceInfo(): DeviceInfo {
     return {
-      browser: navigator.userAgent,
-      os: navigator.platform,
-      platform: navigator.platform,
-      deviceType: /Mobile|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+      userAgent: navigator.userAgent,
       screenResolution: `${window.screen.width}x${window.screen.height}`,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      language: navigator.language
+      colorDepth: window.screen.colorDepth,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      language: navigator.language,
+      platform: navigator.platform
     };
   }
 
@@ -107,24 +109,14 @@ export class SessionManager {
     return createHash('sha256').update(deviceString).digest('hex');
   }
 
-  async createSession(options: { chainId: number; address: Address }): Promise<Session> {
+  async createSession(options: { chainId: number; address: string }): Promise<Session> {
     const session: Session = {
-      id: uuidv4(),
-      timestamp: Date.now(),
-      deviceInfo: this.deviceInfo,
-      deviceChanges: [],
-      permissionChanges: [],
-      isActive: true,
-      lastActivity: Date.now(),
-      address: options.address,
+      id: crypto.randomUUID(),
       chainId: options.chainId,
-      permissions: {
-        read: true,
-        write: true,
-        sign: true,
-        connect: true,
-        disconnect: true
-      }
+      address: options.address,
+      createdAt: Date.now(),
+      lastActive: Date.now(),
+      status: 'active'
     };
 
     await this.keyManager.generateSessionKey(session.id);
@@ -149,7 +141,8 @@ export class SessionManager {
     if (!session) return null;
 
     if (this.config.deviceVerification) {
-      const deviceMatches = this.verifyDeviceInfo(session.deviceInfo, deviceInfo);
+      // Verify device info matches
+      const deviceMatches = this.verifyDeviceInfo(session.deviceInfo!, deviceInfo);
       if (!deviceMatches) {
         throw new Error('Device verification failed');
       }
@@ -157,6 +150,7 @@ export class SessionManager {
 
     const updatedSession: Session = {
       ...session,
+      expiresAt: new Date(Date.now() + this.config.tokenDuration * 1000),
       lastActivity: Date.now()
     };
 
@@ -167,15 +161,16 @@ export class SessionManager {
 
   private verifyDeviceInfo(stored: DeviceInfo, current: DeviceInfo): boolean {
     return (
-      stored.browser === current.browser &&
+      stored.userAgent === current.userAgent &&
       stored.platform === current.platform &&
       stored.language === current.language
     );
   }
 
   public getActiveSession(): Session | null {
+    const now = new Date();
     for (const session of this.sessions.values()) {
-      if (session.isActive) {
+      if (session.expiresAt > now) {
         return session;
       }
     }
@@ -191,14 +186,14 @@ export class SessionManager {
     const session = this.sessions.get(sessionId);
     if (!session) return null;
 
-    const token = uuidv4();
+    const token = crypto.randomUUID();
     this.recoveryTokens.set(token, sessionId);
     
     // Set expiry for recovery token
     setTimeout(() => {
       this.recoveryTokens.delete(token);
-    }, 24 * 60 * 60 * 1000); // 24 hours
-
+    }, this.config.recoveryTokenDuration * 1000);
+    
     return token;
   }
 
@@ -217,69 +212,117 @@ export class SessionManager {
     const session = this.sessions.get(sessionId);
     if (!session) return false;
 
-    // Implementation for session approval
+    // TODO: Implement permission request UI and user approval
     return true;
   }
 
   public disconnect(): void {
-    this.sessions.clear();
-    this.saveSessions();
-  }
-
-  public getState(): { sessions: Session[] } {
-    return {
-      sessions: Array.from(this.sessions.values())
+    this.state = {
+      isActive: false,
+      lastActivity: Date.now(),
+      permissions: new Set()
     };
   }
 
+  public getState(): SessionState {
+    return { ...this.state };
+  }
+
   public getConfig(): SessionConfig {
-    return this.config;
+    return { ...this.config };
   }
 
-  public async generateSessionKey(password: string): Promise<string> {
-    return this.keyManager.generateSessionKey(password);
+  public async generateSessionKey(password: string): Promise<SessionKey> {
+    try {
+      const key = generateRandomBytes(32);
+      const salt = generateRandomBytes(16);
+      const now = Date.now();
+
+      const sessionKey: SessionKey = {
+        key: key.toString('hex'),
+        salt: salt.toString('hex'),
+        createdAt: now,
+        expiresAt: now + this.config.tokenDuration
+      };
+
+      // Encrypt session key before storing
+      const encryptedKey = await encrypt(JSON.stringify(sessionKey), password);
+      this.storage.setItem('sessionKey', encryptedKey);
+
+      return sessionKey;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to generate session key: ${errorMessage}`);
+    }
   }
 
-  public async getSessionKey(password: string): Promise<string | null> {
-    return this.keyManager.getSessionKey(password);
+  public async getSessionKey(password: string): Promise<SessionKey | null> {
+    try {
+      const encryptedKey = this.storage.getItem('sessionKey');
+      if (!encryptedKey) return null;
+
+      const decryptedKey = await decrypt(encryptedKey, password);
+      const sessionKey: SessionKey = JSON.parse(decryptedKey);
+
+      if (Date.now() > sessionKey.expiresAt) {
+        this.storage.removeItem('sessionKey');
+        return null;
+      }
+
+      return sessionKey;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to retrieve session key: ${errorMessage}`);
+    }
   }
 
   public async connect(address: Address, chainId: number): Promise<void> {
-    const session = await this.createSession({ address, chainId });
-    this.activeSessionId = session.id;
+    this.state = {
+      ...this.state,
+      isActive: true,
+      address,
+      chainId,
+      error: null
+    };
   }
 
   public async revokeAllSessions(): Promise<void> {
-    for (const sessionId of this.sessions.keys()) {
-      await this.endSession(sessionId);
+    try {
+      this.sessions.clear();
+      this.activeSessionId = null;
+      this.saveSessions();
+    } catch (error) {
+      throw new Error(`Failed to revoke all sessions: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   public async getSessions(): Promise<Session[]> {
+    try {
       return Array.from(this.sessions.values());
+    } catch (error) {
+      throw new Error(`Failed to get sessions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   public async migrateSession(oldSessionId: string, newChainId: number): Promise<Session> {
-    const oldSession = this.sessions.get(oldSessionId);
-    if (!oldSession) {
-      throw new Error('Session not found');
+    const session = this.sessions.get(oldSessionId);
+    if (!session) {
+      throw new WalletError('Session not found');
     }
 
     const newSession: Session = {
-      ...oldSession,
-      id: uuidv4(),
+      ...session,
       chainId: newChainId,
-      timestamp: Date.now()
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + this.config.sessionDuration)
     };
 
     this.sessions.set(newSession.id, newSession);
-    this.sessions.delete(oldSessionId);
     this.saveSessions();
-
     return newSession;
   }
 
   async getSessionAnalytics(sessionId: string) {
-    return this.analytics.getSessionAnalytics(sessionId);
+    return this.analytics.getSessionMetrics(sessionId);
   }
 }
