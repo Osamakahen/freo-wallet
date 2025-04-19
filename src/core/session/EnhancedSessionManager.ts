@@ -73,13 +73,13 @@ export class EnhancedSessionManager extends SessionManager {
       duration: Date.now() - activeSession.timestamp,
       operations: this.getSessionOperations(),
       lastActivity: Date.now(),
-      deviceInfo: this.getDeviceInfo(),
+      deviceInfo: activeSession.deviceInfo,
       ipAddress: await this.securityManager.getIPAddress(),
       securityScore: await this.securityManager.calculateSecurityScore(activeSession.id)
     };
 
     this.sessionMetrics.set(activeSession.id, metrics);
-    await this.analyticsService.track('session_metrics', metrics);
+    await this.analyticsService.trackSessionMetrics(metrics);
     return metrics;
   }
 
@@ -94,9 +94,9 @@ export class EnhancedSessionManager extends SessionManager {
 
     const deviceChanges: DeviceChange[] = (await this.securityManager.getDeviceChanges(sessionId)).map(change => ({
       timestamp: Date.now(),
-      type: 'device',
+      type: 'deviceType',
       oldValue: JSON.stringify(change),
-      newValue: JSON.stringify(this.getDeviceInfo())
+      newValue: JSON.stringify(session.deviceInfo)
     }));
 
     const auditLog: SessionAuditLog = {
@@ -115,7 +115,7 @@ export class EnhancedSessionManager extends SessionManager {
     return auditLog;
   }
 
-  public async monitorActiveSessions(): Promise<void> {
+  public async monitorActiveSessions(): Promise<SessionStats> {
     const sessions = await this.getSessions();
     const activeSessions = sessions.filter(session => session.isActive);
     
@@ -123,10 +123,12 @@ export class EnhancedSessionManager extends SessionManager {
       totalSessions: sessions.length,
       activeSessions: activeSessions.length,
       averageDuration: this.calculateAverageDuration(activeSessions),
-      securityScore: this.calculateSecurityScore(activeSessions)
+      securityAlerts: await this.detectAnomalies(),
+      permissionUsage: this.analyzePermissionUsage()
     };
 
-    await AnalyticsService.trackSessionStats(stats);
+    await this.analyticsService.trackSessionStats(stats);
+    return stats;
   }
 
   private calculateAverageDuration(sessions: Session[]): number {
@@ -165,7 +167,8 @@ export class EnhancedSessionManager extends SessionManager {
           type: 'HIGH_OPERATION_COUNT',
           sessionId: session.id,
           severity: 'WARNING',
-          message: 'Unusually high number of operations detected'
+          message: 'Unusually high number of operations detected',
+          timestamp: Date.now()
         });
       }
 
@@ -176,7 +179,8 @@ export class EnhancedSessionManager extends SessionManager {
           type: 'MULTIPLE_DEVICE_CHANGES',
           sessionId: session.id,
           severity: 'CRITICAL',
-          message: 'Multiple device changes detected'
+          message: 'Multiple device changes detected',
+          timestamp: Date.now()
         });
       }
 
@@ -186,7 +190,8 @@ export class EnhancedSessionManager extends SessionManager {
           type: 'LOW_SECURITY_SCORE',
           sessionId: session.id,
           severity: 'WARNING',
-          message: 'Low security score detected'
+          message: 'Low security score detected',
+          timestamp: Date.now()
         });
       }
     }
@@ -243,20 +248,5 @@ export class EnhancedSessionManager extends SessionManager {
     }
     
     return recommendations;
-  }
-
-  private async auditSession(sessionId: string): Promise<void> {
-    const session = this.getActiveSession();
-    if (!session) return;
-
-    const auditLog: SessionAuditLog = {
-      id: sessionId,
-      timestamp: Date.now(),
-      operations: [],
-      securityEvents: [],
-      deviceChanges: session.deviceChanges || []
-    };
-
-    await AnalyticsService.trackSessionAudit(auditLog);
   }
 } 
