@@ -8,6 +8,7 @@ import { KeyManager } from '../keyManagement/KeyManager';
 import { ERC20_ABI } from '../../constants/abis';
 import { WalletError } from '../error/ErrorHandler';
 import { WalletClient } from '../wallet/WalletClient';
+import { WalletAdapter } from '../evm/WalletAdapter';
 
 export interface ApprovalRequest {
   tokenAddress: `0x${string}`;
@@ -27,7 +28,7 @@ export interface GasEstimate {
 }
 
 export class TokenApprovalManager {
-  private walletClient: WalletClient;
+  private walletClient: WalletAdapter;
   private publicClient: ReturnType<typeof createPublicClient>;
   private transactionMonitor: WebSocketTransactionMonitor;
   private transactionHistory: ApprovalTransaction[] = [];
@@ -36,7 +37,7 @@ export class TokenApprovalManager {
   private tokenAddress: `0x${string}`;
 
   constructor(
-    walletClient: WalletClient,
+    walletClient: WalletAdapter,
     transactionManager: TransactionManager,
     transactionMonitor: WebSocketTransactionMonitor,
     tokenAddress: `0x${string}`,
