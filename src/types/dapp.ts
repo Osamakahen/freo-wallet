@@ -68,12 +68,7 @@ export interface BridgeState {
   isConnected: boolean;
   address: Address | null;
   chainId: number | null;
-  permissions: {
-    read: boolean;
-    write: boolean;
-    sign: boolean;
-    nft: boolean;
-  } | null;
+  permissions: SessionPermissions | null;
   error: string | null;
 }
 
@@ -98,7 +93,7 @@ export interface BridgeConfig {
 export interface TransactionRequest {
   to: Address;
   value?: string;
-  data?: string;
+  data?: `0x${string}`;
   nonce?: number;
   maxFeePerGas?: string;
   maxPriorityFeePerGas?: string;

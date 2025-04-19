@@ -1,19 +1,22 @@
 import { DAppBridge } from './DAppBridge';
 import { 
-  TransactionRequest as DAppTransactionRequest, 
+  TransactionRequest, 
   DAppInfo, 
   BridgeState,
   DAppResponse
 } from '../../types/dapp';
-import { EthereumCallback, EthereumProvider } from '../../types/ethereum';
-import { WalletError } from '../error/ErrorHandler';
-import { TransactionRequest } from '../../types/wallet';
+import { EthereumEvent, EthereumCallback } from '../../types/ethereum';
+import { WalletError } from '../../types/wallet';
 
 type EventListener = (data?: unknown) => void;
 
 declare global {
   interface Window {
-    ethereum?: EthereumProvider;
+    ethereum?: {
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on: (event: EthereumEvent, callback: EthereumCallback) => void;
+      removeListener: (event: EthereumEvent, callback: EthereumCallback) => void;
+    };
   }
 }
 
@@ -34,40 +37,24 @@ export class InjectedBridge {
     this.bridge.on('message', (message: string) => this.emit('message', message));
   }
 
-  private convertToWalletTransaction(dappTx: DAppTransactionRequest): TransactionRequest {
-    return {
-      from: this.bridge.getState().address as `0x${string}`,
-      to: dappTx.to as `0x${string}`,
-      value: dappTx.value || '0',
-      data: dappTx.data,
-      nonce: dappTx.nonce,
-      maxFeePerGas: dappTx.maxFeePerGas,
-      maxPriorityFeePerGas: dappTx.maxPriorityFeePerGas,
-      gasLimit: dappTx.gasLimit
-    };
-  }
-
   public async request(method: string, params?: unknown[]): Promise<DAppResponse> {
-    let walletTx: TransactionRequest | undefined;
-    
     switch (method) {
       case 'eth_requestAccounts':
-        return { result: [this.bridge.getState().address], id: Date.now() };
+        return { success: true, result: [this.bridge.getState().address] };
       case 'eth_accounts':
-        return { result: [this.bridge.getState().address], id: Date.now() };
+        return { success: true, result: [this.bridge.getState().address] };
       case 'eth_chainId':
-        return { result: this.bridge.getState().chainId, id: Date.now() };
+        return { success: true, result: this.bridge.getState().chainId };
       case 'eth_sendTransaction':
         if (!params?.[0]) {
           throw new WalletError('Missing transaction parameters', 'INVALID_PARAMS');
         }
-        walletTx = this.convertToWalletTransaction(params[0] as DAppTransactionRequest);
-        return { result: await this.bridge.sendTransaction(walletTx), id: Date.now() };
+        return { success: true, result: await this.bridge.sendTransaction(params[0] as TransactionRequest) };
       case 'eth_sign':
         if (!params?.[0] || !params?.[1]) {
           throw new WalletError('Missing sign parameters', 'INVALID_PARAMS');
         }
-        return { result: await this.bridge.signMessage(params[0] as string), id: Date.now() };
+        return { success: true, result: await this.bridge.signMessage(params[0] as string) };
       default:
         throw new WalletError('Unsupported method', 'UNSUPPORTED_METHOD');
     }
@@ -98,5 +85,18 @@ export class InjectedBridge {
 
   public getDAppInfo(): DAppInfo | null {
     return this.bridge.getDAppInfo();
+  }
+
+  private convertToWalletTransaction(dappTx: DAppTransactionRequest): TransactionRequest {
+    return {
+      from: this.bridge.getState().address as `0x${string}`,
+      to: dappTx.to as `0x${string}`,
+      value: dappTx.value || '0',
+      data: dappTx.data as `0x${string}` | undefined,
+      nonce: dappTx.nonce,
+      maxFeePerGas: dappTx.maxFeePerGas,
+      maxPriorityFeePerGas: dappTx.maxPriorityFeePerGas,
+      gasLimit: dappTx.gasLimit
+    };
   }
 } 
