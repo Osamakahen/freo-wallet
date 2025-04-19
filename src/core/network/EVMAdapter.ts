@@ -33,6 +33,7 @@ export class EVMAdapter {
   async sendTransaction(tx: TransactionRequest): Promise<string> {
     const preparedTx = await this.prepareTransaction(tx);
     return this.walletClient.sendTransaction({
+      chain: this.chain,
       account: preparedTx.from,
       to: preparedTx.to,
       value: BigInt(preparedTx.value),
