@@ -112,6 +112,7 @@ export interface DAppRequest {
 }
 
 export interface DAppResponse {
+  id?: number;
   result: unknown;
   error?: {
     code: number;
