@@ -20,9 +20,11 @@ export class EnhancedSessionManager extends SessionManager {
   private securityManager: SecurityManager;
   private sessionMetrics: Map<string, SessionMetrics> = new Map();
   private auditLogs: Map<string, SessionAuditLog[]> = new Map();
+  private config: SessionConfig;
 
   constructor(config: SessionConfig) {
-    super(config);
+    super();
+    this.config = config;
     this.analyticsService = AnalyticsService.getInstance();
     this.securityManager = new SecurityManager();
   }
