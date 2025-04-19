@@ -63,7 +63,7 @@ export class SessionEncryption {
       return {
         id: session.id,
         encryptedData: this.arrayBufferToBase64(encryptedData),
-        iv: this.arrayBufferToBase64(iv),
+        iv: this.arrayBufferToBase64(iv.buffer),
         keyVersion: this.keyVersion,
         createdAt: Date.now()
       };
@@ -71,7 +71,7 @@ export class SessionEncryption {
       throw new WalletError(
         'Failed to encrypt session',
         'ENCRYPTION_ERROR',
-        { error }
+        { error: error instanceof Error ? error : new Error(String(error)) }
       );
     }
   }
@@ -101,7 +101,7 @@ export class SessionEncryption {
       throw new WalletError(
         'Failed to decrypt session',
         'DECRYPTION_ERROR',
-        { error }
+        { error: error instanceof Error ? error : new Error(String(error)) }
       );
     }
   }
