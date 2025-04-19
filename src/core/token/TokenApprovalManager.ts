@@ -114,7 +114,7 @@ export class TokenApprovalManager {
       const tx = await this.transactionManager.createTransaction({
         from,
         to: targetTokenAddress,
-        data: approveData,
+        data: approveData as `0x${string}`,
         value: '0'
       });
 
