@@ -25,15 +25,6 @@ export interface GasEstimate {
   estimatedCost: string;
 }
 
-export interface ApprovalTransaction {
-  hash: `0x${string}`;
-  status: 'pending' | 'confirmed' | 'failed';
-  timestamp: number;
-  type: 'approve' | 'approveMax' | 'revoke';
-  amount?: string;
-  gasEstimate?: string;
-}
-
 export class TokenApprovalManager {
   private walletClient: ReturnType<typeof createWalletClient>;
   private publicClient: ReturnType<typeof createPublicClient>;
