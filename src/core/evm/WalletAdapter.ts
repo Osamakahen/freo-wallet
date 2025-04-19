@@ -4,7 +4,7 @@ import { TransactionRequest } from '../../types/wallet';
 
 declare global {
   interface Window {
-    ethereum?: any;
+    ethereum?: EIP1193Provider;
   }
 }
 
