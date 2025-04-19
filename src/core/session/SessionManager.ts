@@ -13,19 +13,8 @@ import { KeyManager } from '../keyManagement/KeyManager';
 import { ErrorCorrelator } from '../error/ErrorCorrelator';
 import { SessionTokenManager } from './SessionTokenManager';
 import { EnhancedSessionManager } from './EnhancedSessionManager';
-import { AnalyticsService } from '../../services/AnalyticsService';
+import AnalyticsService from '../../services/AnalyticsService';
 import { DeviceFingerprint } from '../security/DeviceFingerprint';
-
-interface ISession {
-  id: string;
-  address: Address;
-  chainId: number;
-  permissions: SessionPermissions;
-  createdAt: Date;
-  expiresAt: Date;
-  deviceInfo?: DeviceInfo;
-  lastActivity?: number;
-}
 
 export class SessionManager {
   private sessions: Map<string, Session> = new Map();
@@ -80,7 +69,9 @@ export class SessionManager {
               permissions: session.permissions || {
                 read: true,
                 write: false,
-                sign: false
+                sign: false,
+                connect: true,
+                disconnect: true
               }
             }
           ])
