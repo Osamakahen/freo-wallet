@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import { WalletConfig } from '../../types/wallet';
 import { EVMAdapter } from '../chain/EVMAdapter';
 import { NetworkError } from '../errors/WalletErrors';
+import { mainnet } from 'viem/chains';
 
 export class NetworkManager {
   private adapter: EVMAdapter;
@@ -11,17 +12,17 @@ export class NetworkManager {
   constructor(config: WalletConfig) {
     this.config = config;
     this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
-    this.adapter = new EVMAdapter(config);
+    this.adapter = new EVMAdapter(mainnet);
   }
 
   async connect(): Promise<void> {
     try {
       await this.provider.ready;
       const network = await this.provider.getNetwork();
-      if (network.chainId !== this.config.chainId) {
+      if (BigInt(network.chainId) !== BigInt(this.config.chainId)) {
         throw new NetworkError(
           `Network mismatch: Expected chainId ${this.config.chainId}, got ${network.chainId}`,
-          network.chainId
+          Number(network.chainId)
         );
       }
     } catch (error) {
@@ -37,7 +38,7 @@ export class NetworkManager {
     try {
       this.config = config;
       this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
-      this.adapter = new EVMAdapter(config);
+      this.adapter = new EVMAdapter(mainnet);
       await this.connect();
     } catch (error) {
       throw new NetworkError(
@@ -60,7 +61,8 @@ export class NetworkManager {
   }
 
   async getGasPrice(): Promise<string> {
-    return (await this.provider.getGasPrice()).toString();
+    const gasPrice = await this.provider.getFeeData();
+    return gasPrice.gasPrice?.toString() || '0';
   }
 
   async estimateGas(tx: any): Promise<string> {
