@@ -15,39 +15,6 @@ import { SecurityManager } from '../security/SecurityManager';
 import { SecurityAlert } from '../../types/security';
 import { v4 as uuidv4 } from 'uuid';
 
-interface SessionMetrics {
-  id: string;
-  duration: number;
-  operations: number;
-  securityScore: number;
-  deviceChanges: DeviceChange[];
-  permissionChanges: PermissionChange[];
-}
-
-interface SessionAuditLog {
-  id: string;
-  timestamp: number;
-  operations: string[];
-  securityEvents: SecurityAlert[];
-  deviceChanges: DeviceChange[];
-}
-
-interface SessionStats {
-  totalSessions: number;
-  activeSessions: number;
-  averageDuration: number;
-  securityScore: number;
-}
-
-interface SessionReport {
-  id: string;
-  timestamp: number;
-  metrics: SessionMetrics;
-  auditLog: SessionAuditLog;
-  stats: SessionStats;
-  alerts: SecurityAlert[];
-}
-
 export class EnhancedSessionManager extends SessionManager {
   private analyticsService: AnalyticsService;
   private securityManager: SecurityManager;
@@ -67,16 +34,17 @@ export class EnhancedSessionManager extends SessionManager {
     }
 
     const metrics: SessionMetrics = {
-      id: activeSession.id,
+      sessionId: activeSession.id,
       duration: Date.now() - activeSession.timestamp,
       operations: this.getSessionOperations(),
-      securityScore: await this.securityManager.calculateSecurityScore(activeSession.id),
-      deviceChanges: activeSession.deviceChanges || [],
-      permissionChanges: activeSession.permissionChanges || []
+      lastActivity: Date.now(),
+      deviceInfo: this.getDeviceInfo(),
+      ipAddress: await this.securityManager.getIPAddress(),
+      securityScore: await this.securityManager.calculateSecurityScore(activeSession.id)
     };
 
     this.sessionMetrics.set(activeSession.id, metrics);
-    await this.analyticsService.trackSessionMetrics(metrics);
+    await this.analyticsService.track('session_metrics', metrics);
     return metrics;
   }
 
@@ -91,28 +59,28 @@ export class EnhancedSessionManager extends SessionManager {
 
     const deviceChanges: DeviceChange[] = (await this.securityManager.getDeviceChanges(sessionId)).map(change => ({
       timestamp: Date.now(),
-      type: 'browser',
+      type: 'device',
       oldValue: JSON.stringify(change),
-      newValue: JSON.stringify(change)
+      newValue: JSON.stringify(this.getDeviceInfo())
     }));
 
     const auditLog: SessionAuditLog = {
-      id: sessionId,
+      sessionId,
       timestamp: Date.now(),
-      operations: [`Operation count: ${this.getSessionOperations()}`],
+      operations: this.getSessionOperations(),
       securityEvents: await this.securityManager.getSecurityEvents(sessionId),
-      deviceChanges
+      deviceChanges,
+      permissionChanges: this.getPermissionChanges()
     };
 
     const logs = this.auditLogs.get(sessionId) || [];
     logs.push(auditLog);
     this.auditLogs.set(sessionId, logs);
 
-    await this.analyticsService.trackSessionAudit(auditLog);
     return auditLog;
   }
 
-  public async monitorActiveSessions(): Promise<SessionStats> {
+  public async monitorActiveSessions(): Promise<void> {
     const sessions = await this.getSessions();
     const activeSessions = sessions.filter(session => session.isActive);
     
@@ -123,8 +91,7 @@ export class EnhancedSessionManager extends SessionManager {
       securityScore: this.calculateSecurityScore(activeSessions)
     };
 
-    await this.analyticsService.trackSessionStats(stats);
-    return stats;
+    await AnalyticsService.trackSessionStats(stats);
   }
 
   private calculateAverageDuration(sessions: Session[]): number {
@@ -163,8 +130,7 @@ export class EnhancedSessionManager extends SessionManager {
           type: 'HIGH_OPERATION_COUNT',
           sessionId: session.id,
           severity: 'WARNING',
-          message: 'Unusually high number of operations detected',
-          timestamp: Date.now()
+          message: 'Unusually high number of operations detected'
         });
       }
 
@@ -175,8 +141,7 @@ export class EnhancedSessionManager extends SessionManager {
           type: 'MULTIPLE_DEVICE_CHANGES',
           sessionId: session.id,
           severity: 'CRITICAL',
-          message: 'Multiple device changes detected',
-          timestamp: Date.now()
+          message: 'Multiple device changes detected'
         });
       }
 
@@ -186,8 +151,7 @@ export class EnhancedSessionManager extends SessionManager {
           type: 'LOW_SECURITY_SCORE',
           sessionId: session.id,
           severity: 'WARNING',
-          message: 'Low security score detected',
-          timestamp: Date.now()
+          message: 'Low security score detected'
         });
       }
     }
@@ -207,12 +171,12 @@ export class EnhancedSessionManager extends SessionManager {
     const alerts = await this.detectAnomalies();
 
     return {
-      id: activeSession.id,
-      timestamp: Date.now(),
+      session: activeSession,
       metrics,
       auditLog,
       stats,
-      alerts
+      alerts,
+      recommendations: this.generateRecommendations(metrics, alerts)
     };
   }
 
@@ -244,5 +208,21 @@ export class EnhancedSessionManager extends SessionManager {
     }
     
     return recommendations;
+  }
+
+  private async getDeviceInfo(): Promise<DeviceInfo> {
+    return {
+      browser: '',
+      os: '',
+      platform: '',
+      deviceType: '',
+      screenResolution: '',
+      timezone: '',
+      language: ''
+    };
+  }
+
+  private async getIPAddress(): Promise<string> {
+    return '';
   }
 } 
