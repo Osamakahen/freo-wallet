@@ -1,8 +1,13 @@
-import { Permission } from '../../types/permission';
-import { PermissionRequest } from '../../types/permission';
+import { 
+  DAppPermission, 
+  PermissionGroup, 
+  PermissionTemplate, 
+  PermissionChange, 
+  PermissionMetrics 
+} from '../../types/permission';
 import { WalletError } from '../error/ErrorHandler';
 import { ErrorCorrelator } from '../error/ErrorCorrelator';
-import { AnalyticsService } from '../../services/AnalyticsService';
+import AnalyticsService from '../../services/AnalyticsService';
 import { AnalyticsEvent } from '../../types/analytics';
 
 export class EnhancedPermissionManager {

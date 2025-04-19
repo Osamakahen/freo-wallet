@@ -27,33 +27,29 @@ export class PortfolioManager {
 
   async getPortfolioSummary(address: Address): Promise<PortfolioSummary> {
     try {
-      // Get token balances
-      const balances = await this.tokenManager.getTokenBalances(address);
+      // Get token list
+      const tokenList = await this.tokenManager.getTokenList();
+      
+      // Get token balances with prices
+      const tokenBalances = await this.tokenManager.getTokenBalancesWithPrices(tokenList, address);
+      
+      // Get token info for each token
+      const tokenInfos = await Promise.all(
+        tokenList.map(tokenAddress => this.tokenManager.getTokenInfo(tokenAddress))
+      );
       
       // Get native token balance
-      const nativeBalance = await this.tokenManager.getBalance(address);
+      const nativeBalance = await this.tokenManager.getBalance('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', address);
       
-      // Get token prices
-      const tokenPrices = await Promise.all(
-        balances.map(async (token: TokenBalance) => {
-          const price = await this.getTokenPrice(token.address);
-          return {
-            address: token.address,
-            price,
-          };
-        })
-      );
-
       // Calculate portfolio value
-      const tokenValues = balances.map((token: TokenBalance) => {
-        const price = tokenPrices.find((p: { address: string; price: number }) => p.address === token.address)?.price || 0;
-        const value = Number(formatEther(token.balance)) * price;
+      const tokenValues = tokenBalances.map((token) => {
+        const tokenInfo = tokenInfos.find(info => info.address === token.tokenAddress);
         return {
-          address: token.address,
-          symbol: token.symbol,
-          balance: formatEther(token.balance),
-          price,
-          value,
+          address: token.tokenAddress,
+          symbol: tokenInfo?.symbol || 'UNKNOWN',
+          balance: token.balance,
+          price: token.price,
+          value: token.value,
           change24h: 0, // TODO: Implement 24h price change
         };
       });
