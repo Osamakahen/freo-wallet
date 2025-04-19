@@ -91,13 +91,16 @@ export interface BridgeConfig {
 }
 
 export interface TransactionRequest {
-  to: Address;
-  value?: string;
-  data?: string;
-  nonce?: number;
+  from: `0x${string}`;
+  to: `0x${string}`;
+  value: string;
+  data?: `0x${string}`;
+  gasLimit?: string;
+  gasPrice?: string;
   maxFeePerGas?: string;
   maxPriorityFeePerGas?: string;
-  gasLimit?: string;
+  nonce?: number;
+  chainId?: number;
 }
 
 export interface Permission {
@@ -112,12 +115,12 @@ export interface DAppRequest {
 }
 
 export interface DAppResponse {
-  id?: number;
   result: unknown;
   error?: {
     code: number;
     message: string;
   };
+  id: number;
 }
 
 export interface DAppMessage {

@@ -34,6 +34,7 @@ export class InjectedBridge {
   }
 
   public async request(method: string, params?: unknown[]): Promise<DAppResponse> {
+    let tx: TransactionRequest;
     switch (method) {
       case 'eth_requestAccounts':
         return { result: [this.bridge.getState().address] };
@@ -45,7 +46,7 @@ export class InjectedBridge {
         if (!params?.[0]) {
           throw new WalletError('Missing transaction parameters', 'INVALID_PARAMS');
         }
-        const tx = params[0] as TransactionRequest;
+        tx = params[0] as TransactionRequest;
         return { result: await this.bridge.sendTransaction(tx) };
       case 'eth_sign':
         if (!params?.[0] || !params?.[1]) {
@@ -82,17 +83,5 @@ export class InjectedBridge {
 
   public getDAppInfo(): DAppInfo | null {
     return this.bridge.getDAppInfo();
-  }
-
-  private convertToWalletTransaction(tx: TransactionRequest): TransactionRequest {
-    return {
-      to: tx.to as `0x${string}`,
-      value: tx.value || '0',
-      data: tx.data as `0x${string}` | undefined,
-      nonce: tx.nonce,
-      maxFeePerGas: tx.maxFeePerGas,
-      maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
-      gasLimit: tx.gasLimit
-    };
   }
 } 
