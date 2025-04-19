@@ -26,17 +26,8 @@ export interface GasEstimate {
   estimatedCost: string;
 }
 
-export interface ApprovalTransaction {
-  hash: `0x${string}`;
-  status: 'pending' | 'confirmed' | 'failed';
-  timestamp: number;
-  type: 'approve' | 'approveMax' | 'revoke';
-  amount?: string;
-  gasEstimate?: string;
-}
-
 export class TokenApprovalManager {
-  private walletClient: ReturnType<typeof createWalletClient>;
+  private walletClient: WalletClient;
   private publicClient: ReturnType<typeof createPublicClient>;
   private transactionMonitor: WebSocketTransactionMonitor;
   private transactionHistory: ApprovalTransaction[] = [];
@@ -44,25 +35,28 @@ export class TokenApprovalManager {
   private keyManager: KeyManager;
   private tokenAddress: `0x${string}`;
 
-  constructor(tokenAddress: `0x${string}`, rpcUrl: string) {
+  constructor(
+    walletClient: WalletClient,
+    transactionManager: TransactionManager,
+    transactionMonitor: WebSocketTransactionMonitor,
+    tokenAddress: `0x${string}`,
+    rpcUrl: string
+  ) {
     if (!window.ethereum) {
       throw new Error('Ethereum provider not found');
     }
 
-    this.walletClient = createWalletClient({
-      chain: mainnet,
-      transport: custom(window.ethereum)
-    });
+    this.walletClient = walletClient;
+    this.transactionManager = transactionManager;
+    this.transactionMonitor = transactionMonitor;
+    this.tokenAddress = tokenAddress;
 
     this.publicClient = createPublicClient({
       chain: mainnet,
       transport: http()
     });
 
-    this.transactionMonitor = new WebSocketTransactionMonitor();
     this.keyManager = new KeyManager();
-    this.transactionManager = new TransactionManager(rpcUrl, this.keyManager);
-    this.tokenAddress = tokenAddress;
   }
 
   async checkApproval(tokenAddress: `0x${string}`, owner: `0x${string}`, spender: `0x${string}`): Promise<ApprovalStatus> {
