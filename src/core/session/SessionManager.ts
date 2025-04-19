@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { WalletError } from '../error/ErrorHandler';
 import { SessionAnalytics } from './SessionAnalytics';
 import { SecurityService } from '../../services/SecurityService';
-import { KeyManager } from '../key/KeyManager';
+import { KeyManager } from '../keyManagement/KeyManager';
 import { ErrorCorrelator } from '../error/ErrorCorrelator';
 import { SessionTokenManager } from './SessionTokenManager';
 import { EnhancedSessionManager } from './EnhancedSessionManager';
