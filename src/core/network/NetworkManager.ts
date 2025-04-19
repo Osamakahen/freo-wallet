@@ -2,32 +2,28 @@ import { ethers } from 'ethers';
 import { WalletConfig } from '../../types/wallet';
 import { EVMAdapter } from '../chain/EVMAdapter';
 import { NetworkError } from '../errors/WalletErrors';
-import { mainnet, goerli, sepolia } from 'viem/chains';
-import { Chain } from 'viem';
+import { ChainConfig } from '../config/ChainConfig';
 
 export class NetworkManager {
   private adapter: EVMAdapter;
   private provider: ethers.JsonRpcProvider;
   private config: WalletConfig;
 
-  private getChainById(chainId: number): Chain {
-    switch (chainId) {
-      case mainnet.id:
-        return mainnet;
-      case goerli.id:
-        return goerli;
-      case sepolia.id:
-        return sepolia;
-      default:
-        throw new Error(`Unsupported chain ID: ${chainId}`);
-    }
+  private getChainConfig(config: WalletConfig): ChainConfig {
+    return {
+      name: 'Ethereum',
+      chainId: config.chainId,
+      rpcUrl: config.rpcUrl,
+      symbol: 'ETH',
+      blockExplorer: 'https://etherscan.io'
+    };
   }
 
   constructor(config: WalletConfig) {
     this.config = config;
     this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
-    const chain = this.getChainById(config.chainId);
-    this.adapter = new EVMAdapter(chain);
+    const chainConfig = this.getChainConfig(config);
+    this.adapter = new EVMAdapter(chainConfig);
   }
 
   async connect(): Promise<void> {
@@ -53,8 +49,8 @@ export class NetworkManager {
     try {
       this.config = config;
       this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
-      const chain = this.getChainById(config.chainId);
-      this.adapter = new EVMAdapter(chain);
+      const chainConfig = this.getChainConfig(config);
+      this.adapter = new EVMAdapter(chainConfig);
       await this.connect();
     } catch (error) {
       throw new NetworkError(
