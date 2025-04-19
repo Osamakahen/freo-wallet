@@ -19,6 +19,13 @@ export interface GasOptimizationOptions {
   maxGasLimit?: string;
 }
 
+interface GasEstimate {
+  gasLimit: number;
+  gasPrice: number;
+  maxFeePerGas: number;
+  maxPriorityFeePerGas: number;
+}
+
 export class GasManager extends EventEmitter {
   private client: ReturnType<typeof createPublicClient>;
   private readonly DEFAULT_GAS_LIMIT = '21000';
@@ -51,7 +58,7 @@ export class GasManager extends EventEmitter {
 
   static getInstance(): GasManager {
     if (!GasManager.instance) {
-      GasManager.instance = new GasManager('https://rpc.ankr.com/eth', ErrorCorrelator.getInstance());
+      GasManager.instance = new GasManager('https://rpc.ankr.com/eth', new ErrorCorrelator());
     }
     return GasManager.instance;
   }
@@ -200,7 +207,7 @@ export class GasManager extends EventEmitter {
   public async getGasHistory(limit: number = 10): Promise<GasHistory> {
     try {
       const currentBlock = await this.client.getBlockNumber();
-      const prices = [];
+      const prices: GasPriceUpdate[] = [];
 
       for (let i = 0; i < limit; i++) {
         const block = await this.client.getBlock({ blockNumber: currentBlock - BigInt(i) });
@@ -209,17 +216,18 @@ export class GasManager extends EventEmitter {
         const baseFee = block.baseFeePerGas;
         prices.push({
           timestamp: Number(block.timestamp) * 1000,
-          slow: (baseFee * 11n / 10n).toString(),
-          standard: (baseFee * 12n / 10n).toString(),
-          fast: (baseFee * 13n / 10n).toString(),
+          baseFee: formatGwei(baseFee),
+          maxFeePerGas: formatGwei(baseFee * 12n / 10n),
+          maxPriorityFeePerGas: formatGwei(baseFee * 13n / 10n)
         });
       }
 
       // Calculate averages
       const average = {
-        slow: (prices.reduce((sum, p) => sum + BigInt(p.slow), 0n) / BigInt(prices.length)).toString(),
-        standard: (prices.reduce((sum, p) => sum + BigInt(p.standard), 0n) / BigInt(prices.length)).toString(),
-        fast: (prices.reduce((sum, p) => sum + BigInt(p.fast), 0n) / BigInt(prices.length)).toString(),
+        baseFee: (prices.reduce((sum, p) => sum + BigInt(p.baseFee), 0n) / BigInt(prices.length)).toString(),
+        maxFeePerGas: (prices.reduce((sum, p) => sum + BigInt(p.maxFeePerGas), 0n) / BigInt(prices.length)).toString(),
+        maxPriorityFeePerGas: (prices.reduce((sum, p) => sum + BigInt(p.maxPriorityFeePerGas), 0n) / BigInt(prices.length)).toString(),
+        timestamp: Date.now()
       };
 
       return { prices, average };
