@@ -76,11 +76,7 @@ export class TransactionManager {
       };
     } catch (error) {
       throw new TransactionError(
-        'Failed to get gas settings',
-        {
-          error: new Error(error instanceof Error ? error.message : String(error)),
-          method: 'getGasSettings'
-        }
+        `Failed to get gas settings: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
@@ -181,6 +177,7 @@ export class TransactionManager {
         removed: false
       }));
 
+      const tx = await this.publicClient.getTransaction({ hash });
       return {
         hash: receipt.transactionHash,
         status: receipt.status === 'success' ? 'success' : 'reverted',
@@ -195,7 +192,9 @@ export class TransactionManager {
         gasUsed: receipt.gasUsed.toString(),
         effectiveGasPrice: receipt.effectiveGasPrice.toString(),
         cumulativeGasUsed: receipt.cumulativeGasUsed.toString(),
-        type: receipt.type
+        type: receipt.type,
+        timestamp: Date.now(),
+        value: tx.value.toString()
       };
     } catch (error) {
       console.error('Error monitoring transaction:', error);

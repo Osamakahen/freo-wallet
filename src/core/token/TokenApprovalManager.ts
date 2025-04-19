@@ -122,7 +122,8 @@ export class TokenApprovalManager {
         account: from,
         to: tx.to,
         data: approveData,
-        value: 0n
+        value: 0n,
+        chain: this.walletClient.chain
       });
 
       // Add to transaction history
@@ -158,7 +159,8 @@ export class TokenApprovalManager {
         account: from,
         to: tx.to,
         data: approveData,
-        value: 0n
+        value: 0n,
+        chain: this.walletClient.chain
       });
 
       const transaction: ApprovalTransaction = {
@@ -184,14 +186,15 @@ export class TokenApprovalManager {
         from,
         to: tokenAddress,
         data: this.encodeApproveData(spender, '0'),
-        value: 0n
+        value: '0'
       });
 
       const hash = await this.walletClient.sendTransaction({
         account: from,
         to: tx.to,
         data: tx.data,
-        value: 0n
+        value: 0n,
+        chain: this.walletClient.chain
       });
 
       const transaction: ApprovalTransaction = {

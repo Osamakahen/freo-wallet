@@ -1,4 +1,4 @@
-import { createPublicClient, http, getContract, formatUnits, parseUnits, type PublicClient } from 'viem';
+import { createPublicClient, http, getContract, formatUnits, parseUnits, type PublicClient, encodeFunctionData } from 'viem';
 import { mainnet } from 'viem/chains';
 import { ERC20_ABI } from './abi/ERC20';
 import { TokenBalance, TokenInfo } from '../../types/token';
@@ -77,7 +77,11 @@ export class TokenManager {
     const decimals = await contract.read.decimals();
     const amountInWei = parseUnits(amount, decimals as number);
 
-    const data = contract.write.approve.data([spender, amountInWei]);
+    const data = encodeFunctionData({
+      abi: ERC20_ABI,
+      functionName: 'approve',
+      args: [spender, amountInWei]
+    });
 
     const tx: TransactionRequest = {
       from: await this.evmAdapter.getAddress(),
@@ -197,7 +201,11 @@ export class TokenManager {
       client: this.publicClient
     });
 
-    const data = contract.write.approve.data([spender, amount]);
+    const data = encodeFunctionData({
+      abi: ERC20_ABI,
+      functionName: 'approve',
+      args: [spender, amount]
+    });
 
     const tx: TransactionRequest = {
       from: await this.evmAdapter.getAddress(),

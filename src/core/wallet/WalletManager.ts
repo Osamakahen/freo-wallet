@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { EthereumProvider } from '../types/ethereum';
+import { EthereumProvider } from '../../types/ethereum';
 import { WalletError } from '../error/ErrorHandler';
 import { ErrorCorrelator } from '../error/ErrorCorrelator';
 
@@ -46,9 +46,9 @@ export class WalletManager {
         isConnected: true,
         chainId: network.chainId.toString()
       };
-    } catch (error) {
+    } catch (error: unknown) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to connect wallet', 'WALLET_CONNECTION_ERROR', { error })
+        new WalletError('Failed to connect wallet', 'WALLET_CONNECTION_ERROR', { error: error as Error })
       );
       throw error;
     }
@@ -58,9 +58,9 @@ export class WalletManager {
     try {
       this.provider = null;
       this.signer = null;
-    } catch (error) {
+    } catch (error: unknown) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to disconnect wallet', 'WALLET_DISCONNECTION_ERROR', { error })
+        new WalletError('Failed to disconnect wallet', 'WALLET_DISCONNECTION_ERROR', { error: error as Error })
       );
       throw error;
     }
@@ -87,9 +87,9 @@ export class WalletManager {
         isConnected: true,
         chainId: network.chainId.toString()
       };
-    } catch (error) {
+    } catch (error: unknown) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to get wallet state', 'WALLET_STATE_ERROR', { error })
+        new WalletError('Failed to get wallet state', 'WALLET_STATE_ERROR', { error: error as Error })
       );
       throw error;
     }
@@ -101,9 +101,9 @@ export class WalletManager {
         throw new WalletError('Wallet not connected', 'WALLET_NOT_CONNECTED');
       }
       return await this.signer.signMessage(message);
-    } catch (error) {
+    } catch (error: unknown) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to sign message', 'MESSAGE_SIGNING_ERROR', { error })
+        new WalletError('Failed to sign message', 'MESSAGE_SIGNING_ERROR', { error: error as Error })
       );
       throw error;
     }
@@ -115,9 +115,9 @@ export class WalletManager {
         throw new WalletError('Wallet not connected', 'WALLET_NOT_CONNECTED');
       }
       return await this.signer.sendTransaction(transaction);
-    } catch (error) {
+    } catch (error: unknown) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to send transaction', 'TRANSACTION_ERROR', { error })
+        new WalletError('Failed to send transaction', 'TRANSACTION_ERROR', { error: error as Error })
       );
       throw error;
     }
