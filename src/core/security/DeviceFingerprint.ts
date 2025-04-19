@@ -73,7 +73,11 @@ export class DeviceFingerprint {
       return fingerprintId;
     } catch (error) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to generate device fingerprint', 'FINGERPRINT_GENERATION_ERROR', { error })
+        new WalletError(
+          'Failed to generate device fingerprint',
+          'FINGERPRINT_GENERATION_ERROR',
+          { error: error instanceof Error ? error : new Error(String(error)) }
+        )
       );
       throw error;
     }
@@ -92,7 +96,11 @@ export class DeviceFingerprint {
       return similarity > 0.8; // 80% similarity threshold
     } catch (error) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to validate device fingerprint', 'FINGERPRINT_VALIDATION_ERROR', { fingerprintId, error })
+        new WalletError(
+          'Failed to validate device fingerprint',
+          'FINGERPRINT_VALIDATION_ERROR',
+          { fingerprintId, error: error instanceof Error ? error : new Error(String(error)) }
+        )
       );
       return false;
     }
@@ -116,7 +124,11 @@ export class DeviceFingerprint {
       await this.calculateRiskScore(fingerprint);
     } catch (error) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to update device fingerprint', 'FINGERPRINT_UPDATE_ERROR', { fingerprintId, error })
+        new WalletError(
+          'Failed to update device fingerprint',
+          'FINGERPRINT_UPDATE_ERROR',
+          { fingerprintId, error: error instanceof Error ? error : new Error(String(error)) }
+        )
       );
     }
   }
@@ -130,7 +142,11 @@ export class DeviceFingerprint {
       }
     } catch (error) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to mark fingerprint as trusted', 'FINGERPRINT_TRUST_ERROR', { fingerprintId, error })
+        new WalletError(
+          'Failed to mark fingerprint as trusted',
+          'FINGERPRINT_TRUST_ERROR',
+          { fingerprintId, error: error instanceof Error ? error : new Error(String(error)) }
+        )
       );
     }
   }
@@ -167,7 +183,11 @@ export class DeviceFingerprint {
       };
     } catch (error) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to collect device info', 'DEVICE_INFO_COLLECTION_ERROR', { error })
+        new WalletError(
+          'Failed to collect device info',
+          'DEVICE_INFO_COLLECTION_ERROR',
+          { error: error instanceof Error ? error : new Error(String(error)) }
+        )
       );
       throw error;
     }
@@ -184,7 +204,11 @@ export class DeviceFingerprint {
         .join('');
     } catch (error) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to hash device info', 'DEVICE_INFO_HASHING_ERROR', { error })
+        new WalletError(
+          'Failed to hash device info',
+          'DEVICE_INFO_HASHING_ERROR',
+          { error: error instanceof Error ? error : new Error(String(error)) }
+        )
       );
       throw error;
     }
@@ -246,7 +270,11 @@ export class DeviceFingerprint {
       return ['Arial', 'Times New Roman', 'Courier New'];
     } catch (error) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to get installed fonts', 'FONT_DETECTION_ERROR', { error })
+        new WalletError(
+          'Failed to get installed fonts',
+          'FONT_DETECTION_ERROR',
+          { error: error instanceof Error ? error : new Error(String(error)) }
+        )
       );
       return [];
     }
@@ -272,7 +300,11 @@ export class DeviceFingerprint {
       return canvas.toDataURL();
     } catch (error) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to get canvas fingerprint', 'CANVAS_FINGERPRINT_ERROR', { error })
+        new WalletError(
+          'Failed to get canvas fingerprint',
+          'CANVAS_FINGERPRINT_ERROR',
+          { error: error instanceof Error ? error : new Error(String(error)) }
+        )
       );
       return '';
     }
@@ -290,7 +322,11 @@ export class DeviceFingerprint {
       return gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
     } catch (error) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to get WebGL fingerprint', 'WEBGL_FINGERPRINT_ERROR', { error })
+        new WalletError(
+          'Failed to get WebGL fingerprint',
+          'WEBGL_FINGERPRINT_ERROR',
+          { error: error instanceof Error ? error : new Error(String(error)) }
+        )
       );
       return '';
     }
@@ -303,7 +339,11 @@ export class DeviceFingerprint {
       return 'audio-fingerprint';
     } catch (error) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to get audio fingerprint', 'AUDIO_FINGERPRINT_ERROR', { error })
+        new WalletError(
+          'Failed to get audio fingerprint',
+          'AUDIO_FINGERPRINT_ERROR',
+          { error: error instanceof Error ? error : new Error(String(error)) }
+        )
       );
       return '';
     }
