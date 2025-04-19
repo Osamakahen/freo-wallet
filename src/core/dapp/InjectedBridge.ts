@@ -5,18 +5,14 @@ import {
   BridgeState,
   DAppResponse
 } from '../../types/dapp';
-import { EthereumEvent, EthereumCallback } from '../../types/ethereum';
-import { WalletError } from '../../types/wallet';
+import { EthereumEvent, EthereumCallback, EthereumProvider } from '../../types/ethereum';
+import { WalletError } from '../error/ErrorHandler';
 
 type EventListener = (data?: unknown) => void;
 
 declare global {
   interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-      on: (event: EthereumEvent, callback: EthereumCallback) => void;
-      removeListener: (event: EthereumEvent, callback: EthereumCallback) => void;
-    };
+    ethereum?: EthereumProvider;
   }
 }
 
@@ -40,21 +36,22 @@ export class InjectedBridge {
   public async request(method: string, params?: unknown[]): Promise<DAppResponse> {
     switch (method) {
       case 'eth_requestAccounts':
-        return { success: true, result: [this.bridge.getState().address] };
+        return { result: [this.bridge.getState().address] };
       case 'eth_accounts':
-        return { success: true, result: [this.bridge.getState().address] };
+        return { result: [this.bridge.getState().address] };
       case 'eth_chainId':
-        return { success: true, result: this.bridge.getState().chainId };
+        return { result: this.bridge.getState().chainId };
       case 'eth_sendTransaction':
         if (!params?.[0]) {
           throw new WalletError('Missing transaction parameters', 'INVALID_PARAMS');
         }
-        return { success: true, result: await this.bridge.sendTransaction(params[0] as TransactionRequest) };
+        const tx = params[0] as TransactionRequest;
+        return { result: await this.bridge.sendTransaction(tx) };
       case 'eth_sign':
         if (!params?.[0] || !params?.[1]) {
           throw new WalletError('Missing sign parameters', 'INVALID_PARAMS');
         }
-        return { success: true, result: await this.bridge.signMessage(params[0] as string) };
+        return { result: await this.bridge.signMessage(params[0] as string) };
       default:
         throw new WalletError('Unsupported method', 'UNSUPPORTED_METHOD');
     }
@@ -87,16 +84,15 @@ export class InjectedBridge {
     return this.bridge.getDAppInfo();
   }
 
-  private convertToWalletTransaction(dappTx: DAppTransactionRequest): TransactionRequest {
+  private convertToWalletTransaction(tx: TransactionRequest): TransactionRequest {
     return {
-      from: this.bridge.getState().address as `0x${string}`,
-      to: dappTx.to as `0x${string}`,
-      value: dappTx.value || '0',
-      data: dappTx.data as `0x${string}` | undefined,
-      nonce: dappTx.nonce,
-      maxFeePerGas: dappTx.maxFeePerGas,
-      maxPriorityFeePerGas: dappTx.maxPriorityFeePerGas,
-      gasLimit: dappTx.gasLimit
+      to: tx.to as `0x${string}`,
+      value: tx.value || '0',
+      data: tx.data as `0x${string}` | undefined,
+      nonce: tx.nonce,
+      maxFeePerGas: tx.maxFeePerGas,
+      maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
+      gasLimit: tx.gasLimit
     };
   }
 } 

@@ -93,7 +93,7 @@ export interface BridgeConfig {
 export interface TransactionRequest {
   to: Address;
   value?: string;
-  data?: `0x${string}`;
+  data?: string;
   nonce?: number;
   maxFeePerGas?: string;
   maxPriorityFeePerGas?: string;
@@ -117,7 +117,6 @@ export interface DAppResponse {
     code: number;
     message: string;
   };
-  id: number;
 }
 
 export interface DAppMessage {
