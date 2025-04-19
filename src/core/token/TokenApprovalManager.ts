@@ -5,7 +5,7 @@ import { TokenMetadata } from '../../types/wallet';
 import { ApprovalTransaction } from '../../types/token';
 import { TransactionManager } from '../transaction/TransactionManager';
 import { KeyManager } from '../keyManagement/KeyManager';
-import { ERC20_ABI } from '../../constants/abi';
+import { ERC20_ABI } from '../../constants/abis';
 import { WalletError } from '../error/ErrorHandler';
 import { WalletClient } from '../wallet/WalletClient';
 
