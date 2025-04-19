@@ -1,12 +1,13 @@
 import { createWalletClient, custom, parseUnits, formatUnits, createPublicClient, http, Address, getContract, encodeFunctionData } from 'viem';
 import { mainnet } from 'viem/chains';
 import { WebSocketTransactionMonitor } from '../transaction/WebSocketTransactionMonitor';
-import { TokenMetadata } from '../types/wallet';
+import { TokenMetadata } from '../../types/wallet';
 import { ApprovalTransaction } from '../../types/token';
 import { TransactionManager } from '../transaction/TransactionManager';
 import { KeyManager } from '../keyManagement/KeyManager';
-import { ERC20_ABI } from '../../constants/abis';
+import { ERC20_ABI } from '../../constants/abi';
 import { WalletError } from '../error/ErrorHandler';
+import { WalletClient } from '../wallet/WalletClient';
 
 export interface ApprovalRequest {
   tokenAddress: `0x${string}`;
