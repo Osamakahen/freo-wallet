@@ -186,14 +186,15 @@ export class TokenApprovalManager {
         from,
         to: tokenAddress,
         data: this.encodeApproveData(spender, '0'),
-        value: 0n
+        value: '0'
       });
 
       const hash = await this.walletClient.sendTransaction({
         account: from,
         to: tx.to,
         data: tx.data,
-        value: 0n
+        value: 0n,
+        chain: mainnet
       });
 
       const transaction: ApprovalTransaction = {
@@ -213,7 +214,7 @@ export class TokenApprovalManager {
   }
 
   subscribeToTransactionUpdates(hash: `0x${string}`, callback: (status: 'pending' | 'confirmed' | 'failed') => void): () => void {
-    return this.transactionMonitor.monitorTransaction(hash, (status) => {
+    return this.transactionMonitor.subscribe(hash, (status) => {
       const transaction = this.transactionHistory.find(tx => tx.hash === hash);
       if (transaction) {
         transaction.status = status;
