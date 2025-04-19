@@ -37,7 +37,9 @@ export class WalletAdapter {
   }
 
   async sendTransaction(tx: TransactionRequest): Promise<`0x${string}`> {
+    const [address] = await this.walletClient.getAddresses();
     const hash = await this.walletClient.sendTransaction({
+      account: address,
       to: tx.to,
       data: tx.data as `0x${string}` | undefined,
       value: tx.value ? BigInt(tx.value) : undefined,
