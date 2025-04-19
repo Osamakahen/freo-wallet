@@ -40,19 +40,22 @@ export class ErrorCorrelator {
 
   async correlateError(error: WalletError): Promise<void> {
     try {
-      const errorId = this.generateErrorId();
+      const errorId = this.generateErrorKey(error);
       const timestamp = Date.now();
       
-      const errorData = {
-        id: errorId,
-        message: error.message,
-        code: error.code,
-        timestamp,
-        stack: error.stack
-      };
+      const errorData = [error];
       
       this.errorMap.set(errorId, errorData);
-      await this.analyticsService.trackError(errorData);
+      await this.analyticsService.trackError({
+        error,
+        correlationId: errorId,
+        timestamp,
+        context: {
+          error: error,
+          timestamp,
+          stackTrace: error.stack
+        }
+      });
     } catch (e) {
       console.error('Failed to correlate error:', e);
     }
@@ -70,7 +73,7 @@ export class ErrorCorrelator {
     this.errorMap.clear();
   }
 
-  async correlateErrorPattern(error: Error | WalletError, context: ErrorContext = {}): Promise<ErrorCorrelation> {
+  async correlateErrorPattern(error: Error | WalletError, context: ErrorContext = { error: new Error('Unknown error') }): Promise<ErrorCorrelation> {
     const correlationId = this.generateCorrelationId();
     const pattern = await this.analyzeErrorPattern(error);
     const relatedErrors = await this.findRelatedErrors(error);

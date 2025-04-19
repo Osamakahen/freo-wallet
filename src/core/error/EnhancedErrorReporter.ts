@@ -93,7 +93,7 @@ export class EnhancedErrorReporter {
   }
 
   private storeError(context: ErrorContext) {
-    const sessionId = context.userContext.sessionId || 'unknown';
+    const sessionId = context.userContext?.sessionId || 'unknown';
     const errors = this.errorHistory.get(sessionId) || [];
     errors.push(context);
     this.errorHistory.set(sessionId, errors);

@@ -1,6 +1,6 @@
 export type ErrorSeverity = 'low' | 'medium' | 'high';
 
-interface DeviceInfo {
+export interface DeviceInfo {
   userAgent: string;
   platform: string;
   language: string;
@@ -8,14 +8,14 @@ interface DeviceInfo {
   colorDepth: number;
 }
 
-interface SystemMetrics {
+export interface SystemMetrics {
   memoryUsage: number;
   cpuUsage: number;
   networkStatus: string;
   browserInfo: string;
 }
 
-interface UserContext {
+export interface UserContext {
   userId?: string;
   sessionId?: string;
   deviceInfo?: DeviceInfo;

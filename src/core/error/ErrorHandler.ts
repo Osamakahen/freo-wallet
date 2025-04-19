@@ -1,12 +1,14 @@
 import { ErrorSeverity, ErrorContext, RecoveryStrategy } from '../../types/error';
 
+export type ErrorType = string;
+
 export class WalletError extends Error {
   public timestamp: number;
 
   constructor(
     message: string,
     public code?: string,
-    public context: ErrorContext = {},
+    public context: ErrorContext = { error: new Error(message) },
     public severity: ErrorSeverity = 'medium',
     public recoveryStrategy?: RecoveryStrategy
   ) {
@@ -16,52 +18,45 @@ export class WalletError extends Error {
   }
 }
 
-export interface RecoveryStrategy {
-  type: 'retry' | 'fallback' | 'user_action';
-  maxAttempts?: number;
-  action?: () => Promise<void>;
-  message?: string;
-}
-
 export class SessionError extends WalletError {
-  constructor(message: string, context: ErrorContext = {}, recoveryStrategy?: RecoveryStrategy) {
-    super(message, 'SESSION_ERROR', context, 'error', recoveryStrategy);
+  constructor(message: string, context: ErrorContext = { error: new Error(message) }, recoveryStrategy?: RecoveryStrategy) {
+    super(message, 'SESSION_ERROR', context, 'high', recoveryStrategy);
   }
 }
 
 export class TransactionError extends WalletError {
-  constructor(message: string, context: ErrorContext = {}, recoveryStrategy?: RecoveryStrategy) {
-    super(message, 'TRANSACTION_ERROR', context, 'error', recoveryStrategy);
+  constructor(message: string, context: ErrorContext = { error: new Error(message) }, recoveryStrategy?: RecoveryStrategy) {
+    super(message, 'TRANSACTION_ERROR', context, 'high', recoveryStrategy);
   }
 }
 
 export class NetworkError extends WalletError {
-  constructor(message: string, context: ErrorContext = {}, recoveryStrategy?: RecoveryStrategy) {
-    super(message, 'NETWORK_ERROR', context, 'error', recoveryStrategy);
+  constructor(message: string, context: ErrorContext = { error: new Error(message) }, recoveryStrategy?: RecoveryStrategy) {
+    super(message, 'NETWORK_ERROR', context, 'high', recoveryStrategy);
   }
 }
 
 export class SecurityError extends WalletError {
-  constructor(message: string, context: ErrorContext = {}, recoveryStrategy?: RecoveryStrategy) {
-    super(message, 'SECURITY_ERROR', context, 'critical', recoveryStrategy);
+  constructor(message: string, context: ErrorContext = { error: new Error(message) }, recoveryStrategy?: RecoveryStrategy) {
+    super(message, 'SECURITY_ERROR', context, 'high', recoveryStrategy);
   }
 }
 
 export class ValidationError extends WalletError {
-  constructor(message: string, context: ErrorContext = {}, recoveryStrategy?: RecoveryStrategy) {
-    super(message, 'VALIDATION_ERROR', context, 'warning', recoveryStrategy);
+  constructor(message: string, context: ErrorContext = { error: new Error(message) }, recoveryStrategy?: RecoveryStrategy) {
+    super(message, 'VALIDATION_ERROR', context, 'medium', recoveryStrategy);
   }
 }
 
 export class RecoveryError extends WalletError {
-  constructor(message: string, context: ErrorContext = {}, recoveryStrategy?: RecoveryStrategy) {
-    super(message, 'RECOVERY_ERROR', context, 'error', recoveryStrategy);
+  constructor(message: string, context: ErrorContext = { error: new Error(message) }, recoveryStrategy?: RecoveryStrategy) {
+    super(message, 'RECOVERY_ERROR', context, 'high', recoveryStrategy);
   }
 }
 
 export class DAppError extends WalletError {
-  constructor(message: string, context: ErrorContext = {}, recoveryStrategy?: RecoveryStrategy) {
-    super(message, 'DAPP_ERROR', context, 'error', recoveryStrategy);
+  constructor(message: string, context: ErrorContext = { error: new Error(message) }, recoveryStrategy?: RecoveryStrategy) {
+    super(message, 'DAPP_ERROR', context, 'high', recoveryStrategy);
   }
 }
 
@@ -82,7 +77,7 @@ export class ErrorTracker {
     return ErrorTracker.instance;
   }
 
-  trackError(error: Error, context: ErrorContext = {}): void {
+  trackError(error: Error, context: ErrorContext = { error }): void {
     this.errors.push({
       error,
       timestamp: Date.now(),
@@ -117,7 +112,7 @@ export class ErrorTracker {
   }
 }
 
-export function handleError(error: unknown, context: ErrorContext = {}): WalletError {
+export function handleError(error: unknown, context: ErrorContext = { error: new Error('Unknown error') }): WalletError {
   if (error instanceof WalletError) {
     return error;
   }
@@ -125,7 +120,7 @@ export function handleError(error: unknown, context: ErrorContext = {}): WalletE
   const message = error instanceof Error ? error.message : 'An unknown error occurred';
   return new WalletError(message, 'UNKNOWN_ERROR', {
     ...context,
-    originalError: error
+    error: error instanceof Error ? error : new Error(message)
   });
 }
 
@@ -141,6 +136,7 @@ export function getErrorContext(error: unknown): ErrorContext {
     return error.context;
   }
   return {
+    error: error instanceof Error ? error : new Error('Unknown error'),
     originalError: error
   };
 }

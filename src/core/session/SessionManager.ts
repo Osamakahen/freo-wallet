@@ -84,9 +84,9 @@ export class SessionManager {
   }
 
   private saveSessions(): void {
-    const data = {
+      const data = {
       sessions: Object.fromEntries(this.sessions)
-    };
+      };
     this.storage.setItem(this.STORAGE_KEY, JSON.stringify(data));
   }
 
@@ -256,7 +256,7 @@ export class SessionManager {
   }
 
   public async getSessions(): Promise<Session[]> {
-    return Array.from(this.sessions.values());
+      return Array.from(this.sessions.values());
   }
 
   public async migrateSession(oldSessionId: string, newChainId: number): Promise<Session> {
