@@ -1,7 +1,7 @@
 import { createWalletClient, custom, parseUnits, formatUnits, createPublicClient, http, Address, getContract, encodeFunctionData } from 'viem';
 import { mainnet } from 'viem/chains';
 import { WebSocketTransactionMonitor } from '../transaction/WebSocketTransactionMonitor';
-import { TokenMetadata } from '../../types/wallet';
+import { TokenMetadata } from '../types/wallet';
 import { ApprovalTransaction } from '../../types/token';
 import { TransactionManager } from '../transaction/TransactionManager';
 import { KeyManager } from '../keyManagement/KeyManager';
@@ -23,6 +23,15 @@ export interface ApprovalStatus {
 export interface GasEstimate {
   gasLimit: bigint;
   estimatedCost: string;
+}
+
+export interface ApprovalTransaction {
+  hash: `0x${string}`;
+  status: 'pending' | 'confirmed' | 'failed';
+  timestamp: number;
+  type: 'approve' | 'approveMax' | 'revoke';
+  amount?: string;
+  gasEstimate?: string;
 }
 
 export class TokenApprovalManager {
@@ -107,10 +116,11 @@ export class TokenApprovalManager {
   async approveToken(amount: string): Promise<string> {
     try {
       const [from] = await this.walletClient.getAddresses();
+      const amountBigInt = BigInt(amount);
       const tx = await this.transactionManager.createTransaction({
         from,
         to: this.tokenAddress,
-        data: this.encodeApproveData(this.tokenAddress, amount),
+        data: this.encodeApproveData(this.tokenAddress, amountBigInt.toString()),
         value: 0n
       });
 
@@ -129,74 +139,67 @@ export class TokenApprovalManager {
 
   async approveMaxToken(request: ApprovalRequest): Promise<ApprovalTransaction> {
     try {
+      const [from] = await this.walletClient.getAddresses();
       const maxAmount = 2n ** 256n - 1n;
-      const gasEstimate = await this.estimateGas({
-        ...request,
-        amount: maxAmount.toString()
+      const tx = await this.transactionManager.createTransaction({
+        from,
+        to: request.tokenAddress,
+        data: this.encodeApproveData(request.spender, maxAmount.toString()),
+        value: 0n
       });
 
-      const hash = await this.walletClient.writeContract({
-        chain: mainnet,
-        address: request.tokenAddress,
-        abi: ERC20_ABI,
-        functionName: 'approve',
-        args: [request.spender, maxAmount],
-        gas: gasEstimate.gasLimit
+      const hash = await this.walletClient.sendTransaction({
+        account: from,
+        to: tx.to,
+        data: tx.data,
+        value: 0n
       });
 
       const transaction: ApprovalTransaction = {
         hash,
         status: 'pending',
         timestamp: Date.now(),
-        type: 'approveMax',
-        gasEstimate: gasEstimate.estimatedCost
+        type: 'approve',
+        amount: maxAmount.toString()
       };
 
       this.transactionHistory.push(transaction);
-      this.transactionMonitor.monitorTransaction(hash);
-
       return transaction;
     } catch (error) {
+      console.error('Error approving max token:', error);
       throw new Error('Failed to approve max token amount');
     }
   }
 
   async revokeApproval(tokenAddress: `0x${string}`, spender: `0x${string}`): Promise<ApprovalTransaction> {
     try {
-      const gasEstimate = await this.estimateGas({
-        tokenAddress,
-        spender,
-        amount: '0',
-        tokenMetadata: {
-          address: tokenAddress,
-          name: '',
-          symbol: '',
-          balance: '0'
-        }
+      const [from] = await this.walletClient.getAddresses();
+      const tx = await this.transactionManager.createTransaction({
+        from,
+        to: tokenAddress,
+        data: this.encodeApproveData(spender, '0'),
+        value: 0n
       });
 
-      const hash = await this.walletClient.writeContract({
-        chain: mainnet,
-        address: tokenAddress,
-        abi: ERC20_ABI,
-        functionName: 'approve',
-        args: [spender, 0n],
-        gas: gasEstimate.gasLimit
+      const hash = await this.walletClient.sendTransaction({
+        account: from,
+        to: tx.to,
+        data: tx.data,
+        value: 0n
       });
 
       const transaction: ApprovalTransaction = {
         hash,
         status: 'pending',
         timestamp: Date.now(),
-        type: 'revoke',
-        gasEstimate: gasEstimate.estimatedCost
+        type: 'approve',
+        amount: '0'
       };
 
       this.transactionHistory.push(transaction);
-      this.transactionMonitor.monitorTransaction(hash);
-
       return transaction;
     } catch (error) {
+      console.error('Error revoking approval:', error);
       throw new Error('Failed to revoke approval');
     }
   }
