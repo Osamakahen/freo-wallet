@@ -111,14 +111,14 @@ export class TokenApprovalManager {
         from,
         to: this.tokenAddress,
         data: this.encodeApproveData(this.tokenAddress, amount),
-        value: '0x0'
+        value: 0n
       });
 
       const hash = await this.walletClient.sendTransaction({
         account: from,
         to: tx.to,
         data: tx.data,
-        value: tx.value
+        value: 0n
       });
       return hash;
     } catch (error) {
