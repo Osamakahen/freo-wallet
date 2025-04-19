@@ -23,7 +23,7 @@ export class PermissionManager {
       this.permissions.set(address, permissions);
     } catch (error) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to grant permissions', 'PERMISSION_GRANT_ERROR', { error })
+        new WalletError('Failed to grant permissions', 'PERMISSION_GRANT_ERROR', { error: error instanceof Error ? error : new Error(String(error)) })
       );
       throw error;
     }
@@ -34,7 +34,7 @@ export class PermissionManager {
       this.permissions.delete(address);
     } catch (error) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to revoke permissions', 'PERMISSION_REVOKE_ERROR', { error })
+        new WalletError('Failed to revoke permissions', 'PERMISSION_REVOKE_ERROR', { error: error instanceof Error ? error : new Error(String(error)) })
       );
       throw error;
     }

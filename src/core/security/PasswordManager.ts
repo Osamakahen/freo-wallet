@@ -1,4 +1,4 @@
-import { encrypt, decrypt, generateKey } from '../../utils/crypto';
+import { encrypt, decrypt, generateKey, exportKey } from '../../utils/crypto';
 
 interface PasswordConfig {
   minLength: number;
@@ -15,7 +15,7 @@ export class PasswordManager {
   private static readonly MAX_ATTEMPTS = 5;
   private static readonly LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
   
-  private encryptionKey: CryptoKey | null = null;
+  private encryptionKey: string | null = null;
   private passwordConfig: PasswordConfig = {
     minLength: 8,
     requireUppercase: true,
@@ -32,8 +32,8 @@ export class PasswordManager {
    * Initialize or load the encryption key
    */
   private async initializeEncryptionKey(): Promise<void> {
-    const key = await generateKey();
-    this.encryptionKey = key;
+    const cryptoKey = await generateKey();
+    this.encryptionKey = await exportKey(cryptoKey);
   }
 
   /**
