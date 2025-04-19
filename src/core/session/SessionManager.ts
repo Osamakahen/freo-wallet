@@ -9,23 +9,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { WalletError } from '../error/ErrorHandler';
 import { SessionAnalytics } from './SessionAnalytics';
 import { SecurityService } from '../../services/SecurityService';
-import { KeyManager } from '../key/KeyManager';
+import { KeyManager } from '../keyManagement/KeyManager';
 import { ErrorCorrelator } from '../error/ErrorCorrelator';
 import { SessionTokenManager } from './SessionTokenManager';
 import { EnhancedSessionManager } from './EnhancedSessionManager';
-import { AnalyticsService } from '../../services/AnalyticsService';
+import AnalyticsService from '../../services/AnalyticsService';
 import { DeviceFingerprint } from '../security/DeviceFingerprint';
-
-interface ISession {
-  id: string;
-  address: Address;
-  chainId: number;
-  permissions: SessionPermissions;
-  createdAt: Date;
-  expiresAt: Date;
-  deviceInfo?: DeviceInfo;
-  lastActivity?: number;
-}
 
 export class SessionManager {
   private sessions: Map<string, Session> = new Map();
@@ -44,13 +33,11 @@ export class SessionManager {
   private securityService: SecurityService;
 
   constructor() {
-    this.keyManager = SessionKeyManager.getInstance();
-    this.tokenManager = SessionTokenManager.getInstance();
-    this.enhancedManager = new EnhancedSessionManager(this.config, this);
+    this.keyManager = new SessionKeyManager();
+    this.tokenManager = new SessionTokenManager();
+    this.enhancedManager = new EnhancedSessionManager();
     this.config = {
-      sessionDuration: 300000, // 5 minutes in milliseconds
-      tokenDuration: 3600, // 1 hour in seconds
-      recoveryTokenDuration: 3600 // 1 hour in seconds
+      sessionDuration: 300000 // 5 minutes in milliseconds
     };
     this.storage = window.localStorage;
     this.state = {

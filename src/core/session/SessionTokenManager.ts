@@ -1,6 +1,6 @@
 import { WalletError } from '../error/ErrorHandler';
 import { ErrorCorrelator } from '../error/ErrorCorrelator';
-import { AnalyticsService } from '../../services/AnalyticsService';
+import AnalyticsService from '../../services/AnalyticsService';
 
 export class SessionTokenManager {
   private static instance: SessionTokenManager;
