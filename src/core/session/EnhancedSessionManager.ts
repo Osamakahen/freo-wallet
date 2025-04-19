@@ -15,22 +15,23 @@ import { SecurityManager } from '../security/SecurityManager';
 import { SecurityAlert } from '../../types/security';
 import { v4 as uuidv4 } from 'uuid';
 
-export class EnhancedSessionManager extends SessionManager {
+export class EnhancedSessionManager {
   private analyticsService: AnalyticsService;
   private securityManager: SecurityManager;
   private sessionMetrics: Map<string, SessionMetrics> = new Map();
   private auditLogs: Map<string, SessionAuditLog[]> = new Map();
   private config: SessionConfig;
+  private sessionManager: SessionManager;
 
-  constructor(config: SessionConfig) {
-    super();
+  constructor(config: SessionConfig, sessionManager: SessionManager) {
     this.config = config;
+    this.sessionManager = sessionManager;
     this.analyticsService = AnalyticsService.getInstance();
     this.securityManager = new SecurityManager();
   }
 
   public async trackSessionMetrics(): Promise<SessionMetrics> {
-    const activeSession = this.getActiveSession();
+    const activeSession = this.sessionManager.getActiveSession();
     if (!activeSession) {
       throw new Error('No active session');
     }
@@ -52,9 +53,8 @@ export class EnhancedSessionManager extends SessionManager {
   }
 
   public async auditSession(sessionId: string): Promise<SessionAuditLog> {
-    const session = await this.getSessions().then(sessions => 
-      sessions.find(s => s.id === sessionId)
-    );
+    const sessions = await this.sessionManager.getSessions();
+    const session = sessions.find(s => s.id === sessionId);
     
     if (!session) {
       throw new Error('Session not found');
@@ -83,18 +83,17 @@ export class EnhancedSessionManager extends SessionManager {
     return auditLog;
   }
 
-  public async monitorActiveSessions(): Promise<void> {
-    const sessions = await this.getSessions();
+  public async monitorActiveSessions(): Promise<SessionStats> {
+    const sessions = await this.sessionManager.getSessions();
     const activeSessions = sessions.filter(session => session.isActive);
     
     const stats: SessionStats = {
       totalSessions: sessions.length,
       activeSessions: activeSessions.length,
-      averageDuration: this.calculateAverageDuration(activeSessions),
-      securityScore: this.calculateSecurityScore(activeSessions)
+      averageDuration: this.calculateAverageDuration(activeSessions)
     };
 
-    await AnalyticsService.trackSessionStats(stats);
+    return stats;
   }
 
   private calculateAverageDuration(sessions: Session[]): number {
@@ -107,21 +106,9 @@ export class EnhancedSessionManager extends SessionManager {
     return totalDuration / sessions.length;
   }
 
-  private calculateSecurityScore(sessions: Session[]): number {
-    if (sessions.length === 0) return 100;
-    
-    const totalScore = sessions.reduce((sum, session) => {
-      const deviceChanges = session.deviceChanges?.length || 0;
-      const permissionChanges = session.permissionChanges?.length || 0;
-      return sum + (100 - (deviceChanges * 10 + permissionChanges * 5));
-    }, 0);
-    
-    return Math.max(0, Math.min(100, totalScore / sessions.length));
-  }
-
   public async detectAnomalies(): Promise<SecurityAlert[]> {
     const alerts: SecurityAlert[] = [];
-    const sessions = await this.getSessions();
+    const sessions = await this.sessionManager.getSessions();
     
     for (const session of sessions) {
       const metrics = this.sessionMetrics.get(session.id);
@@ -166,7 +153,7 @@ export class EnhancedSessionManager extends SessionManager {
   }
 
   public async generateSessionReport(): Promise<SessionReport> {
-    const activeSession = await this.getActiveSession();
+    const activeSession = this.sessionManager.getActiveSession();
     if (!activeSession) {
       throw new Error('No active session');
     }
@@ -194,12 +181,6 @@ export class EnhancedSessionManager extends SessionManager {
   private getPermissionChanges(): PermissionChange[] {
     // Implementation to track permission changes
     return []; // Placeholder
-  }
-
-  private analyzePermissionUsage(): Map<string, number> {
-    const usage = new Map<string, number>();
-    // Implementation to analyze permission usage
-    return usage;
   }
 
   private generateRecommendations(metrics: SessionMetrics, alerts: SecurityAlert[]): string[] {
@@ -243,9 +224,8 @@ export class EnhancedSessionManager extends SessionManager {
     return '';
   }
 
-  public async initializeSession(): Promise<void> {
+  public async initializeSession(session: Session): Promise<void> {
     try {
-      const session = await this.createSession();
       const deviceInfo = this.getEnhancedDeviceInfo();
       const ipAddress = await this.getIPAddress();
 
@@ -275,5 +255,10 @@ export class EnhancedSessionManager extends SessionManager {
       console.error('Failed to initialize session:', error);
       throw error;
     }
+  }
+
+  public async endSession(sessionId: string): Promise<void> {
+    this.sessionMetrics.delete(sessionId);
+    this.auditLogs.delete(sessionId);
   }
 } 
