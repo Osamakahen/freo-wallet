@@ -3,7 +3,7 @@ import { Address, Hash } from 'viem';
 export interface TransactionRequest {
   from: Address;
   to: Address;
-  value: bigint;
+  value: string;
   data?: `0x${string}`;
   gasLimit?: string;
   gasPrice?: string;
