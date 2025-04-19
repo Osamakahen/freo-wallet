@@ -1,13 +1,19 @@
-import { createPublicClient, http, Chain, mainnet } from 'viem';
+import { createPublicClient, createWalletClient, http, Chain } from 'viem';
+import { mainnet } from 'viem/chains';
 import { TransactionRequest, TransactionReceipt } from '../types/transaction';
 
 export class EVMAdapter {
-  private client: ReturnType<typeof createPublicClient>;
+  private publicClient: ReturnType<typeof createPublicClient>;
+  private walletClient: ReturnType<typeof createWalletClient>;
   private chain: Chain;
 
   constructor(chain: Chain = mainnet) {
     this.chain = chain;
-    this.client = createPublicClient({
+    this.publicClient = createPublicClient({
+      chain: this.chain,
+      transport: http()
+    });
+    this.walletClient = createWalletClient({
       chain: this.chain,
       transport: http()
     });
@@ -26,33 +32,29 @@ export class EVMAdapter {
 
   async sendTransaction(tx: TransactionRequest): Promise<string> {
     const preparedTx = await this.prepareTransaction(tx);
-    const { hash } = await this.client.sendTransaction({
+    return this.walletClient.sendTransaction({
       account: preparedTx.from,
       to: preparedTx.to,
       value: BigInt(preparedTx.value),
-      gasPrice: preparedTx.gasPrice ? BigInt(preparedTx.gasPrice) : undefined,
-      gas: preparedTx.gasLimit ? BigInt(preparedTx.gasLimit) : undefined,
-      data: preparedTx.data as `0x${string}`,
-      chain: this.chain
+      data: preparedTx.data as `0x${string}`
     });
-    return hash;
   }
 
   async getNonce(address: string): Promise<number> {
-    return Number(await this.client.getTransactionCount({
+    return Number(await this.publicClient.getTransactionCount({
       address: address as `0x${string}`
     }));
   }
 
   async getBalance(address: string): Promise<string> {
-    const balance = await this.client.getBalance({
+    const balance = await this.publicClient.getBalance({
       address: address as `0x${string}`
     });
     return balance.toString();
   }
 
   async getTransactionReceipt(hash: string): Promise<TransactionReceipt> {
-    return this.client.getTransactionReceipt({
+    return this.publicClient.getTransactionReceipt({
       hash: hash as `0x${string}`
     });
   }
@@ -64,7 +66,7 @@ export class EVMAdapter {
   }
 
   async getGasPrice(): Promise<string> {
-    const gasPrice = await this.client.getGasPrice();
+    const gasPrice = await this.publicClient.getGasPrice();
     return gasPrice.toString();
   }
 
