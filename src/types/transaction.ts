@@ -1,5 +1,20 @@
 import { Address, Hash } from 'viem';
 
+export interface Transaction {
+  hash: Hash;
+  from: Address;
+  to: Address | null;
+  value: bigint;
+  input: `0x${string}`;
+  nonce: number;
+  gas: bigint;
+  gasPrice: bigint;
+  maxFeePerGas?: bigint;
+  maxPriorityFeePerGas?: bigint;
+  chainId: number;
+  type: 'legacy' | 'eip2930' | 'eip1559';
+}
+
 export interface TransactionRequest {
   from: Address;
   to: Address;
