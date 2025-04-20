@@ -94,9 +94,7 @@ export class TransactionMonitor {
         gasLimit: tx.gas.toString(),
         maxFeePerGas: tx.maxFeePerGas?.toString(),
         maxPriorityFeePerGas: tx.maxPriorityFeePerGas?.toString(),
-        nonce: tx.nonce,
-        hash: txHash,
-        status: 'pending'
+        nonce: tx.nonce
       };
     } catch (error) {
       console.error('Error fetching transaction details:', error);

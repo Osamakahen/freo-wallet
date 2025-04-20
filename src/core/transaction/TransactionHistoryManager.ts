@@ -64,7 +64,22 @@ export class TransactionHistoryManager extends EventEmitter {
             });
 
             if (receipt) {
-              const categorizedTx = await this.categorizeTransaction(tx, receipt, address);
+              const enhancedReceipt = {
+                ...receipt,
+                hash: tx.hash,
+                timestamp: Date.now(),
+                value: tx.value.toString(),
+                blockNumber: Number(receipt.blockNumber),
+                contractAddress: receipt.contractAddress ?? null,
+                logs: receipt.logs.map(log => ({
+                  ...log,
+                  blockNumber: Number(log.blockNumber)
+                })),
+                gasUsed: receipt.gasUsed.toString(),
+                effectiveGasPrice: receipt.effectiveGasPrice.toString(),
+                cumulativeGasUsed: receipt.cumulativeGasUsed.toString()
+              };
+              const categorizedTx = await this.categorizeTransaction(tx, enhancedReceipt, address);
               if (
                 (!category || categorizedTx.category === category) &&
                 (!tokenAddress || categorizedTx.tokenAddress === tokenAddress)
@@ -89,6 +104,18 @@ export class TransactionHistoryManager extends EventEmitter {
   ): Promise<CategorizedTransaction> {
     const isFromUser = tx.from.toLowerCase() === userAddress.toLowerCase();
     const isToUser = tx.to?.toLowerCase() === userAddress.toLowerCase();
+
+    // Convert viem receipt to our custom type
+    const customReceipt: TransactionReceipt = {
+      ...receipt,
+      hash: tx.hash,
+      timestamp: Date.now(),
+      value: tx.value.toString(),
+      blockNumber: Number(receipt.blockNumber),
+      gasUsed: receipt.gasUsed.toString(),
+      effectiveGasPrice: receipt.effectiveGasPrice.toString(),
+      cumulativeGasUsed: receipt.cumulativeGasUsed.toString()
+    };
 
     // Check if it's a token transfer
     if (tx.input && tx.input.startsWith('0xa9059cbb')) {

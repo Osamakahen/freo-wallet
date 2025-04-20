@@ -18,6 +18,7 @@ interface TransactionHistoryProps {
 
 interface ExtendedTransactionReceipt extends TransactionReceipt {
   amount: bigint;
+  hash: string;
 }
 
 const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address, network }) => {
@@ -100,10 +101,10 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address, networ
     },
     {
       title: 'Hash',
-      dataIndex: 'transactionHash',
-      key: 'transactionHash',
+      dataIndex: 'hash',
+      key: 'hash',
       render: (hash: string) => (
-        <Typography.Link onClick={() => setSelectedTx(transactionHistory.find(tx => tx.transactionHash === hash) as ExtendedTransactionReceipt)}>
+        <Typography.Link onClick={() => setSelectedTx(transactionHistory.find(tx => tx.hash === hash) as ExtendedTransactionReceipt)}>
           {`${hash.slice(0, 6)}...${hash.slice(-4)}`}
         </Typography.Link>
       ),
@@ -112,7 +113,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address, networ
 
   const filteredTransactions = transactionHistory
     .filter((tx) => {
-      const matchesSearch = tx.transactionHash.toLowerCase().includes(searchText.toLowerCase());
+      const matchesSearch = tx.hash.toLowerCase().includes(searchText.toLowerCase());
       const matchesStatus = !statusFilter || tx.status === statusFilter;
       return matchesSearch && matchesStatus;
     })
@@ -160,7 +161,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address, networ
       <Table
         columns={columns}
         dataSource={filteredTransactions}
-        rowKey="transactionHash"
+        rowKey="hash"
         pagination={{ pageSize: 10 }}
       />
 
@@ -174,7 +175,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address, networ
           <Space direction="vertical" size="large">
             <div>
               <Typography.Text strong>Hash:</Typography.Text>
-              <Typography.Text copyable>{selectedTx.transactionHash}</Typography.Text>
+              <Typography.Text copyable>{selectedTx.hash}</Typography.Text>
             </div>
             <div>
               <Typography.Text strong>From:</Typography.Text>

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { type Address } from 'viem';
-import { type TransactionRequest, type TokenBalance } from '../types/wallet';
+import { type TransactionRequest, type TokenBalance, ExtendedTransactionRequest } from '../types/wallet';
 
 interface WalletStoreState {
   address: Address | null;
@@ -9,8 +9,8 @@ interface WalletStoreState {
   balance: string;
   chainId: number;
   network: string;
-  transactions: Array<TransactionRequest & { hash: string; status: 'pending' | 'completed' | 'failed' }>;
-  pendingTransactions: Array<TransactionRequest & { hash: string; status: 'pending' | 'completed' | 'failed' }>;
+  transactions: ExtendedTransactionRequest[];
+  pendingTransactions: ExtendedTransactionRequest[];
   tokens: TokenBalance[];
   selectedToken: string | null;
   isLoading: boolean;
@@ -22,14 +22,15 @@ interface WalletStoreState {
   setBalance: (balance: string) => void;
   setChainId: (chainId: number) => void;
   setNetwork: (network: string) => void;
-  addTransaction: (transaction: TransactionRequest & { hash: string; status: 'pending' | 'completed' | 'failed' }) => void;
-  updateTransaction: (hash: string, updates: Partial<TransactionRequest & { status: 'pending' | 'completed' | 'failed' }>) => void;
+  addTransaction: (transaction: ExtendedTransactionRequest) => void;
+  updateTransaction: (hash: string, updates: Partial<ExtendedTransactionRequest>) => void;
   setTokens: (tokens: TokenBalance[]) => void;
   setSelectedToken: (token: string | null) => void;
   setLoading: (loading: boolean) => void;
   setConnecting: (connecting: boolean) => void;
   setSending: (sending: boolean) => void;
   setError: (error: string | null) => void;
+  clearTransactions: () => void;
 }
 
 const useWalletStore = create<WalletStoreState>()(
@@ -55,20 +56,27 @@ const useWalletStore = create<WalletStoreState>()(
       setNetwork: (network) => set({ network }),
       addTransaction: (transaction) => set((state) => ({
         transactions: [...state.transactions, transaction],
-        pendingTransactions: [...state.pendingTransactions, transaction],
+        pendingTransactions: transaction.status === 'pending' 
+          ? [...state.pendingTransactions, transaction]
+          : state.pendingTransactions
       })),
-      updateTransaction: (hash, updates) => set((state) => ({
-        transactions: state.transactions.map((tx) =>
+      updateTransaction: (hash, updates) => set((state) => {
+        const updatedTransactions = state.transactions.map((tx) =>
           tx.hash === hash ? { ...tx, ...updates } : tx
-        ),
-        pendingTransactions: state.pendingTransactions.filter((tx) => tx.hash !== hash),
-      })),
+        );
+
+        return {
+          transactions: updatedTransactions,
+          pendingTransactions: updatedTransactions.filter((tx) => tx.status === 'pending')
+        };
+      }),
       setTokens: (tokens) => set({ tokens }),
       setSelectedToken: (token) => set({ selectedToken: token }),
       setLoading: (loading) => set({ isLoading: loading }),
       setConnecting: (connecting) => set({ isConnecting: connecting }),
       setSending: (sending) => set({ isSending: sending }),
       setError: (error) => set({ error }),
+      clearTransactions: () => set({ transactions: [], pendingTransactions: [] }),
     }),
     {
       name: 'wallet-storage',

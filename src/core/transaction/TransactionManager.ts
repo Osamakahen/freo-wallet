@@ -167,20 +167,25 @@ export class TransactionManager {
       
       const tx = await this.publicClient.getTransaction({ hash });
       return {
-        transactionHash: receipt.transactionHash,
+        hash: receipt.transactionHash,
         status: receipt.status,
-        blockNumber: BigInt(receipt.blockNumber),
+        blockNumber: Number(receipt.blockNumber),
         blockHash: receipt.blockHash,
         transactionIndex: Number(receipt.transactionIndex),
         from: receipt.from,
         to: receipt.to || null,
         contractAddress: receipt.contractAddress || null,
-        logs: receipt.logs,
+        logs: receipt.logs.map(log => ({
+          ...log,
+          blockNumber: Number(log.blockNumber)
+        })),
         logsBloom: receipt.logsBloom,
-        gasUsed: BigInt(receipt.gasUsed),
-        effectiveGasPrice: BigInt(receipt.effectiveGasPrice),
-        cumulativeGasUsed: BigInt(receipt.cumulativeGasUsed),
-        type: receipt.type
+        gasUsed: receipt.gasUsed.toString(),
+        effectiveGasPrice: receipt.effectiveGasPrice.toString(),
+        cumulativeGasUsed: receipt.cumulativeGasUsed.toString(),
+        type: receipt.type,
+        timestamp: Date.now(),
+        value: tx.value.toString()
       };
     } catch (error) {
       console.error('Error monitoring transaction:', error);
