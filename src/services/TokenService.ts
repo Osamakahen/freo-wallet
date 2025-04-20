@@ -1,4 +1,4 @@
-import { createWalletClient, custom, parseUnits, type Address, type Hash } from 'viem'
+import { createWalletClient, createPublicClient, custom, parseUnits, type Address, type Hash, http, type Chain } from 'viem'
 import { type ChainConfig } from '../core/chain/ChainAdapter'
 
 export interface Token {
@@ -9,20 +9,48 @@ export interface Token {
 }
 
 export class TokenService {
-  private client: ReturnType<typeof createWalletClient>
+  private walletClient: ReturnType<typeof createWalletClient>
+  private publicClient: ReturnType<typeof createPublicClient>
+  private chain: Chain
 
   constructor(network: ChainConfig) {
     if (!window.ethereum) throw new Error('No ethereum provider found')
     
-    this.client = createWalletClient({
-      chain: network.chain,
+    this.chain = {
+      id: network.chainId,
+      name: network.name,
+      network: network.name,
+      nativeCurrency: network.nativeCurrency || {
+        name: network.symbol,
+        symbol: network.symbol,
+        decimals: 18
+      },
+      rpcUrls: {
+        default: { http: [network.rpcUrl] },
+        public: { http: [network.rpcUrl] }
+      },
+      blockExplorers: network.explorer ? {
+        default: {
+          name: network.name,
+          url: network.explorer
+        }
+      } : undefined
+    } as Chain
+
+    this.walletClient = createWalletClient({
+      chain: this.chain,
       transport: custom(window.ethereum)
+    })
+
+    this.publicClient = createPublicClient({
+      chain: this.chain,
+      transport: http()
     })
   }
 
   async getTokenBalance(tokenAddress: Address, walletAddress: Address): Promise<bigint> {
     try {
-      const data = await this.client.readContract({
+      const data = await this.publicClient.readContract({
         address: tokenAddress,
         abi: [{
           constant: true,
@@ -51,7 +79,10 @@ export class TokenService {
     try {
       const value = parseUnits(amount, decimals)
       
-      const hash = await this.client.writeContract({
+      const [account] = await this.walletClient.getAddresses()
+      const hash = await this.walletClient.writeContract({
+        account,
+        chain: this.chain,
         address: tokenAddress,
         abi: [{
           constant: false,
@@ -62,7 +93,7 @@ export class TokenService {
           name: 'transfer',
           outputs: [{ name: '', type: 'bool' }],
           type: 'function'
-        }],
+        }] as const,
         functionName: 'transfer',
         args: [to, value]
       })
@@ -83,7 +114,10 @@ export class TokenService {
     try {
       const value = parseUnits(amount, decimals)
       
-      const hash = await this.client.writeContract({
+      const [account] = await this.walletClient.getAddresses()
+      const hash = await this.walletClient.writeContract({
+        account,
+        chain: this.chain,
         address: tokenAddress,
         abi: [{
           constant: false,
@@ -94,7 +128,7 @@ export class TokenService {
           name: 'approve',
           outputs: [{ name: '', type: 'bool' }],
           type: 'function'
-        }],
+        }] as const,
         functionName: 'approve',
         args: [spender, value]
       })
@@ -112,7 +146,7 @@ export class TokenService {
     spender: Address
   ): Promise<bigint> {
     try {
-      const data = await this.client.readContract({
+      const data = await this.publicClient.readContract({
         address: tokenAddress,
         abi: [{
           constant: true,

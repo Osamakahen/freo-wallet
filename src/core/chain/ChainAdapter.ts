@@ -18,6 +18,11 @@ export interface ChainConfig {
   blockExplorer?: string;
   explorer?: string;  // For backward compatibility
   iconUrl?: string;
+  nativeCurrency?: {
+    name: string;
+    symbol: string;
+    decimals: number;
+  };
 }
 
 export abstract class ChainAdapter {
