@@ -90,7 +90,7 @@ export class TransactionMonitor {
         from: tx.from,
         to: tx.to!,
         value: tx.value.toString(),
-        data: tx.data,
+        data: tx.input,
         gasLimit: tx.gas.toString(),
         maxFeePerGas: tx.maxFeePerGas?.toString(),
         maxPriorityFeePerGas: tx.maxPriorityFeePerGas?.toString(),
