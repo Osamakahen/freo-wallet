@@ -159,7 +159,8 @@ export class TokenApprovalManager {
         account: from,
         to: tx.to,
         data: approveData,
-        value: 0n
+        value: 0n,
+        chain: undefined
       });
 
       const transaction: ApprovalTransaction = {
