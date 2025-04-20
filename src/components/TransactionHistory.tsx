@@ -18,7 +18,6 @@ interface TransactionHistoryProps {
 
 interface ExtendedTransactionReceipt extends TransactionReceipt {
   amount: bigint;
-  timestamp: number;
 }
 
 const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address, network }) => {
@@ -27,10 +26,41 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address, networ
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const [blockTimestamps, setBlockTimestamps] = useState<Record<string, number>>({});
 
   useEffect(() => {
     refreshHistory();
   }, [address, network, refreshHistory]);
+
+  const getBlockTimestamp = async (blockNumber: bigint) => {
+    if (blockTimestamps[blockNumber.toString()]) {
+      return blockTimestamps[blockNumber.toString()];
+    }
+    try {
+      const response = await fetch(`${network.rpcUrl}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'eth_getBlockByNumber',
+          params: [`0x${blockNumber.toString(16)}`, false],
+          id: 1,
+        }),
+      });
+      const data = await response.json();
+      const timestamp = parseInt(data.result.timestamp, 16);
+      setBlockTimestamps(prev => ({
+        ...prev,
+        [blockNumber.toString()]: timestamp
+      }));
+      return timestamp;
+    } catch (error) {
+      console.error('Error fetching block timestamp:', error);
+      return 0;
+    }
+  };
 
   const columns = [
     {
@@ -61,10 +91,12 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address, networ
     },
     {
       title: 'Date',
-      dataIndex: 'timestamp',
-      key: 'timestamp',
-      render: (timestamp: number) =>
-        dayjs(timestamp * 1000).format('YYYY-MM-DD HH:mm:ss'),
+      dataIndex: 'blockNumber',
+      key: 'blockNumber',
+      render: async (blockNumber: bigint) => {
+        const timestamp = await getBlockTimestamp(blockNumber);
+        return dayjs(timestamp * 1000).format('YYYY-MM-DD HH:mm:ss');
+      },
     },
     {
       title: 'Hash',
@@ -82,13 +114,9 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address, networ
     .filter((tx) => {
       const matchesSearch = tx.transactionHash.toLowerCase().includes(searchText.toLowerCase());
       const matchesStatus = !statusFilter || tx.status === statusFilter;
-      const matchesDateRange = !dateRange || (
-        tx.timestamp >= dateRange[0].unix() &&
-        tx.timestamp <= dateRange[1].unix()
-      );
-      return matchesSearch && matchesStatus && matchesDateRange;
+      return matchesSearch && matchesStatus;
     })
-    .sort((a, b) => b.timestamp - a.timestamp);
+    .sort((a, b) => Number(b.blockNumber - a.blockNumber));
 
   if (loading) {
     return <div className="p-4">Loading transactions...</div>;
@@ -169,7 +197,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({ address, networ
             <div>
               <Typography.Text strong>Date:</Typography.Text>
               <Typography.Text>
-                {dayjs(selectedTx.timestamp * 1000).format('YYYY-MM-DD HH:mm:ss')}
+                {dayjs(Number(selectedTx.blockNumber) * 1000).format('YYYY-MM-DD HH:mm:ss')}
               </Typography.Text>
             </div>
           </Space>
