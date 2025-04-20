@@ -20,12 +20,19 @@ export class NetworkManager {
     return {
       id: config.chainId,
       name: config.networkName,
-      nativeCurrency: { symbol: config.symbol },
+      nativeCurrency: {
+        name: config.networkName,
+        symbol: config.symbol,
+        decimals: 18
+      },
       rpcUrls: {
         default: { http: [config.rpcUrl] }
       },
       blockExplorers: config.blockExplorer ? {
-        default: { url: config.blockExplorer }
+        default: {
+          name: config.networkName,
+          url: config.blockExplorer
+        }
       } : undefined
     };
   }
