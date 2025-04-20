@@ -92,10 +92,10 @@ export interface BridgeConfig {
 }
 
 export interface TransactionRequest {
-  from: Address;
-  to: Address;
+  from: `0x${string}`;
+  to: `0x${string}`;
   value: string;
-  data?: string;
+  data?: `0x${string}`;
   nonce?: number;
   maxFeePerGas?: string;
   maxPriorityFeePerGas?: string;
