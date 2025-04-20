@@ -1,4 +1,5 @@
 import { Address } from 'viem';
+import { TransactionReceipt as ViemTransactionReceipt } from 'viem';
 
 export interface ChainConfig {
   chainId: number;
@@ -26,7 +27,7 @@ export interface TransactionRequest {
   from: `0x${string}`;
   to: `0x${string}`;
   value: string;
-  data?: `0x${string}`;
+  data?: string;
   gasLimit?: string;
   gasPrice?: string;
   maxFeePerGas?: string;
@@ -35,24 +36,7 @@ export interface TransactionRequest {
   chainId?: number;
 }
 
-export interface TransactionReceipt {
-  hash: string;
-  status: 'success' | 'reverted' | 'pending' | 'failed' | 'confirmed';
-  blockNumber: number;
-  blockHash: string;
-  transactionIndex: number;
-  from: Address;
-  to: Address | null;
-  contractAddress: Address | null;
-  logs: TransactionLog[];
-  logsBloom: string;
-  gasUsed: string;
-  effectiveGasPrice: string;
-  cumulativeGasUsed: string;
-  type: string;
-  timestamp: number;
-  value: string;
-}
+export type TransactionReceipt = ViemTransactionReceipt;
 
 export interface TransactionLog {
   address: Address;

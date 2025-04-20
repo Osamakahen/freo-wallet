@@ -165,36 +165,22 @@ export class TransactionManager {
     try {
       const receipt = await this.publicClient.waitForTransactionReceipt({ hash });
       
-      const logs: TransactionLog[] = receipt.logs.map(log => ({
-        address: log.address,
-        topics: log.topics,
-        data: log.data,
-        logIndex: Number(log.logIndex),
-        transactionIndex: Number(log.transactionIndex),
-        transactionHash: log.transactionHash,
-        blockHash: log.blockHash,
-        blockNumber: Number(log.blockNumber),
-        removed: false
-      }));
-
       const tx = await this.publicClient.getTransaction({ hash });
       return {
-        hash: receipt.transactionHash,
-        status: receipt.status === 'success' ? 'success' : 'reverted',
-        blockNumber: Number(receipt.blockNumber),
+        transactionHash: receipt.transactionHash,
+        status: receipt.status,
+        blockNumber: BigInt(receipt.blockNumber),
         blockHash: receipt.blockHash,
         transactionIndex: Number(receipt.transactionIndex),
         from: receipt.from,
         to: receipt.to || null,
         contractAddress: receipt.contractAddress || null,
-        logs,
+        logs: receipt.logs,
         logsBloom: receipt.logsBloom,
-        gasUsed: receipt.gasUsed.toString(),
-        effectiveGasPrice: receipt.effectiveGasPrice.toString(),
-        cumulativeGasUsed: receipt.cumulativeGasUsed.toString(),
-        type: receipt.type,
-        timestamp: Date.now(),
-        value: tx.value.toString()
+        gasUsed: BigInt(receipt.gasUsed),
+        effectiveGasPrice: BigInt(receipt.effectiveGasPrice),
+        cumulativeGasUsed: BigInt(receipt.cumulativeGasUsed),
+        type: receipt.type
       };
     } catch (error) {
       console.error('Error monitoring transaction:', error);

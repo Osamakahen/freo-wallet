@@ -192,7 +192,7 @@ export class TokenApprovalManager {
       const hash = await this.walletClient.sendTransaction({
         account: from,
         to: tx.to,
-        data: tx.data,
+        data: tx.data as `0x${string}` | undefined,
         value: 0n,
         chain: null
       });

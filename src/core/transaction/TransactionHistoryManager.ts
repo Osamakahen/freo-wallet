@@ -1,18 +1,27 @@
-import { createPublicClient, http, getContract } from 'viem';
+import { createPublicClient, http, getContract, decodeFunctionData } from 'viem';
 import { mainnet } from 'viem/chains';
 import { ERC20_ABI } from '../token/abi/ERC20';
 import { TransactionReceipt } from '../../types/wallet';
 import { CategorizedTransaction } from './types';
 import { Transaction } from '../../types/transaction';
+import { ErrorCorrelator } from '../error/ErrorCorrelator';
+import { EventEmitter } from 'events';
+import { WalletError } from '../error/ErrorHandler';
 
-export class TransactionHistoryManager {
+export class TransactionHistoryManager extends EventEmitter {
   private publicClient: ReturnType<typeof createPublicClient>;
+  private address: string;
+  private errorCorrelator: ErrorCorrelator;
+  private transactions: Transaction[] = [];
 
-  constructor() {
+  constructor(address: string) {
+    super();
     this.publicClient = createPublicClient({
       chain: mainnet,
       transport: http()
     });
+    this.address = address;
+    this.errorCorrelator = ErrorCorrelator.getInstance();
   }
 
   async getTransactionHistory(
@@ -86,13 +95,18 @@ export class TransactionHistoryManager {
       const contract = getContract({
         address: tx.to!,
         abi: ERC20_ABI,
-        publicClient: this.publicClient
+        client: this.publicClient
       });
 
       try {
-        const [to, value] = contract.interface.decodeFunctionData('transfer', tx.input);
-        const decimals = await contract.read.decimals();
-        const amount = Number(value) / Math.pow(10, decimals);
+        const result = decodeFunctionData({
+          abi: ERC20_ABI,
+          data: tx.input
+        });
+        const [to, value] = result.args as [`0x${string}`, bigint];
+        const decimals = (await contract.read.decimals()) as number;
+        const amount = Number(value) / parseInt('1' + '0'.repeat(decimals));
+        const symbol = (await contract.read.symbol()) as string;
 
         return {
           hash: tx.hash,
@@ -100,7 +114,7 @@ export class TransactionHistoryManager {
           from: tx.from,
           to: to,
           amount: isFromUser ? -amount : amount,
-          tokenSymbol: await contract.read.symbol(),
+          tokenSymbol: symbol,
           tokenAddress: tx.to!,
           status: receipt.status === 'success' ? 'success' : 'reverted',
           blockNumber: Number(receipt.blockNumber),
@@ -117,13 +131,18 @@ export class TransactionHistoryManager {
       const contract = getContract({
         address: tx.to!,
         abi: ERC20_ABI,
-        publicClient: this.publicClient
+        client: this.publicClient
       });
 
       try {
-        const [spender, value] = contract.interface.decodeFunctionData('approve', tx.input);
-        const decimals = await contract.read.decimals();
-        const amount = Number(value) / Math.pow(10, decimals);
+        const result = decodeFunctionData({
+          abi: ERC20_ABI,
+          data: tx.input
+        });
+        const args = result.args as [`0x${string}`, bigint];
+        const [spender, value] = args;
+        const decimals = (await contract.read.decimals()) as number;
+        const amount = Number(value) / parseInt('1' + '0'.repeat(decimals));
 
         return {
           hash: tx.hash,
@@ -131,7 +150,7 @@ export class TransactionHistoryManager {
           from: tx.from,
           to: spender,
           amount,
-          tokenSymbol: await contract.read.symbol(),
+          tokenSymbol: (await contract.read.symbol()) as string,
           tokenAddress: tx.to!,
           status: receipt.status === 'success' ? 'success' : 'reverted',
           blockNumber: Number(receipt.blockNumber),
@@ -200,7 +219,7 @@ export class TransactionHistoryManager {
   private async processTransaction(transaction: Transaction): Promise<void> {
     try {
       const from = transaction.from.toLowerCase();
-      const to = transaction.to.toLowerCase();
+      const to = transaction.to?.toLowerCase() ?? '';
       const address = this.address.toLowerCase();
       
       if (from === address) {
@@ -210,7 +229,7 @@ export class TransactionHistoryManager {
       }
     } catch (error) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to process transaction', 'TRANSACTION_PROCESSING_ERROR', { error })
+        new WalletError('Failed to process transaction', 'TRANSACTION_PROCESSING_ERROR', { error: error as Error })
       );
     }
   }
@@ -230,5 +249,17 @@ export class TransactionHistoryManager {
       console.error('Error adding transaction:', error);
       throw error;
     }
+  }
+
+  private async addOutgoingTransaction(transaction: Transaction): Promise<void> {
+    // Implementation for outgoing transactions
+  }
+
+  private async addIncomingTransaction(transaction: Transaction): Promise<void> {
+    // Implementation for incoming transactions
+  }
+
+  private async saveTransactions(): Promise<void> {
+    // Implementation for saving transactions
   }
 } 
