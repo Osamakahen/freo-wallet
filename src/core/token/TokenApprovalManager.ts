@@ -123,7 +123,8 @@ export class TokenApprovalManager {
         to: tx.to,
         data: approveData,
         value: 0n,
-        chain: this.walletClient.chain
+        chain: this.walletClient.chain,
+        type: 'eip1559'
       });
 
       // Add to transaction history

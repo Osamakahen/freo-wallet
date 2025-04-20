@@ -3,13 +3,17 @@ import { useNetwork } from '../contexts/NetworkContext';
 
 export const useWalletConnection = () => {
   const { address, isConnected, connect, disconnect } = useWallet();
-  const { network } = useNetwork();
+  const { chainId, networkName, symbol, rpcUrl, explorer } = useNetwork();
 
   return {
     address,
     isConnected,
     connect,
     disconnect,
-    network
+    chainId,
+    networkName,
+    symbol,
+    rpcUrl,
+    explorer
   };
 }; 
