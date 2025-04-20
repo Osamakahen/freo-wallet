@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, Rea
 import { useWallet } from './WalletContext';
 import { TokenManager } from '../core/token/TokenManager';
 import { TokenBalance } from '../types/token';
-import { EVMAdapter } from '../core/evm/EVMAdapter';
+import { EVMAdapter } from '../core/chain/EVMAdapter';
 import { mainnet } from 'viem/chains';
 import debounce from 'lodash/debounce';
 import { Address } from 'viem';
@@ -81,7 +81,7 @@ export const TokenProvider = ({ children }: { children: ReactNode }) => {
       
       setTokens(newBalances);
       setBalances(newBalances.map(balance => ({
-        tokenAddress: balance.address as `0x${string}`,
+        tokenAddress: balance.address,
         balance: balance.balance,
         decimals: balance.decimals
       })));

@@ -3,7 +3,7 @@ import { TransactionReceipt } from '../types/wallet';
 import { WebSocketTransactionMonitor } from '../core/transaction/WebSocketTransactionMonitor';
 
 interface TransactionManager {
-  getTransactionReceipt(txHash: `0x${string}`): Promise<TransactionReceipt>;
+  getTransactionReceipt(hash: string): Promise<TransactionReceipt | null>;
 }
 
 interface TransactionStatusProps {
@@ -37,10 +37,12 @@ export const TransactionStatus: React.FC<TransactionStatusProps> = ({
           const unsubscribe = transactionMonitor.subscribe(txHash, (newStatus) => {
             setStatus(newStatus);
             if (newStatus !== 'pending') {
-              transactionManager.getTransactionReceipt(txHash).then((receipt: TransactionReceipt) => {
-                setReceipt(receipt);
-                if (onComplete) {
-                  onComplete();
+              transactionManager.getTransactionReceipt(txHash).then((receipt) => {
+                if (receipt) {
+                  setReceipt(receipt);
+                  if (onComplete) {
+                    onComplete();
+                  }
                 }
               });
             }

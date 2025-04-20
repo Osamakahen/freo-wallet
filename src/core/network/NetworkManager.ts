@@ -3,20 +3,31 @@ import { WalletConfig } from '../../types/wallet';
 import { EVMAdapter } from '../chain/EVMAdapter';
 import { NetworkError } from '../errors/WalletErrors';
 import { ChainConfig } from '../config/ChainConfig';
+import { defineChain } from 'viem';
 
 export class NetworkManager {
   private adapter: EVMAdapter;
   private provider: ethers.JsonRpcProvider;
   private config: WalletConfig;
 
-  private getChainConfig(config: WalletConfig): ChainConfig {
-    return {
-      name: 'Ethereum',
-      chainId: config.chainId,
-      rpcUrl: config.rpcUrl,
-      symbol: 'ETH',
-      blockExplorer: 'https://etherscan.io'
-    };
+  private getChainConfig(config: WalletConfig) {
+    return defineChain({
+      id: config.chainId,
+      name: config.networkName,
+      network: config.networkName.toLowerCase(),
+      nativeCurrency: {
+        name: config.symbol,
+        symbol: config.symbol,
+        decimals: 18,
+      },
+      rpcUrls: {
+        default: { http: [config.rpcUrl] },
+        public: { http: [config.rpcUrl] },
+      },
+      blockExplorers: {
+        default: { name: 'Etherscan', url: config.blockExplorer || 'https://etherscan.io' },
+      },
+    });
   }
 
   constructor(config: WalletConfig) {
@@ -83,6 +94,6 @@ export class NetworkManager {
 
   getTransactionExplorerUrl(hash: string): string {
     const chainConfig = this.getChainConfig(this.config);
-    return `${chainConfig.blockExplorer}/tx/${hash}`;
+    return `${chainConfig.blockExplorers.default.url}/tx/${hash}`;
   }
 } 

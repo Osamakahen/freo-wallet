@@ -97,7 +97,7 @@ export const WalletComponent: React.FC<Props> = ({ wallet }) => {
       {activeTransaction && (
         <TransactionStatus
           txHash={activeTransaction}
-          transactionManager={wallet}
+          transactionManager={wallet.getTransactionManager()}
           onComplete={() => handleTransactionComplete(activeTransaction)}
         />
       )}

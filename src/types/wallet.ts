@@ -11,6 +11,8 @@ export interface WalletConfig {
   networkName: string;
   chainId: number;
   rpcUrl: string;
+  symbol: string;
+  blockExplorer?: string;
 }
 
 export interface WalletState {
@@ -114,9 +116,4 @@ export interface SavedAddress {
   name: string;
   label?: string;
   createdAt: number;
-}
-
-export type ExtendedTransactionRequest = TransactionRequest & {
-  hash: string;
-  status: 'pending' | 'completed' | 'failed';
-}; 
+} 

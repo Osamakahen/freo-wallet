@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { TokenManager } from '../core/token/TokenManager';
 import { TokenBalance } from '../types/token';
-import { WalletAdapter } from '../core/evm/WalletAdapter';
+import { EVMAdapter } from '../core/network/EVMAdapter';
 import { mainnet } from 'viem/chains';
 
 interface TokenInfoProps {
@@ -20,7 +20,7 @@ export const TokenInfo: React.FC<TokenInfoProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [approvalAmount, setApprovalAmount] = useState<string>('');
 
-  const tokenManager = useMemo(() => new TokenManager(new WalletAdapter(mainnet)), []);
+  const tokenManager = useMemo(() => new TokenManager(new EVMAdapter(mainnet)), []);
 
   const loadTokenInfo = useCallback(async () => {
     try {

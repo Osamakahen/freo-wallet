@@ -1,13 +1,14 @@
-import { createWalletClient, custom, getAddress, formatEther } from 'viem';
+import { createWalletClient, createPublicClient, custom, getAddress, formatEther } from 'viem';
 import { mainnet } from 'viem/chains';
 import { KeyManager } from '../keyManagement/KeyManager';
 import { TransactionManager } from '../transaction/TransactionManager';
 import { NetworkManager } from '../network/NetworkManager';
 import { DAppManager } from '../dapp/DAppManager';
-import { WalletConfig, WalletState, TransactionRequest } from '../../types/wallet';
+import { WalletConfig, WalletState, TransactionRequest, TransactionReceipt } from '../../types/wallet';
 import { SessionManager } from '../session/SessionManager';
 import { TokenManager } from '../token/TokenManager';
-import { TokenBalance, TransactionReceipt } from '../../types/token';
+import { TokenBalance } from '../../types/token';
+import { EVMAdapter } from '../chain/EVMAdapter';
 
 export class Wallet {
   private keyManager: KeyManager;
@@ -18,19 +19,19 @@ export class Wallet {
   private tokenManager: TokenManager;
   private state: WalletState;
   private client: ReturnType<typeof createWalletClient>;
+  private publicClient: ReturnType<typeof createPublicClient>;
 
   constructor(config: WalletConfig) {
     this.keyManager = new KeyManager();
     this.networkManager = new NetworkManager(config);
     this.sessionManager = new SessionManager();
     this.transactionManager = new TransactionManager(
-      this.networkManager.getAdapter(),
+      config.rpcUrl,
       this.keyManager
     );
     this.dappManager = new DAppManager(
-      this.sessionManager,
-      this.keyManager,
-      this.networkManager.getAdapter()
+      this.networkManager.getAdapter(),
+      this.sessionManager
     );
     this.tokenManager = new TokenManager(this.networkManager.getAdapter());
     
@@ -40,12 +41,17 @@ export class Wallet {
       isConnected: false,
       address: null,
       balance: '0',
-      network: config.networkName
+      network: config.networkName,
+      chainId: config.chainId
     };
     
     // Initialize viem client with proper error handling
     if (typeof window !== 'undefined' && window.ethereum) {
       this.client = createWalletClient({
+        chain: mainnet,
+        transport: custom(window.ethereum)
+      });
+      this.publicClient = createPublicClient({
         chain: mainnet,
         transport: custom(window.ethereum)
       });
@@ -89,10 +95,16 @@ export class Wallet {
         throw new Error('No client available');
       }
 
-      const signer = this.client.getSigner();
-      const response = await signer.sendTransaction(tx);
+      const [address] = await this.client.getAddresses();
+      const hash = await this.client.sendTransaction({
+        account: address,
+        to: tx.to,
+        value: tx.value ? BigInt(tx.value) : undefined,
+        data: tx.data as `0x${string}` | undefined,
+        chain: this.client.chain
+      });
       await this.updateBalance();
-      return response.hash;
+      return hash;
     } catch (error) {
       console.error('Error sending transaction:', error);
       throw error;
@@ -103,8 +115,8 @@ export class Wallet {
     if (!this.state.address || this.state.address === '0x') return;
     
     try {
-      const balance = await this.client.getBalance({
-        address: this.state.address
+      const balance = await this.publicClient.getBalance({
+        address: this.state.address as `0x${string}`
       });
       this.state.balance = formatEther(balance);
     } catch (error) {
@@ -143,5 +155,9 @@ export class Wallet {
       throw new Error('Wallet not connected');
     }
     return this.transactionManager.getTransactionReceipt(hash);
+  }
+
+  getTransactionManager(): TransactionManager {
+    return this.transactionManager;
   }
 } 

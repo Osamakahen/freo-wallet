@@ -2,16 +2,16 @@ import { createPublicClient, http, getContract, formatUnits, parseUnits, type Pu
 import { mainnet } from 'viem/chains';
 import { ERC20_ABI } from './abi/ERC20';
 import { TokenBalance, TokenInfo } from '../../types/token';
-import { TransactionRequest } from '../../types/wallet';
-import { WalletAdapter } from '../evm/WalletAdapter';
+import { TransactionRequest } from '../types/transaction';
+import { EVMAdapter } from '../network/EVMAdapter';
 
 export class TokenManager {
   private publicClient: PublicClient;
-  private evmAdapter: WalletAdapter;
+  private evmAdapter: EVMAdapter;
   private priceCache: Map<string, { price: number; timestamp: number }>;
   private readonly PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  constructor(evmAdapter: WalletAdapter) {
+  constructor(evmAdapter: EVMAdapter) {
     this.evmAdapter = evmAdapter;
     this.publicClient = createPublicClient({
       chain: mainnet,
@@ -87,10 +87,10 @@ export class TokenManager {
       from: await this.evmAdapter.getAddress(),
       to: tokenAddress,
       value: '0',
-      data
+      data: data as `0x${string}`
     };
 
-    return this.evmAdapter.sendTransaction(tx);
+    return (await this.evmAdapter.sendTransaction(tx)) as `0x${string}`;
   }
 
   async getAllowance(
@@ -214,6 +214,6 @@ export class TokenManager {
       data
     };
 
-    return this.evmAdapter.sendTransaction(tx);
+    return (await this.evmAdapter.sendTransaction(tx)) as `0x${string}`;
   }
 } 

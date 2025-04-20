@@ -79,4 +79,9 @@ export class EVMAdapter {
     // Implementation
     return '0';
   }
+
+  async getAddress(): Promise<`0x${string}`> {
+    const [address] = await this.walletClient.getAddresses();
+    return address;
+  }
 } 
