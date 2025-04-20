@@ -10,24 +10,13 @@ export class NetworkManager {
   private provider: ethers.JsonRpcProvider;
   private config: WalletConfig;
 
-  private getChainConfig(config: WalletConfig) {
-    return defineChain({
-      id: config.chainId,
+  private getChainConfig(config: WalletConfig): ChainConfig {
+    return {
+      chainId: config.chainId,
       name: config.networkName,
-      network: config.networkName.toLowerCase(),
-      nativeCurrency: {
-        name: config.symbol,
-        symbol: config.symbol,
-        decimals: 18,
-      },
-      rpcUrls: {
-        default: { http: [config.rpcUrl] },
-        public: { http: [config.rpcUrl] },
-      },
-      blockExplorers: {
-        default: { name: 'Etherscan', url: config.blockExplorer || 'https://etherscan.io' },
-      },
-    });
+      rpcUrl: config.rpcUrl,
+      symbol: config.symbol
+    };
   }
 
   constructor(config: WalletConfig) {
@@ -94,6 +83,6 @@ export class NetworkManager {
 
   getTransactionExplorerUrl(hash: string): string {
     const chainConfig = this.getChainConfig(this.config);
-    return `${chainConfig.blockExplorers.default.url}/tx/${hash}`;
+    return `${chainConfig.blockExplorer}/tx/${hash}`;
   }
 } 
