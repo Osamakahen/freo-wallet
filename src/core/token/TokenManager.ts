@@ -216,4 +216,21 @@ export class TokenManager {
 
     return (await this.evmAdapter.sendTransaction(tx)) as `0x${string}`;
   }
+
+  async getTransferData(tokenAddress: `0x${string}`, to: `0x${string}`, amount: string): Promise<`0x${string}`> {
+    const contract = getContract({
+      address: tokenAddress,
+      abi: ERC20_ABI,
+      client: this.publicClient
+    });
+
+    const decimals = await contract.read.decimals();
+    const amountInWei = parseUnits(amount, decimals as number);
+
+    return encodeFunctionData({
+      abi: ERC20_ABI,
+      functionName: 'transfer',
+      args: [to, amountInWei]
+    });
+  }
 } 
