@@ -25,7 +25,8 @@ const defaultChainConfig = mainnet;
 const networkManager = new NetworkManager({
   networkName: defaultChainConfig.name,
   chainId: defaultChainConfig.id,
-  rpcUrl: defaultChainConfig.rpcUrls.default.http[0]
+  rpcUrl: defaultChainConfig.rpcUrls.default.http[0],
+  symbol: defaultChainConfig.nativeCurrency.symbol
 });
 
 const AppContent: React.FC = () => {
