@@ -160,8 +160,7 @@ export class TokenApprovalManager {
         account: from,
         to: tx.to,
         data: approveData,
-        value: 0n,
-        chain: this.walletClient.chain
+        value: 0n
       });
 
       const transaction: ApprovalTransaction = {
@@ -194,8 +193,7 @@ export class TokenApprovalManager {
         account: from,
         to: tx.to,
         data: tx.data,
-        value: 0n,
-        chain: this.walletClient.chain
+        value: 0n
       });
 
       const transaction: ApprovalTransaction = {
