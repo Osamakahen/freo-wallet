@@ -80,4 +80,9 @@ export class NetworkManager {
   async estimateGas(tx: any): Promise<string> {
     return (await this.provider.estimateGas(tx)).toString();
   }
+
+  getTransactionExplorerUrl(hash: string): string {
+    const chainConfig = this.getChainConfig(this.config);
+    return `${chainConfig.blockExplorer}/tx/${hash}`;
+  }
 } 
