@@ -8,7 +8,7 @@ import { WalletConfig, WalletState, TransactionRequest, TransactionReceipt } fro
 import { SessionManager } from '../session/SessionManager';
 import { TokenManager } from '../token/TokenManager';
 import { TokenBalance } from '../../types/token';
-import { EVMAdapter } from '../chain/EVMAdapter';
+import { EVMAdapter } from '../network/EVMAdapter';
 
 export class Wallet {
   private keyManager: KeyManager;

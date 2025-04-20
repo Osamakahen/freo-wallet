@@ -1,22 +1,31 @@
 import { ethers } from 'ethers';
 import { WalletConfig } from '../../types/wallet';
-import { EVMAdapter } from '../chain/EVMAdapter';
+import { EVMAdapter } from './EVMAdapter';
 import { NetworkError } from '../errors/WalletErrors';
 import { ChainConfig } from '../config/ChainConfig';
-import { defineChain } from 'viem';
+import { defineChain, Chain } from 'viem';
 
 export class NetworkManager {
   private adapter: EVMAdapter;
   private provider: ethers.JsonRpcProvider;
   private config: WalletConfig;
 
-  private getChainConfig(config: WalletConfig): ChainConfig {
-    return {
-      chainId: config.chainId,
+  private getChainConfig(config: WalletConfig): Chain {
+    return defineChain({
+      id: config.chainId,
       name: config.networkName,
-      rpcUrl: config.rpcUrl,
-      symbol: config.symbol
-    };
+      nativeCurrency: {
+        name: config.networkName,
+        symbol: config.symbol,
+        decimals: 18
+      },
+      rpcUrls: {
+        default: { http: [config.rpcUrl] }
+      },
+      blockExplorers: {
+        default: { name: 'Explorer', url: config.blockExplorer || '' }
+      }
+    });
   }
 
   constructor(config: WalletConfig) {
@@ -83,6 +92,7 @@ export class NetworkManager {
 
   getTransactionExplorerUrl(hash: string): string {
     const chainConfig = this.getChainConfig(this.config);
-    return `${chainConfig.blockExplorer}/tx/${hash}`;
+    const explorerUrl = chainConfig.blockExplorers?.default?.url || this.config.blockExplorer || '';
+    return `${explorerUrl}/tx/${hash}`;
   }
 } 
