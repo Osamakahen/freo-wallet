@@ -3,27 +3,57 @@ import { DAppManager } from '../../../core/dapp/DAppManager';
 import { ChainConfig } from '../../../types/wallet';
 import { SessionManager } from '../../../core/session/SessionManager';
 import { KeyManager } from '../../../core/keyManagement/KeyManager';
-import { DAppManifest, DAppPermission } from '../../../types/dapp';
+import { DAppManifest, AuditStatus, SessionPermissions } from '../../../types/dapp';
 import { ErrorCorrelator } from '../../../core/error/ErrorCorrelator';
+import { Session, DeviceInfo } from '../../../types/session';
+import { EVMAdapter } from '../../../core/chain/EVMAdapter';
 
 // Mock dependencies
 jest.mock('../../../core/session/SessionManager');
 jest.mock('../../../core/keyManagement/KeyManager');
+jest.mock('../../../core/chain/EVMAdapter');
 
 describe('DAppManager', () => {
   let dAppManager: DAppManager;
   let sessionManager: jest.Mocked<SessionManager>;
   let errorCorrelator: ErrorCorrelator;
   let keyManager: jest.Mocked<KeyManager>;
+  let evmAdapter: jest.Mocked<EVMAdapter>;
+
+  const mockChainConfig: ChainConfig = {
+    chainId: 1,
+    name: 'Ethereum',
+    rpcUrl: 'https://mainnet.infura.io/v3/your-api-key',
+    symbol: 'ETH'
+  };
+
+  const mockDeviceInfo: DeviceInfo = {
+    browser: 'test-browser',
+    os: 'test-os',
+    platform: 'test-platform',
+    deviceType: 'desktop',
+    screenResolution: '1920x1080',
+    timezone: 'UTC',
+    language: 'en'
+  };
+
+  const mockPermissions: SessionPermissions = {
+    read: true,
+    write: true,
+    sign: true,
+    nft: true
+  };
 
   const mockManifest: DAppManifest = {
     id: 'test-dapp',
     name: 'Test DApp',
     description: 'A test DApp',
-    url: 'https://test-dapp.com',
+    origin: 'https://test-dapp.com',
     icon: 'https://test-dapp.com/icon.png',
     permissions: ['read'],
-    auditStatus: 'pending'
+    chains: [1],
+    version: '1.0.0',
+    auditStatus: AuditStatus.PENDING
   };
 
   beforeEach(() => {
@@ -31,8 +61,9 @@ describe('DAppManager', () => {
     sessionManager = new SessionManager() as jest.Mocked<SessionManager>;
     errorCorrelator = ErrorCorrelator.getInstance();
     keyManager = new KeyManager() as jest.Mocked<KeyManager>;
+    evmAdapter = new EVMAdapter(mockChainConfig) as jest.Mocked<EVMAdapter>;
 
-    dAppManager = new DAppManager(sessionManager, errorCorrelator);
+    dAppManager = new DAppManager(evmAdapter, sessionManager);
   });
 
   describe('DApp Registration', () => {
@@ -56,9 +87,20 @@ describe('DAppManager', () => {
     });
 
     it('should connect to a registered dApp', async () => {
-      const mockSession = { id: 'test-session' };
+      const mockSession: Session = {
+        id: 'test-session',
+        timestamp: Date.now(),
+        deviceInfo: mockDeviceInfo,
+        deviceChanges: [],
+        permissionChanges: [],
+        isActive: true,
+        lastActivity: Date.now(),
+        address: '0x123',
+        chainId: 1,
+        permissions: mockPermissions
+      };
       sessionManager.createSession.mockResolvedValue(mockSession);
-      keyManager.getAddress.mockReturnValue('0x123');
+      keyManager.getAddress.mockResolvedValue('0x123' as `0x${string}`);
 
       const session = await dAppManager.connect(mockManifest.id);
       expect(session).toEqual(mockSession);

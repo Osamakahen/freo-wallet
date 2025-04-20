@@ -26,6 +26,8 @@
     "@types/jsonwebtoken": "^9.0.9",
     "@types/react-router-dom": "^5.3.3",
     "@types/react-toastify": "^4.0.2",
+    "@walletconnect/modal-sign-html": "^2.7.0",
+    "@walletconnect/qrcode-modal": "^1.8.0",
     "@walletconnect/sign-client": "^2.20.0",
     "@walletconnect/types": "^2.20.0",
     "antd": "^5.24.7",

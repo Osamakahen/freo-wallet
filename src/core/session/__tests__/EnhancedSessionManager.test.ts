@@ -1,11 +1,46 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { EnhancedSessionManager } from '../EnhancedSessionManager';
 import { WalletError } from '../../error/ErrorHandler';
+import { SessionManager } from '../SessionManager';
+import { Session, DeviceInfo } from '../../../types/session';
+import { SessionPermissions as DAppSessionPermissions } from '../../../types/dapp';
 
 describe('EnhancedSessionManager', () => {
   let sessionManager: EnhancedSessionManager;
+  let baseSessionManager: SessionManager;
+
+  const mockDeviceInfo: DeviceInfo = {
+    browser: 'test-browser',
+    os: 'test-os',
+    platform: 'test-platform',
+    deviceType: 'desktop',
+    screenResolution: '1920x1080',
+    timezone: 'UTC',
+    language: 'en'
+  };
+
+  const mockPermissions: DAppSessionPermissions = {
+    read: true,
+    write: true,
+    sign: true,
+    nft: true
+  };
+
+  const mockSession: Session = {
+    id: 'test-session',
+    timestamp: Date.now(),
+    deviceInfo: mockDeviceInfo,
+    deviceChanges: [],
+    permissionChanges: [],
+    isActive: true,
+    lastActivity: Date.now(),
+    address: '0x1234567890123456789012345678901234567890',
+    chainId: 1,
+    permissions: mockPermissions
+  };
 
   beforeEach(() => {
+    baseSessionManager = new SessionManager();
     sessionManager = new EnhancedSessionManager({
       tokenDuration: 3600000,
       refreshThreshold: 300000,
@@ -13,12 +48,12 @@ describe('EnhancedSessionManager', () => {
       deviceVerification: true,
       analyticsEnabled: true,
       monitoringEnabled: true
-    });
+    }, baseSessionManager);
   });
 
   describe('trackSessionMetrics', () => {
     it('should track session metrics correctly', async () => {
-      await sessionManager.initializeSession('test-private-key');
+      await sessionManager.initializeSession(mockSession);
       const metrics = await sessionManager.trackSessionMetrics();
       
       expect(metrics).toHaveProperty('sessionId');
@@ -33,7 +68,7 @@ describe('EnhancedSessionManager', () => {
 
   describe('auditSession', () => {
     it('should audit session correctly', async () => {
-      await sessionManager.initializeSession('test-private-key');
+      await sessionManager.initializeSession(mockSession);
       const auditLog = await sessionManager.auditSession('test-session');
       
       expect(auditLog).toHaveProperty('sessionId');
@@ -73,7 +108,7 @@ describe('EnhancedSessionManager', () => {
 
   describe('generateSessionReport', () => {
     it('should generate session report correctly', async () => {
-      await sessionManager.initializeSession('test-private-key');
+      await sessionManager.initializeSession(mockSession);
       const report = await sessionManager.generateSessionReport();
       
       expect(report).toHaveProperty('session');

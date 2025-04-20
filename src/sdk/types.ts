@@ -1,7 +1,13 @@
+import { Chain } from 'viem/chains';
+
 export interface SDKConfig {
   apiKey: string;
   network: string;
   debug?: boolean;
+  chain: Chain;
+  apiUrl: string;
+  chainId: number;
+  autoConnect?: boolean;
 }
 
 export interface Session {

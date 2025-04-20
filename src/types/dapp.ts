@@ -1,6 +1,7 @@
 import { ChainId } from './chain';
 import { Address } from 'viem';
-import { QRCodeModal } from '@walletconnect/qrcode-modal';
+import QRCodeModal from '@walletconnect/qrcode-modal';
+import { WalletConnectModalSign } from '@walletconnect/modal-sign-html';
 
 export type DAppPermission = 'read' | 'transaction' | 'message-sign' | 'assets' | 'history';
 
@@ -91,16 +92,14 @@ export interface BridgeConfig {
 }
 
 export interface TransactionRequest {
-  from: `0x${string}`;
-  to: `0x${string}`;
+  from: Address;
+  to: Address;
   value: string;
-  data?: `0x${string}`;
-  gasLimit?: string;
-  gasPrice?: string;
+  data?: string;
+  nonce?: number;
   maxFeePerGas?: string;
   maxPriorityFeePerGas?: string;
-  nonce?: number;
-  chainId?: number;
+  gasLimit?: string;
 }
 
 export interface Permission {
@@ -129,7 +128,7 @@ export interface DAppMessage {
 }
 
 export interface DAppConnector {
-  qrcodeModal: QRCodeModal;
+  qrcodeModal: typeof QRCodeModal;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   send: (request: DAppRequest) => Promise<DAppResponse>;

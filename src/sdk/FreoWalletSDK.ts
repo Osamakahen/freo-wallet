@@ -1,20 +1,11 @@
-import { createPublicClient, http, PublicClient, WalletClient, createWalletClient, custom, Chain } from 'viem';
+import { createPublicClient, http, PublicClient, WalletClient, createWalletClient, custom } from 'viem';
 import { SDKConfig, Session, Event, EventHandler, SDKError } from './types';
 import { SessionManager } from '../core/session/SessionManager';
 import { ErrorCorrelator } from '../core/error/ErrorCorrelator';
-import { WalletError } from '../core/errors/WalletErrors';
-import { TransactionRequest } from '../types/transaction';
-import { EthereumProvider } from '../types/ethereum';
-
-export interface ExtendedSDKConfig extends SDKConfig {
-  chain: Chain;
-  apiUrl: string;
-  chainId: number;
-  autoConnect?: boolean;
-}
+import { WalletError } from '../core/error/ErrorHandler';
 
 export class FreoWalletSDK {
-  private config: ExtendedSDKConfig;
+  private config: SDKConfig;
   private publicClient: PublicClient;
   private walletClient?: WalletClient;
   private session?: Session;
@@ -24,7 +15,7 @@ export class FreoWalletSDK {
   private sessionManager: SessionManager;
   private errorCorrelator: ErrorCorrelator;
 
-  constructor(config: ExtendedSDKConfig) {
+  constructor(config: SDKConfig) {
     this.config = config;
     this.eventHandlers = new Map();
     this.reconnectAttempts = 0;
@@ -74,15 +65,15 @@ export class FreoWalletSDK {
       }
 
       const sessionData = await response.json();
-      if (!sessionData) {
-        throw new SDKError('Invalid session data');
-      }
-
       this.session = sessionData;
       this.reconnectAttempts = 0;
 
       // Start event listeners
       this.setupEventListeners();
+
+      if (!this.session) {
+        throw new SDKError('Failed to create session');
+      }
 
       return this.session;
     } catch (error) {
@@ -95,27 +86,23 @@ export class FreoWalletSDK {
   }
 
   private setupEventListeners() {
-    if (!window.ethereum) return;
+    if (!this.walletClient || !window.ethereum) return;
 
-    const ethereum = window.ethereum as EthereumProvider;
-
-    // Listen for account changes
+    const ethereum = window.ethereum;
     ethereum.on('accountsChanged', (accounts: string[]) => {
       this.handleEvent('accountsChanged', { accounts });
     });
 
-    // Listen for chain changes
     ethereum.on('chainChanged', (chainId: string) => {
       this.handleEvent('chainChanged', { chainId });
     });
 
-    // Listen for disconnect
-    ethereum.on('disconnect', (error: Error) => {
-      this.handleEvent('disconnect', error);
+    ethereum.on('disconnect', (error: any) => {
+      this.handleEvent('disconnect', { error });
     });
   }
 
-  async signTransaction(transaction: TransactionRequest): Promise<string> {
+  async signTransaction(transaction: any): Promise<string> {
     if (!this.walletClient || !this.session) {
       throw new SDKError('Not connected');
     }
@@ -136,12 +123,7 @@ export class FreoWalletSDK {
       }
 
       // Sign transaction
-      const signedTx = await this.walletClient.signTransaction({
-        ...transaction,
-        value: BigInt(transaction.value),
-        gas: transaction.gasLimit ? BigInt(transaction.gasLimit) : undefined,
-        maxFeePerGas: transaction.gasPrice ? BigInt(transaction.gasPrice) : undefined
-      });
+      const signedTx = await this.walletClient.signTransaction(transaction);
       return signedTx;
     } catch (error) {
       this.handleEvent('transactionError', { error });
@@ -166,7 +148,7 @@ export class FreoWalletSDK {
     }
   }
 
-  private handleEvent(type: string, data: unknown) {
+  private handleEvent(type: string, data: any) {
     const event: Event = {
       type,
       data,
@@ -199,11 +181,7 @@ export class FreoWalletSDK {
   }
 
   private async handleError(error: Error): Promise<void> {
-    const walletError = new WalletError(error.message, {
-      timestamp: Date.now(),
-      context: 'SDK',
-      severity: 'error'
-    });
+    const walletError = new WalletError(error.message, 'SDK_ERROR', { error: error }, 'high', undefined);
     await this.errorCorrelator.correlateError(walletError);
     throw error;
   }
