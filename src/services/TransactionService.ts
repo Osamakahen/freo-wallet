@@ -1,4 +1,4 @@
-import { createPublicClient, http, type Address, type Hash } from 'viem'
+import { createPublicClient, createWalletClient, http, custom, type Address, type Hash, type Chain } from 'viem'
 import { type ChainConfig } from '../core/chain/ChainAdapter'
 
 export interface Transaction {
@@ -14,11 +14,41 @@ export interface Transaction {
 
 export class TransactionService {
   private client: ReturnType<typeof createPublicClient>
+  private walletClient: ReturnType<typeof createWalletClient>
+  private chain: Chain
 
   constructor(network: ChainConfig) {
+    if (!window.ethereum) throw new Error('No ethereum provider found')
+    
+    this.chain = {
+      id: network.chainId,
+      name: network.name,
+      network: network.name,
+      nativeCurrency: network.nativeCurrency || {
+        name: network.symbol,
+        symbol: network.symbol,
+        decimals: 18
+      },
+      rpcUrls: {
+        default: { http: [network.rpcUrl] },
+        public: { http: [network.rpcUrl] }
+      },
+      blockExplorers: network.explorer ? {
+        default: {
+          name: network.name,
+          url: network.explorer
+        }
+      } : undefined
+    } as Chain
+
     this.client = createPublicClient({
-      chain: network.chain,
-      transport: http(network.rpcUrl)
+      chain: this.chain,
+      transport: http()
+    })
+
+    this.walletClient = createWalletClient({
+      chain: this.chain,
+      transport: custom(window.ethereum)
     })
   }
 
@@ -65,7 +95,7 @@ export class TransactionService {
           from: log.args.from as Address,
           to: log.args.to as Address,
           value: log.args.value as bigint,
-          status: receipt.status ? 'confirmed' : 'failed',
+          status: receipt.status ? 'confirmed' : 'failed' as 'confirmed' | 'failed',
           timestamp: Number(block.timestamp) * 1000,
           gasUsed: receipt.gasUsed,
           gasPrice: receipt.effectiveGasPrice
@@ -85,7 +115,15 @@ export class TransactionService {
     data?: `0x${string}`
   }): Promise<Hash> {
     try {
-      const hash = await this.client.sendTransaction(transaction)
+      const [account] = await this.walletClient.getAddresses()
+      const hash = await this.walletClient.sendTransaction({
+        account,
+        to: transaction.to,
+        value: transaction.value,
+        data: transaction.data,
+        chain: this.chain,
+        type: 'eip1559'
+      })
       return hash
     } catch (error) {
       console.error('Error sending transaction:', error)
