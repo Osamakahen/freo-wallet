@@ -30,7 +30,7 @@ export class Wallet {
       this.keyManager
     );
     this.dappManager = new DAppManager(
-      this.networkManager.getAdapter(),
+      new EVMAdapter(this.networkManager.getCurrentNetwork()),
       this.sessionManager
     );
     this.tokenManager = new TokenManager(this.networkManager.getAdapter());
