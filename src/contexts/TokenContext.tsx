@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { useWallet } from './WalletContext';
 import { TokenManager } from '../core/token/TokenManager';
