@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { WalletManager } from '../core/wallet/WalletManager';
+import { WalletManager } from '../core/wallet/WalletManager.js';
 import { toast } from 'react-toastify';
-import { EthereumCallback, EthereumProvider } from '../types/ethereum';
+import { EthereumEvent, EthereumCallback, EthereumProvider } from '../types/ethereum';
 
 interface WalletContextType {
   walletManager: WalletManager;
@@ -11,6 +11,7 @@ interface WalletContextType {
   isConnected: boolean;
   loading: boolean;
   error: string | null;
+  balance: string;
   connect: () => Promise<void>;
   disconnect: () => void;
   setChainId: (chainId: string | number) => void;
@@ -25,6 +26,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [balance, setBalance] = useState<string>('0');
   const [walletManager] = useState(() => new WalletManager());
 
   useEffect(() => {
@@ -76,31 +78,56 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [ethereum]);
 
   const connect = async () => {
-    if (!ethereum) {
-      setError('No Ethereum provider found. Please install MetaMask.');
-      return;
-    }
-
     try {
       setLoading(true);
       setError(null);
-      
-      const [accounts, chainId] = await Promise.all([
-        ethereum.request({ method: 'eth_requestAccounts' }),
-        ethereum.request({ method: 'eth_chainId' })
-      ]);
 
-      if (Array.isArray(accounts) && accounts.length > 0) {
-        setAddress(accounts[0] as string);
-        setIsConnected(true);
+      if (!ethereum) {
+        throw new Error('No Ethereum provider found');
       }
-      if (typeof chainId === 'string') {
-        setChainId(chainId);
-      }
+
+      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+      const address = accounts[0];
+      setAddress(address);
+      setIsConnected(true);
+
+      // Get chain ID
+      const chainId = await ethereum.request({ method: 'eth_chainId' });
+      setChainId(chainId);
+
+      // Get balance
+      const balance = await ethereum.request({
+        method: 'eth_getBalance',
+        params: [address, 'latest']
+      });
+      setBalance(balance);
+
+      // Define event handlers
+      const handleAccountsChanged = (accounts: unknown) => {
+        if (Array.isArray(accounts) && accounts.length > 0) {
+          setAddress(accounts[0] as string);
+          setIsConnected(true);
+        } else {
+          setAddress(null);
+          setIsConnected(false);
+        }
+      };
+
+      const handleChainChanged = (newChainId: unknown) => {
+        if (typeof newChainId === 'string') {
+          setChainId(newChainId);
+        }
+      };
+
+      // Set up event listeners
+      ethereum.on('accountsChanged', handleAccountsChanged);
+      ethereum.on('chainChanged', handleChainChanged);
     } catch (err) {
-      const error = err as Error;
-      setError(error.message || 'Failed to connect wallet');
-      toast.error(error.message || 'Failed to connect wallet');
+      setError(err instanceof Error ? err.message : 'Failed to connect wallet');
+      setIsConnected(false);
+      setAddress(null);
+      setChainId(null);
+      setBalance('0');
     } finally {
       setLoading(false);
     }
@@ -130,6 +157,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isConnected,
         loading,
         error,
+        balance,
         connect,
         disconnect,
         setChainId: handleSetChainId

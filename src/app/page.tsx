@@ -2,152 +2,108 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useWallet } from '@/hooks/useWallet';
-import { Tooltip } from '@/components/ui/tooltip';
 import { WalletModal } from '@/components/wallet/WalletModal';
-import { formatEther } from 'viem';
+import { Tooltip } from '@/components/ui/tooltip';
+import { TokenList } from '@/components/wallet/TokenList';
+import { SendToken } from '@/components/wallet/SendToken';
+import { TransactionHistory } from '@/components/wallet/TransactionHistory';
+import { useWallet } from '@/contexts/WalletContext';
 import { COLORS } from '@/constants/colors';
+import { type TokenMetadata } from '@/types/token';
+import { type ChainConfig } from '@/types/network';
+import { formatEther } from 'ethers';
 
 export default function Home() {
-  const { state, connect, disconnect, isConnecting } = useWallet();
+  const { address, balance, chainId, connect, disconnect, isConnected } = useWallet();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [detectedWallets, setDetectedWallets] = useState<string[]>([]);
+  const [tokens, setTokens] = useState<TokenMetadata[]>([]);
+  const [currentChain, setCurrentChain] = useState<ChainConfig | null>(null);
 
   useEffect(() => {
     const checkWallets = () => {
       const wallets = [];
-      if (window.ethereum?.isMetaMask) wallets.push('MetaMask');
-      // Add more wallet checks as needed
+      if (window.ethereum) {
+        wallets.push('MetaMask');
+      }
       setDetectedWallets(wallets);
     };
 
     checkWallets();
   }, []);
 
-  const handleConnect = async () => {
-    if (detectedWallets.length > 0) {
-      setIsModalOpen(true);
-    } else {
-      await connect();
-    }
+  const handleConnect = () => {
+    setIsModalOpen(true);
   };
 
-  const formatBalance = (balance: string) => {
-    try {
-      return parseFloat(formatEther(BigInt(balance))).toFixed(4);
-    } catch {
-      return '0.0000';
-    }
+  const handleDisconnect = () => {
+    disconnect();
   };
+
+  const formattedBalance = balance ? formatEther(balance) : '0';
 
   return (
-    <main className="min-h-screen" style={{ backgroundColor: COLORS.background }}>
-      {/* Hero Section */}
-      <section className="py-20 px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-5xl font-bold mb-6"
-              style={{ color: COLORS.textPrimary }}
-            >
-              Your Gateway to Web3
-            </motion.h1>
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-xl mb-8"
-              style={{ color: COLORS.textSecondary }}
-            >
-              Secure, simple, and powerful wallet for managing your digital assets
-            </motion.p>
-          </div>
-
-          {/* Wallet Connection Section */}
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-16">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold" style={{ color: COLORS.primary }}>
-                Freo Wallet
-              </h2>
-              {state.isConnected ? (
-                <div className="flex items-center gap-4">
-                  <Tooltip content={`Balance: ${formatBalance(state.balance)} ETH`}>
-                    <span className="text-sm" style={{ color: COLORS.textSecondary }}>
-                      {state.address?.slice(0, 6)}...{state.address?.slice(-4)}
-                    </span>
-                  </Tooltip>
-                  <motion.button
-                    onClick={disconnect}
-                    className="px-4 py-2 rounded-lg text-sm font-medium"
-                    style={{
-                      backgroundColor: COLORS.error,
-                      color: 'white',
-                    }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    Disconnect
-                  </motion.button>
-                </div>
-              ) : (
-                <motion.button
-                  onClick={handleConnect}
-                  disabled={isConnecting}
-                  className="px-6 py-3 rounded-lg text-sm font-medium"
-                  style={{
-                    backgroundColor: isConnecting ? COLORS.secondary : COLORS.primary,
-                    color: 'white',
-                    opacity: isConnecting ? 0.7 : 1,
-                  }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  {isConnecting ? 'Connecting...' : 'Connect Wallet'}
-                </motion.button>
-              )}
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
+      <main className="container mx-auto px-4 py-8">
+        <header className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-white">Freo Wallet</h1>
+          {isConnected ? (
+            <div className="flex items-center space-x-4">
+              <Tooltip content={`Balance: ${formattedBalance} ETH`}>
+                <span className="text-white">{address?.slice(0, 6)}...{address?.slice(-4)}</span>
+              </Tooltip>
+              <button
+                onClick={handleDisconnect}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Disconnect
+              </button>
             </div>
+          ) : (
+            <button
+              onClick={handleConnect}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Connect Wallet
+            </button>
+          )}
+        </header>
+
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-gray-800 p-6 rounded-lg">
+            <h2 className="text-xl font-semibold text-white mb-4">Wallet Features</h2>
+            <ul className="space-y-2">
+              <li className="text-gray-300">Secure wallet connection</li>
+              <li className="text-gray-300">Balance display</li>
+              <li className="text-gray-300">Transaction history</li>
+              <li className="text-gray-300">Token management</li>
+            </ul>
           </div>
 
-          {/* Features Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-white rounded-xl shadow-lg p-6"
-            >
-              <h3 className="text-xl font-bold mb-4" style={{ color: COLORS.primary }}>Secure Storage</h3>
-              <p style={{ color: COLORS.textSecondary }}>Your private keys are encrypted and stored securely on your device.</p>
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="bg-white rounded-xl shadow-lg p-6"
-            >
-              <h3 className="text-xl font-bold mb-4" style={{ color: COLORS.primary }}>Easy Transactions</h3>
-              <p style={{ color: COLORS.textSecondary }}>Send and receive tokens with just a few clicks.</p>
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-white rounded-xl shadow-lg p-6"
-            >
-              <h3 className="text-xl font-bold mb-4" style={{ color: COLORS.primary }}>Token Management</h3>
-              <p style={{ color: COLORS.textSecondary }}>View and manage all your tokens in one place.</p>
-            </motion.div>
+          <div className="bg-gray-800 p-6 rounded-lg">
+            <h2 className="text-xl font-semibold text-white mb-4">Network Info</h2>
+            {currentChain && (
+              <div className="space-y-2">
+                <p className="text-gray-300">Network: {currentChain.name}</p>
+                <p className="text-gray-300">Chain ID: {currentChain.chainId}</p>
+                <p className="text-gray-300">Symbol: {currentChain.symbol}</p>
+              </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+
+        {isConnected && (
+          <section className="mt-8">
+            <TokenList tokens={tokens} />
+          </section>
+        )}
+      </main>
 
       <WalletModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         detectedWallets={detectedWallets}
       />
-    </main>
+    </div>
   );
 } 
