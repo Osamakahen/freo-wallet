@@ -1,40 +1,41 @@
 import { ethers } from 'ethers';
-import { ErrorCorrelator } from '../error/ErrorCorrelator';
-import { WalletError } from '../error/ErrorHandler';
+import { ErrorCorrelator } from './ErrorCorrelator';
+import { WalletError } from '../error/WalletError';
 
 export class WalletManager {
   private provider: ethers.BrowserProvider | null = null;
   private signer: ethers.JsonRpcSigner | null = null;
   private errorCorrelator: ErrorCorrelator;
+  private isConnected: boolean = false;
 
   constructor() {
     this.errorCorrelator = ErrorCorrelator.getInstance();
   }
 
-  async connect(): Promise<void> {
+  private async connect(): Promise<void> {
     try {
-      if (typeof window.ethereum === 'undefined') {
-        throw new Error('MetaMask is not installed');
+      if (!window.ethereum) {
+        throw new WalletError('No Ethereum provider found', 'wallet', 'high');
       }
+
       this.provider = new ethers.BrowserProvider(window.ethereum);
       this.signer = await this.provider.getSigner();
-    } catch (error) {
-      const walletError = error instanceof Error ? new WalletError(error.message) : new WalletError('Unknown error');
-      const correlatedError = this.errorCorrelator.correlateError(walletError);
-      throw correlatedError;
+      this.isConnected = true;
+    } catch (error: unknown) {
+      const walletError = error instanceof WalletError ? error : new WalletError(error instanceof Error ? error.message : 'Unknown error', 'wallet', 'high');
+      throw this.errorCorrelator.correlateError(walletError);
     }
   }
 
   async getAddress(): Promise<string> {
-    if (!this.signer) {
-      throw new Error('Wallet not connected');
-    }
     try {
+      if (!this.signer) {
+        throw new WalletError('Wallet not connected', 'wallet', 'high');
+      }
       return await this.signer.getAddress();
-    } catch (error) {
-      const walletError = error instanceof Error ? new WalletError(error.message) : new WalletError('Unknown error');
-      const correlatedError = this.errorCorrelator.correlateError(walletError);
-      throw correlatedError;
+    } catch (error: unknown) {
+      const walletError = error instanceof WalletError ? error : new WalletError(error instanceof Error ? error.message : 'Unknown error', 'wallet', 'high');
+      throw this.errorCorrelator.correlateError(walletError);
     }
   }
 
@@ -45,22 +46,20 @@ export class WalletManager {
     try {
       return await this.signer.signMessage(message);
     } catch (error) {
-      const walletError = error instanceof Error ? new WalletError(error.message) : new WalletError('Unknown error');
-      const correlatedError = this.errorCorrelator.correlateError(walletError);
+      const correlatedError = this.errorCorrelator.correlateError(error);
       throw correlatedError;
     }
   }
 
   async sendTransaction(transaction: ethers.TransactionRequest): Promise<ethers.TransactionResponse> {
-    if (!this.signer) {
-      throw new Error('Wallet not connected');
-    }
     try {
+      if (!this.signer) {
+        throw new WalletError('Wallet not connected', 'wallet', 'high');
+      }
       return await this.signer.sendTransaction(transaction);
-    } catch (error) {
-      const walletError = error instanceof Error ? new WalletError(error.message) : new WalletError('Unknown error');
-      const correlatedError = this.errorCorrelator.correlateError(walletError);
-      throw correlatedError;
+    } catch (error: unknown) {
+      const walletError = error instanceof WalletError ? error : new WalletError(error instanceof Error ? error.message : 'Unknown error', 'wallet', 'high');
+      throw this.errorCorrelator.correlateError(walletError);
     }
   }
 } 
