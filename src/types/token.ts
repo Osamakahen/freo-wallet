@@ -30,6 +30,10 @@ export interface ApprovalTransaction {
   status: 'pending' | 'success' | 'failed';
   timestamp: number;
   hash: `0x${string}`;
+  gasEstimate?: {
+    gasLimit: bigint;
+    estimatedCost: string;
+  };
 }
 
 export interface TokenMetadata {

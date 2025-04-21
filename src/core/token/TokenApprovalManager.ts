@@ -129,7 +129,7 @@ export class TokenApprovalManager {
       // Add to transaction history
       this.transactionHistory.push({
         type: 'approve',
-        amount,
+        amount: BigInt(amount),
         status: 'pending',
         timestamp: Date.now(),
         hash,
@@ -168,7 +168,7 @@ export class TokenApprovalManager {
         status: 'pending',
         timestamp: Date.now(),
         type: 'approve',
-        amount: maxAmount.toString()
+        amount: BigInt(maxAmount)
       };
 
       this.transactionHistory.push(transaction);
@@ -202,7 +202,7 @@ export class TokenApprovalManager {
         status: 'pending',
         timestamp: Date.now(),
         type: 'approve',
-        amount: '0'
+        amount: 0n
       };
 
       this.transactionHistory.push(transaction);
@@ -213,12 +213,12 @@ export class TokenApprovalManager {
     }
   }
 
-  subscribeToTransactionUpdates(hash: `0x${string}`, callback: (status: 'pending' | 'confirmed' | 'failed') => void): () => void {
+  subscribeToTransactionUpdates(hash: `0x${string}`, callback: (status: 'pending' | 'success' | 'failed') => void): () => void {
     return this.transactionMonitor.subscribe(hash, (status) => {
       const transaction = this.transactionHistory.find(tx => tx.hash === hash);
       if (transaction) {
-        transaction.status = status;
-        callback(status);
+        transaction.status = status === 'confirmed' ? 'success' : status;
+        callback(status === 'confirmed' ? 'success' : status);
       }
     });
   }

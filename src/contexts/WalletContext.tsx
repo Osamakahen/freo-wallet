@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { WalletManager } from '../core/wallet/WalletManager.js';
+import { WalletManager } from '@/core/wallet/WalletManager';
 import { toast } from 'react-toastify';
 import { EthereumEvent, EthereumCallback, EthereumProvider } from '../types/ethereum';
 
