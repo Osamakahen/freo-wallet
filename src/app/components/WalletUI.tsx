@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useWallet } from '../../hooks/useWallet';
+import { useWalletContext } from '../../hooks/useWallet';
 import { TransactionRequest } from '../../types/wallet';
 
 export function WalletUI() {
-  const { state, connect, disconnect, sendTransaction } = useWallet();
+  const { state, connect, disconnect, sendTransaction } = useWalletContext();
   const [txTo, setTxTo] = useState('');
   const [txValue, setTxValue] = useState('');
 
