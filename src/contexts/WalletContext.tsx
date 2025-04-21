@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { WalletManager } from '@/core/wallet/WalletManager';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { WalletManager } from '../core/wallet/WalletManager';
 import { toast } from 'react-toastify';
 import { EthereumEvent, EthereumCallback, EthereumProvider } from '../types/ethereum';
+import { WalletError } from '../core/error/WalletError';
 
 interface WalletContextType {
   walletManager: WalletManager;
@@ -19,8 +20,8 @@ interface WalletContextType {
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
-export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [ethereum, setEthereum] = useState<EthereumProvider | undefined>(window.ethereum);
+export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [ethereum, setEthereum] = useState<EthereumProvider | undefined>(undefined);
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -30,10 +31,18 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [walletManager] = useState(() => new WalletManager());
 
   useEffect(() => {
+    // Only access window.ethereum on the client side
+    if (typeof window !== 'undefined' && window.ethereum) {
+      setEthereum(window.ethereum as EthereumProvider);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!ethereum) return;
+
     const handleAccountsChanged = (accounts: unknown) => {
       if (Array.isArray(accounts) && accounts.length > 0) {
         setAddress(accounts[0] as string);
-        setIsConnected(true);
       } else {
         setAddress(null);
         setIsConnected(false);
@@ -41,109 +50,67 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const handleChainChanged = (newChainId: unknown) => {
-      if (typeof newChainId === 'string') {
-        setChainId(newChainId);
-      }
+      setChainId(newChainId as string);
     };
 
     const handleDisconnect = () => {
       setAddress(null);
-      setChainId(null);
       setIsConnected(false);
-      setError('Wallet disconnected');
+      setChainId(null);
     };
 
-    if (ethereum) {
-      ethereum.on('accountsChanged', handleAccountsChanged);
-      ethereum.on('chainChanged', handleChainChanged);
-      ethereum.on('disconnect', handleDisconnect);
+    ethereum.on('accountsChanged', handleAccountsChanged);
+    ethereum.on('chainChanged', handleChainChanged);
+    ethereum.on('disconnect', handleDisconnect);
 
-      // Get initial chain ID
-      ethereum.request({ method: 'eth_chainId' })
-        .then((id) => {
-          if (typeof id === 'string') {
-            setChainId(id);
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to get chain ID:', err);
-        });
-
-      return () => {
-        ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        ethereum.removeListener('chainChanged', handleChainChanged);
-        ethereum.removeListener('disconnect', handleDisconnect);
-      };
-    }
+    return () => {
+      ethereum.removeListener('accountsChanged', handleAccountsChanged);
+      ethereum.removeListener('chainChanged', handleChainChanged);
+      ethereum.removeListener('disconnect', handleDisconnect);
+    };
   }, [ethereum]);
 
   const connect = async () => {
+    if (!ethereum) {
+      setError('No Ethereum provider found');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-
-      if (!ethereum) {
-        throw new Error('No Ethereum provider found');
-      }
-
-      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-      const address = accounts[0];
+      await walletManager.connect();
+      const address = await walletManager.getAddress();
       setAddress(address);
       setIsConnected(true);
-
-      // Get chain ID
-      const chainId = await ethereum.request({ method: 'eth_chainId' });
-      setChainId(chainId);
-
-      // Get balance
-      const balance = await ethereum.request({
-        method: 'eth_getBalance',
-        params: [address, 'latest']
-      });
-      setBalance(balance);
-
-      // Define event handlers
-      const handleAccountsChanged = (accounts: unknown) => {
-        if (Array.isArray(accounts) && accounts.length > 0) {
-          setAddress(accounts[0] as string);
-          setIsConnected(true);
-        } else {
-          setAddress(null);
-          setIsConnected(false);
-        }
-      };
-
-      const handleChainChanged = (newChainId: unknown) => {
-        if (typeof newChainId === 'string') {
-          setChainId(newChainId);
-        }
-      };
-
-      // Set up event listeners
-      ethereum.on('accountsChanged', handleAccountsChanged);
-      ethereum.on('chainChanged', handleChainChanged);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to connect wallet');
-      setIsConnected(false);
-      setAddress(null);
-      setChainId(null);
-      setBalance('0');
-    } finally {
+      setLoading(false);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to connect wallet');
       setLoading(false);
     }
   };
 
   const disconnect = () => {
     setAddress(null);
-    setChainId(null);
     setIsConnected(false);
+    setChainId(null);
+    setBalance('0');
   };
 
   const handleSetChainId = (newChainId: string | number) => {
-    if (typeof newChainId === 'number') {
-      setChainId(`0x${newChainId.toString(16)}`);
-    } else {
-      setChainId(newChainId);
+    if (!ethereum) {
+      setError('No Ethereum provider found');
+      return;
+    }
+
+    try {
+      ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: `0x${Number(newChainId).toString(16)}` }]
+      });
+      setChainId(newChainId.toString());
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to switch chain');
     }
   };
 
@@ -170,7 +137,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
 export const useWallet = () => {
   const context = useContext(WalletContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useWallet must be used within a WalletProvider');
   }
   return context;

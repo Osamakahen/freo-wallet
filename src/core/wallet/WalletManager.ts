@@ -12,7 +12,7 @@ export class WalletManager {
     this.errorCorrelator = ErrorCorrelator.getInstance();
   }
 
-  private async connect(): Promise<void> {
+  async connect(): Promise<void> {
     try {
       if (!window.ethereum) {
         throw new WalletError('No Ethereum provider found', 'wallet', 'high');

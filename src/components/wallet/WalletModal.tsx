@@ -1,20 +1,24 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWallet } from '@/hooks/useWallet';
 import { COLORS } from '@/constants/colors';
 
 interface WalletModalProps {
   isOpen: boolean;
   onClose: () => void;
   detectedWallets: string[];
+  onConnect: () => Promise<void>;
+  onDisconnect: () => void;
 }
 
-export const WalletModal = ({ isOpen, onClose, detectedWallets }: WalletModalProps) => {
-  const { connect } = useWallet();
-
+export const WalletModal = ({ isOpen, onClose, detectedWallets, onConnect, onDisconnect }: WalletModalProps) => {
   const handleWalletSelect = async () => {
-    await connect();
+    await onConnect();
+    onClose();
+  };
+
+  const handleDisconnect = () => {
+    onDisconnect();
     onClose();
   };
 
@@ -59,7 +63,13 @@ export const WalletModal = ({ isOpen, onClose, detectedWallets }: WalletModalPro
                   )}
                 </div>
               </div>
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between">
+                <button
+                  onClick={handleDisconnect}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Disconnect
+                </button>
                 <button
                   onClick={onClose}
                   className="text-sm text-gray-500 hover:text-gray-700"
