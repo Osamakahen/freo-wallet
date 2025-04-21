@@ -10,20 +10,35 @@ const mockCrypto = {
     return buffer;
   },
   subtle: {
-    generateKey: jest.fn().mockResolvedValue({
-      type: 'secret',
-      extractable: true,
-      algorithm: { name: 'AES-GCM' },
-      usages: ['encrypt', 'decrypt']
+    generateKey: jest.fn().mockImplementation((...args: unknown[]) => {
+      const [algorithm, extractable, keyUsages] = args as [AesKeyGenParams, boolean, KeyUsage[]];
+      return {
+        type: 'secret',
+        extractable,
+        algorithm,
+        usages: keyUsages
+      };
     }),
-    encrypt: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
-    decrypt: jest.fn().mockResolvedValue(new Uint8Array([4, 5, 6])),
-    exportKey: jest.fn().mockResolvedValue(new Uint8Array([7, 8, 9])),
-    importKey: jest.fn().mockResolvedValue({
-      type: 'secret',
-      extractable: true,
-      algorithm: { name: 'AES-GCM' },
-      usages: ['encrypt', 'decrypt']
+    encrypt: jest.fn().mockImplementation((...args: unknown[]) => {
+      const [algorithm, key, data] = args as [Algorithm, CryptoKey, BufferSource];
+      return Promise.resolve(new ArrayBuffer(3));
+    }),
+    decrypt: jest.fn().mockImplementation((...args: unknown[]) => {
+      const [algorithm, key, data] = args as [Algorithm, CryptoKey, BufferSource];
+      return Promise.resolve(new ArrayBuffer(3));
+    }),
+    exportKey: jest.fn().mockImplementation((...args: unknown[]) => {
+      const [format, key] = args as [string, CryptoKey];
+      return Promise.resolve(new ArrayBuffer(3));
+    }),
+    importKey: jest.fn().mockImplementation((...args: unknown[]) => {
+      const [format, keyData, algorithm, extractable, keyUsages] = args as [string, BufferSource, Algorithm, boolean, KeyUsage[]];
+      return {
+        type: 'secret',
+        extractable,
+        algorithm,
+        usages: keyUsages
+      };
     })
   }
 };
