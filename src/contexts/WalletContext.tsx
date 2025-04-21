@@ -1,5 +1,3 @@
-'use client';
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { WalletManager } from '../core/wallet/WalletManager';
 import { toast } from 'react-toastify';
@@ -12,6 +10,7 @@ interface WalletContextType {
   address: string | null;
   chainId: string | null;
   isConnected: boolean;
+  isConnecting: boolean;
   loading: boolean;
   error: string | null;
   balance: string;
@@ -124,6 +123,7 @@ export const WalletProvider: React.FC<{ children: ReactNode; devMode?: boolean }
         address,
         chainId,
         isConnected,
+        isConnecting: loading,
         loading,
         error,
         balance,

@@ -37,6 +37,7 @@ export default function Home() {
             onClose={() => {}}
             onConnect={connect}
             onDisconnect={disconnect}
+            detectedWallets={['MetaMask', 'FreoWallet']}
             theme={{
               primary: COLORS.primary,
               secondary: COLORS.secondary,
@@ -106,7 +107,12 @@ export default function Home() {
               <h2 className="text-xl font-semibold mb-4 text-[#00FF88]">Recent Transactions</h2>
               <TransactionHistory 
                 address={address || '0x'}
-                network={CHAINS.ethereum}
+                network={{
+                  chainId: CHAINS.ethereum.id,
+                  name: CHAINS.ethereum.name,
+                  rpcUrl: process.env.NEXT_PUBLIC_INFURA_URL || '',
+                  symbol: CHAINS.ethereum.nativeCurrency.symbol
+                }}
               />
             </motion.div>
           </motion.div>

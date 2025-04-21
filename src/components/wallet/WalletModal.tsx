@@ -9,6 +9,18 @@ interface WalletModalProps {
   detectedWallets: string[];
   onConnect: () => Promise<void>;
   onDisconnect: () => void;
+  theme?: {
+    primary: string;
+    secondary: string;
+    background: string;
+  };
+  walletOptions?: Array<{
+    id: string;
+    name: string;
+    icon: string;
+    isRecommended?: boolean;
+  }>;
+  connectionStatus?: React.ReactNode;
 }
 
 export const WalletModal = ({ isOpen, onClose, detectedWallets, onConnect, onDisconnect }: WalletModalProps) => {
