@@ -1,7 +1,55 @@
-import { GasEstimate, GasPrice, GasSettings, GasOptimizationOptions, GasPriceUpdate } from '../core/gas/GasManager';
+export interface GasEstimate {
+  gasLimit: string;
+  maxFeePerGas: string;
+  maxPriorityFeePerGas: string;
+}
+
+export interface GasPrice {
+  slow: string;
+  standard: string;
+  fast: string;
+  timestamp: number;
+}
+
+export interface GasSettings {
+  gasLimit: string;
+  maxFeePerGas: string;
+  maxPriorityFeePerGas: string;
+}
+
+export interface GasOptimizationOptions {
+  speed?: 'slow' | 'standard' | 'fast';
+  maxGasPrice?: string;
+  maxPriorityFee?: string;
+  maxGasLimit?: string;
+  maxCost?: string;
+}
+
+export interface GasPriceUpdate {
+  baseFee: string;
+  maxFeePerGas: string;
+  maxPriorityFeePerGas: string;
+  timestamp: number;
+}
+
+export interface GasHistory {
+  prices: GasPriceUpdate[];
+  timestamps: number[];
+  average: {
+    baseFee: string;
+    maxFeePerGas: string;
+    maxPriorityFeePerGas: string;
+  };
+}
+
+export interface GasSimulationResult {
+  success: boolean;
+  gasUsed: string;
+  error?: string;
+}
 
 export interface GasContext {
-  gasManager: GasManager;
+  gasManager: any; // We'll fix this type later
   gasPrices: GasPrice | null;
   gasHistory: GasHistory | null;
   loading: boolean;
@@ -17,40 +65,8 @@ export interface GasContext {
   updateGasSettings: (settings: GasSettings) => void;
 }
 
-export interface GasHistory {
-  prices: GasPriceUpdate[];
-  timestamps: number[];
-}
-
-export interface GasSimulationResult {
-  success: boolean;
-  gasUsed: string;
-  error?: string;
-}
-
-export type { GasEstimate, GasPrice, GasSettings, GasOptimizationOptions, GasPriceUpdate };
-
-export interface GasPrice {
-  slow: string;
-  standard: string;
-  fast: string;
-  timestamp: number;
-}
-
-export interface GasEstimate {
-  gasLimit: string;
-  maxFeePerGas: string;
-  maxPriorityFeePerGas: string;
-}
-
-export interface GasSettings {
-  gasLimit: string;
-  maxFeePerGas: string;
-  maxPriorityFeePerGas: string;
-}
-
 export interface GasContextType {
-  gasManager: GasManager;
+  gasManager: any; // We'll fix this type later
   gasEstimate: GasEstimate | null;
   gasPrices: GasPriceUpdate | null;
   gasHistory: GasHistory | null;

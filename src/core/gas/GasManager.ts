@@ -1,22 +1,24 @@
-import { createPublicClient, http, formatGwei, parseEther } from 'viem';
+import { createPublicClient, http, PublicClient, WalletClient, createWalletClient, formatGwei, parseEther } from 'viem';
 import { mainnet } from 'viem/chains';
 import { EventEmitter } from 'events';
-import { GasPrice, GasHistory, GasEstimate, GasSimulationResult, GasSettings } from '../../types/gas';
-import { WalletError } from '../error/ErrorHandler';
 import { ErrorCorrelator } from '../error/ErrorCorrelator';
+import { 
+  GasEstimate, 
+  GasPrice, 
+  GasSettings, 
+  GasOptimizationOptions, 
+  GasPriceUpdate,
+  GasHistory,
+  GasSimulationResult
+} from '../../types/gas';
+import { WalletError } from '../error/ErrorHandler';
 import { TransactionRequest } from '../../types/wallet';
 
-export interface GasPriceUpdate {
-  baseFee: string;
+interface LocalGasEstimate {
+  gasLimit: string;
   maxFeePerGas: string;
   maxPriorityFeePerGas: string;
   timestamp: number;
-}
-
-export interface GasOptimizationOptions {
-  speed?: 'slow' | 'medium' | 'fast';
-  maxCost?: string;
-  maxGasLimit?: string;
 }
 
 export class GasManager extends EventEmitter {
@@ -24,7 +26,7 @@ export class GasManager extends EventEmitter {
   private readonly DEFAULT_GAS_LIMIT = '21000';
   private readonly SPEED_MULTIPLIERS = {
     slow: 1.0,
-    medium: 1.5,
+    standard: 1.5,
     fast: 2.0
   };
   private readonly GAS_LIMIT_BUFFER = BigInt(10000);
@@ -33,7 +35,7 @@ export class GasManager extends EventEmitter {
   private updateInterval: NodeJS.Timeout | null = null;
   private lastGasPrice: GasPrice | null = null;
   private static instance: GasManager;
-  private estimates: Map<`0x${string}`, GasEstimate> = new Map();
+  private estimates: Map<string, LocalGasEstimate> = new Map();
   private errorCorrelator: ErrorCorrelator;
   private gasPriceCache: Map<string, number>;
   private lastUpdate: number;
@@ -42,13 +44,13 @@ export class GasManager extends EventEmitter {
   constructor(rpcUrl: string, errorCorrelator: ErrorCorrelator) {
     super();
     this.rpcUrl = rpcUrl;
+    this.errorCorrelator = errorCorrelator;
+    this.gasPriceCache = new Map();
+    this.lastUpdate = 0;
     this.client = createPublicClient({
       chain: mainnet,
       transport: http(rpcUrl)
     });
-    this.errorCorrelator = errorCorrelator;
-    this.gasPriceCache = new Map();
-    this.lastUpdate = 0;
   }
 
   static getInstance(): GasManager {
@@ -195,6 +197,9 @@ export class GasManager extends EventEmitter {
         timestamp: Date.now(),
       };
     } catch (error) {
+      await this.errorCorrelator.correlateError(
+        new WalletError('Failed to update gas price', 'GAS_PRICE_UPDATE_ERROR', { error: error instanceof Error ? error : new Error(String(error)) })
+      );
       throw new Error(`Failed to get gas price: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -202,25 +207,33 @@ export class GasManager extends EventEmitter {
   public async getGasHistory(limit: number = 10): Promise<GasHistory> {
     try {
       const currentBlock = await this.client.getBlockNumber();
-      const prices: GasPriceUpdate[] = [];
-      const timestamps: number[] = [];
+      const prices = [];
 
       for (let i = 0; i < limit; i++) {
         const block = await this.client.getBlock({ blockNumber: currentBlock - BigInt(i) });
         if (!block.baseFeePerGas) continue;
 
         const baseFee = block.baseFeePerGas;
-        const timestamp = Number(block.timestamp) * 1000;
         prices.push({
-          timestamp,
-          baseFee: formatGwei(baseFee),
-          maxFeePerGas: formatGwei(baseFee * 12n / 10n),
-          maxPriorityFeePerGas: formatGwei(baseFee * 13n / 10n)
+          timestamp: Number(block.timestamp) * 1000,
+          baseFee: baseFee.toString(),
+          maxFeePerGas: (baseFee * 13n / 10n).toString(),
+          maxPriorityFeePerGas: (baseFee * 3n / 10n).toString()
         });
-        timestamps.push(timestamp);
       }
 
-      return { prices, timestamps };
+      // Calculate averages
+      const average = {
+        baseFee: (prices.reduce((sum, p) => sum + BigInt(p.baseFee), 0n) / BigInt(prices.length)).toString(),
+        maxFeePerGas: (prices.reduce((sum, p) => sum + BigInt(p.maxFeePerGas), 0n) / BigInt(prices.length)).toString(),
+        maxPriorityFeePerGas: (prices.reduce((sum, p) => sum + BigInt(p.maxPriorityFeePerGas), 0n) / BigInt(prices.length)).toString()
+      };
+
+      return { 
+        prices, 
+        timestamps: prices.map(p => p.timestamp),
+        average 
+      };
     } catch (error) {
       throw new Error(`Failed to get gas history: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -262,28 +275,35 @@ export class GasManager extends EventEmitter {
     return this.lastGasPrice;
   }
 
-  async estimateGas(transaction: TransactionRequest): Promise<bigint> {
+  async estimateGas(transaction: TransactionRequest): Promise<number> {
     try {
       const { to, value, data } = transaction;
       
       // Use the data parameter to estimate gas
       const gasEstimate = await this.client.estimateGas({
-        to: to as `0x${string}`,
-        value: value ? BigInt(value) : undefined,
+        to,
+        value: BigInt(value),
         data: data as `0x${string}` | undefined
       });
       
-      return gasEstimate;
+      return Number(gasEstimate);
     } catch (error) {
       await this.errorCorrelator.correlateError(
-        new WalletError('Failed to estimate gas', 'GAS_ESTIMATION_ERROR', { error: error instanceof Error ? error : new Error(String(error)) })
+        new WalletError('Failed to estimate gas', 'GAS_ESTIMATION_ERROR', { error: error as Error })
       );
       throw error;
     }
   }
 
-  getLastEstimate(to: `0x${string}`): GasEstimate | undefined {
-    return this.estimates.get(to);
+  getLastEstimate(to: string): GasEstimate | undefined {
+    const estimate = this.estimates.get(to);
+    if (!estimate) return undefined;
+    
+    return {
+      gasLimit: estimate.gasLimit.toString(),
+      maxFeePerGas: estimate.maxFeePerGas.toString(),
+      maxPriorityFeePerGas: estimate.maxPriorityFeePerGas.toString()
+    };
   }
 
   clearEstimates(): void {
