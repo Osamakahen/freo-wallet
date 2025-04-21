@@ -17,10 +17,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Enable development mode if INFURA_URL is set
+  const isDevMode = !!process.env.NEXT_PUBLIC_INFURA_URL;
+
   return (
     <html lang="en">
       <body className={inter.className}>
-        <WalletProvider>
+        <WalletProvider devMode={isDevMode}>
           <TokenProvider>
             <div className="min-h-screen bg-[#121212] text-white">
               <Navigation />

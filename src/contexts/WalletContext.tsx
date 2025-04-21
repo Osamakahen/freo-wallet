@@ -20,7 +20,7 @@ interface WalletContextType {
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
-export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const WalletProvider: React.FC<{ children: ReactNode; devMode?: boolean }> = ({ children, devMode = false }) => {
   const [ethereum, setEthereum] = useState<EthereumProvider | undefined>(undefined);
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<string | null>(null);
@@ -28,14 +28,14 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<string>('0');
-  const [walletManager] = useState(() => new WalletManager());
+  const [walletManager] = useState(() => new WalletManager(devMode));
 
   useEffect(() => {
-    // Only access window.ethereum on the client side
-    if (typeof window !== 'undefined' && window.ethereum) {
+    // Only access window.ethereum on the client side and in production mode
+    if (!devMode && typeof window !== 'undefined' && window.ethereum) {
       setEthereum(window.ethereum as EthereumProvider);
     }
-  }, []);
+  }, [devMode]);
 
   useEffect(() => {
     if (!ethereum) return;

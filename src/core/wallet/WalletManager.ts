@@ -3,17 +3,34 @@ import { ErrorCorrelator } from './ErrorCorrelator';
 import { WalletError } from '../error/WalletError';
 
 export class WalletManager {
-  private provider: ethers.BrowserProvider | null = null;
+  private provider: ethers.JsonRpcProvider | ethers.BrowserProvider | null = null;
   private signer: ethers.JsonRpcSigner | null = null;
   private errorCorrelator: ErrorCorrelator;
   private isConnected: boolean = false;
+  private isDevMode: boolean;
 
-  constructor() {
+  constructor(devMode: boolean = false) {
     this.errorCorrelator = ErrorCorrelator.getInstance();
+    this.isDevMode = devMode;
   }
 
-  async connect(): Promise<void> {
+  public async connect(): Promise<void> {
     try {
+      if (this.isDevMode) {
+        // Development mode: Use Infura provider
+        const infuraUrl = process.env.NEXT_PUBLIC_INFURA_URL;
+        if (!infuraUrl) {
+          throw new WalletError('Infura URL not configured', 'wallet', 'high');
+        }
+        this.provider = new ethers.JsonRpcProvider(infuraUrl);
+        // Create a random wallet for testing
+        const wallet = ethers.Wallet.createRandom();
+        this.signer = (wallet.connect(this.provider) as unknown) as ethers.JsonRpcSigner;
+        this.isConnected = true;
+        return;
+      }
+
+      // Production mode: Use browser wallet
       if (!window.ethereum) {
         throw new WalletError('No Ethereum provider found', 'wallet', 'high');
       }
