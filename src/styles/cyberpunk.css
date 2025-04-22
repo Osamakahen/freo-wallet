@@ -1,0 +1,105 @@
+:root {
+  --cyberpunk-purple: #9333EA;
+  --cyberpunk-mint: #00FF88;
+  --cyberpunk-dark: #0A0A0A;
+  --cyberpunk-light: #FFFFFF;
+}
+
+.cyberpunk-bg {
+  background-color: var(--cyberpunk-dark);
+  background-image: url('/hex-grid.svg');
+  background-repeat: repeat;
+  background-position: center;
+}
+
+.cyberpunk-glow {
+  box-shadow: 0 0 10px var(--cyberpunk-mint),
+              0 0 20px var(--cyberpunk-purple);
+}
+
+.cyberpunk-border {
+  border: 1px solid var(--cyberpunk-mint);
+  position: relative;
+}
+
+.cyberpunk-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(45deg, var(--cyberpunk-purple), var(--cyberpunk-mint));
+  z-index: -1;
+  opacity: 0.5;
+}
+
+.cyberpunk-text {
+  background: linear-gradient(to right, var(--cyberpunk-mint), var(--cyberpunk-purple));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.cyberpunk-panel {
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--cyberpunk-mint);
+  transition: all 0.3s ease;
+}
+
+.cyberpunk-panel:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3);
+}
+
+.cyberpunk-button {
+  background: linear-gradient(45deg, var(--cyberpunk-purple), var(--cyberpunk-mint));
+  border: none;
+  color: var(--cyberpunk-light);
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.cyberpunk-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: 0.5s;
+}
+
+.cyberpunk-button:hover::before {
+  left: 100%;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.floating {
+  animation: float 4s ease-in-out infinite;
+}
+
+.hexagon {
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+} 

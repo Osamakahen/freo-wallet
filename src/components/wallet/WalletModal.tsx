@@ -1,6 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect } from 'react';
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -19,13 +20,21 @@ export const WalletModal = ({
   isDevMode = false 
 }: WalletModalProps) => {
   const handleConnect = async () => {
-    await onConnect();
-    onClose();
+    try {
+      await onConnect();
+      onClose();
+    } catch (error) {
+      console.error('Failed to connect:', error);
+    }
   };
 
+  useEffect(() => {
+    if (isDevMode) {
+      handleConnect();
+    }
+  }, [isDevMode]); // Only run when isDevMode changes
+
   if (isDevMode) {
-    // Auto-connect in dev mode
-    handleConnect();
     return null;
   }
 
