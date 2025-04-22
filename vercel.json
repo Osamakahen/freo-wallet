@@ -7,7 +7,7 @@
     }
   ],
   "env": {
-    "NEXT_PUBLIC_INFURA_URL": "@next_public_infura_url"
+    "NEXT_PUBLIC_INFURA_URL": "https://mainnet.infura.io/v3/6131105f1e4c4841a297c5392effa977"
   },
   "routes": [
     {
