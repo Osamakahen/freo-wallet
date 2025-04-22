@@ -16,20 +16,28 @@ import { PulseLoader } from 'react-spinners';
 export default function Home() {
   const { address, isConnected, isConnecting, connect, disconnect } = useWallet();
   const { tokens } = useToken();
+  const isDevMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
+    <div className="min-h-screen bg-[#6B3FA0] text-white"
+      style={{
+        backgroundImage: "url('/geometric-pattern.svg')",
+        backgroundBlendMode: "overlay",
+        backgroundSize: "cover"
+      }}>
       <div className="container mx-auto px-4 py-8 space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <motion.div
-            initial={ANIMATIONS.fadeIn.initial}
-            animate={ANIMATIONS.fadeIn.animate}
-            transition={ANIMATIONS.spring}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
           >
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#00FF88] to-[#FFD700] bg-clip-text text-transparent">
-              Welcome to Freo Wallet
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-white to-[#A2E4B8] bg-clip-text text-transparent">
+              FreoWallet
             </h1>
-            <p className="text-gray-400 mt-2">Your gateway to the decentralized web</p>
+            <p className="text-[#A2E4B8] mt-2 text-xl">
+              Your Trusted and Easy-going WEB3 Mate
+            </p>
           </motion.div>
           
           <WalletModal
@@ -37,52 +45,38 @@ export default function Home() {
             onClose={() => {}}
             onConnect={connect}
             onDisconnect={disconnect}
-            detectedWallets={['MetaMask', 'FreoWallet']}
-            theme={{
-              primary: COLORS.primary,
-              secondary: COLORS.secondary,
-              background: COLORS.background.dark
-            }}
-            walletOptions={[
-              { id: 'metamask', name: 'MetaMask', icon: '/wallets/metamask.svg' },
-              { id: 'freo', name: 'FreoWallet', icon: '/wallets/freo.svg', isRecommended: true }
-            ]}
-            connectionStatus={
-              isConnecting ? <PulseLoader color={COLORS.primary} size={8} /> : null
-            }
+            detectedWallets={[]}
+            isDevMode={isDevMode}
           />
         </div>
 
         {!isConnected ? (
           <motion.div
-            initial={ANIMATIONS.fadeIn.initial}
-            animate={ANIMATIONS.fadeIn.animate}
-            transition={ANIMATIONS.spring}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
             className="text-center py-16"
           >
-            <Lock className="mx-auto h-12 w-12 text-[#00FF88]" />
-            <h3 className="mt-4 text-lg font-medium text-[#FFD700]">
+            <Lock className="mx-auto h-12 w-12 text-[#A2E4B8]" />
+            <h3 className="mt-4 text-lg font-medium text-white">
               Unlock Your Web3 Vault
             </h3>
-            <p className="mt-2 text-gray-400">
+            <p className="mt-2 text-[#A2E4B8]">
               Connect your wallet to view assets and transactions
             </p>
           </motion.div>
         ) : (
           <motion.div
-            initial={ANIMATIONS.fadeIn.initial}
-            animate={ANIMATIONS.fadeIn.animate}
-            transition={ANIMATIONS.spring}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
             className="grid grid-cols-1 md:grid-cols-2 gap-8"
           >
             <motion.div
-              className={`bg-[#0D0D0D] border border-[#00FF88]/20 rounded-xl p-6 shadow-[0_0_20px_rgba(0,255,136,0.1)]`}
-              whileHover={{
-                scale: 1.02,
-                boxShadow: SHADOWS.hover
-              }}
+              className="bg-[#6B3FA0]/50 backdrop-blur-sm border border-[#A2E4B8] rounded-xl p-6 shadow-lg"
+              whileHover={{ scale: 1.02 }}
             >
-              <h2 className="text-xl font-semibold mb-4 text-[#00FF88]">Your Tokens</h2>
+              <h2 className="text-xl font-semibold mb-4 text-[#A2E4B8]">Your Tokens</h2>
               <TokenList 
                 tokens={tokens}
                 onTokenClick={(token) => console.log('Token clicked:', token)}
@@ -90,21 +84,14 @@ export default function Home() {
                   showFiatValue: true,
                   showChainIndicator: true
                 }}
-                style={{
-                  headerColor: COLORS.primary,
-                  hoverEffect: 'glow'
-                }}
               />
             </motion.div>
             
             <motion.div
-              className={`bg-[#0D0D0D] border border-[#00FF88]/20 rounded-xl p-6 shadow-[0_0_20px_rgba(0,255,136,0.1)]`}
-              whileHover={{
-                scale: 1.02,
-                boxShadow: SHADOWS.hover
-              }}
+              className="bg-[#6B3FA0]/50 backdrop-blur-sm border border-[#A2E4B8] rounded-xl p-6 shadow-lg"
+              whileHover={{ scale: 1.02 }}
             >
-              <h2 className="text-xl font-semibold mb-4 text-[#00FF88]">Recent Transactions</h2>
+              <h2 className="text-xl font-semibold mb-4 text-[#A2E4B8]">Recent Transactions</h2>
               <TransactionHistory 
                 address={address || '0x'}
                 network={{

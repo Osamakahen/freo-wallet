@@ -25,7 +25,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <WalletProvider devMode={isDevMode}>
           <TokenProvider>
-            <div className="min-h-screen bg-[#121212] text-white">
+            <div className="min-h-screen bg-[#6B3FA0] text-white">
               <Navigation />
               <main className="container mx-auto px-4 py-8">
                 {children}

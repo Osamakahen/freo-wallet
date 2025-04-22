@@ -33,6 +33,13 @@ export const WalletProvider: React.FC<{ children: ReactNode; devMode?: boolean }
   const [balance, setBalance] = useState<string>('0');
   const [walletManager] = useState(() => new WalletManager(devMode));
 
+  // Auto-connect in dev mode
+  useEffect(() => {
+    if (devMode) {
+      connect();
+    }
+  }, [devMode]);
+
   useEffect(() => {
     // Only access window.ethereum on the client side and in production mode
     if (!devMode && typeof window !== 'undefined' && window.ethereum) {
@@ -74,11 +81,6 @@ export const WalletProvider: React.FC<{ children: ReactNode; devMode?: boolean }
   }, [ethereum]);
 
   const connect = async () => {
-    if (!ethereum) {
-      setError('No Ethereum provider found');
-      return;
-    }
-
     try {
       setLoading(true);
       setError(null);
@@ -86,34 +88,42 @@ export const WalletProvider: React.FC<{ children: ReactNode; devMode?: boolean }
       const address = await walletManager.getAddress();
       setAddress(address);
       setIsConnected(true);
-      setLoading(false);
+      
+      // Get initial balance
+      const state = walletManager.getState();
+      setBalance(state.balance);
+      
+      toast.success('Connected successfully!');
     } catch (error) {
+      console.error('Connection error:', error);
       setError(error instanceof Error ? error.message : 'Failed to connect wallet');
+      toast.error('Failed to connect wallet');
+    } finally {
       setLoading(false);
     }
   };
 
   const disconnect = () => {
-    setAddress(null);
-    setIsConnected(false);
-    setChainId(null);
-    setBalance('0');
+    try {
+      walletManager.disconnect();
+      setAddress(null);
+      setIsConnected(false);
+      setChainId(null);
+      setBalance('0');
+      toast.info('Disconnected from wallet');
+    } catch (error) {
+      console.error('Disconnect error:', error);
+      toast.error('Failed to disconnect');
+    }
   };
 
-  const handleSetChainId = (newChainId: string | number) => {
-    if (!ethereum) {
-      setError('No Ethereum provider found');
-      return;
-    }
-
+  const handleSetChainId = async (newChainId: string | number) => {
     try {
-      ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: `0x${Number(newChainId).toString(16)}` }]
-      });
       setChainId(newChainId.toString());
+      // Additional chain switching logic if needed
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to switch chain');
+      toast.error('Failed to switch chain');
     }
   };
 
