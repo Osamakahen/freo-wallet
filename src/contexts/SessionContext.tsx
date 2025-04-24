@@ -1,93 +1,98 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Permission } from '../types/session';
+'use client';
+
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useWallet } from './WalletContext';
+import { SessionService } from '@/services/SessionService';
+
+interface Session {
+  domain: string;
+  chainId: string;
+  name: string;
+  favicon: string;
+  connectedAt: number;
+  expiresAt: number;
+  lastActivity: number;
+}
 
 interface SessionContextType {
-  isAuthenticated: boolean;
-  permissions: Permission[];
-  login: () => Promise<void>;
-  logout: () => Promise<void>;
-  checkPermission: (permission: Permission) => boolean;
+  activeSessions: boolean;
+  sessionExpiry: number | null;
+  connectedDapps: Session[];
+  refreshSessions: () => void;
+  disconnectDapp: (domain: string) => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
-export function useSession() {
-  const context = useContext(SessionContext);
-  if (!context) {
-    throw new Error('useSession must be used within a SessionProvider');
-  }
-  return context;
-}
-
-export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
-
+export function SessionProvider({ children }: { children: ReactNode }) {
+  const { account, connected } = useWallet();
+  const [activeSessions, setActiveSessions] = useState<boolean>(false);
+  const [sessionExpiry, setSessionExpiry] = useState<number | null>(null);
+  const [connectedDapps, setConnectedDapps] = useState<Session[]>([]);
+  
   useEffect(() => {
-    // Check for existing session
-    const checkSession = async () => {
-      try {
-        // Add your session check logic here
-        const hasSession = localStorage.getItem('session');
-        if (hasSession) {
-          setIsAuthenticated(true);
-          // Load permissions from storage or API
-          const storedPermissions = localStorage.getItem('permissions');
-          if (storedPermissions) {
-            setPermissions(JSON.parse(storedPermissions));
-          }
-        }
-      } catch (error) {
-        console.error('Failed to check session:', error);
+    if (!connected || !account) return;
+    
+    // Load session data when wallet connects
+    loadSessions();
+    
+    // Set up refresh interval
+    const intervalId = setInterval(loadSessions, 30000);
+    return () => clearInterval(intervalId);
+  }, [connected, account]);
+  
+  const loadSessions = async () => {
+    try {
+      if (!account) return;
+      const sessions = await SessionService.getActiveSessions(account);
+      setConnectedDapps(sessions);
+      setActiveSessions(sessions.length > 0);
+      
+      // Find the earliest expiry time
+      if (sessions.length > 0) {
+        const earliestExpiry = Math.min(...sessions.map(s => s.expiresAt));
+        setSessionExpiry(earliestExpiry);
+      } else {
+        setSessionExpiry(null);
       }
-    };
-
-    checkSession();
-  }, []);
-
-  const login = async () => {
-    try {
-      // Add your login logic here
-      setIsAuthenticated(true);
-      // Set default permissions
-      const defaultPermissions: Permission[] = ['read', 'write'];
-      setPermissions(defaultPermissions);
-      localStorage.setItem('session', 'true');
-      localStorage.setItem('permissions', JSON.stringify(defaultPermissions));
     } catch (error) {
-      console.error('Failed to login:', error);
-      throw error;
+      console.error("Failed to load sessions:", error);
     }
   };
-
-  const logout = async () => {
+  
+  const refreshSessions = () => {
+    loadSessions();
+  };
+  
+  const disconnectDapp = async (domain: string) => {
     try {
-      // Add your logout logic here
-      setIsAuthenticated(false);
-      setPermissions([]);
-      localStorage.removeItem('session');
-      localStorage.removeItem('permissions');
+      if (!account) return;
+      await SessionService.terminateSession(account, domain);
+      refreshSessions();
     } catch (error) {
-      console.error('Failed to logout:', error);
-      throw error;
+      console.error("Failed to disconnect dApp:", error);
     }
   };
-
-  const checkPermission = (permission: Permission) => {
-    return permissions.includes(permission);
-  };
-
+  
   return (
     <SessionContext.Provider
       value={{
-        isAuthenticated,
-        permissions,
-        login,
-        logout,
-        checkPermission
+        activeSessions,
+        sessionExpiry,
+        connectedDapps,
+        refreshSessions,
+        disconnectDapp
       }}
     >
       {children}
     </SessionContext.Provider>
   );
+}
+
+export function useSession() {
+  const context = useContext(SessionContext);
+  if (context === undefined) {
+    throw new Error('useSession must be used within a SessionProvider');
+  }
+  return context;
 } 

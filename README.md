@@ -1,151 +1,141 @@
-# Freo Wallet
+# Freo Wallet - Seamless dApp Navigation
 
-A modern, secure, and user-friendly Ethereum wallet built with React, TypeScript, and Viem.
+Freo Wallet is a browser extension wallet that aims to solve one of the biggest pain points in the current Web3 user experience: the need to repeatedly connect and authenticate when moving between different dApps.
 
-## Features
+## Key Features
 
-- 🔐 Secure key management with mnemonic phrase support
-- 💰 Native token (ETH) and ERC20 token support
-- 🔄 Real-time transaction monitoring
-- 🛡️ Built-in security features
-- 📱 Responsive design
-- 🌐 Multi-chain support (Ethereum Mainnet and testnets)
-- 🔍 Transaction history and analytics
-- 🎨 Modern UI with dark/light mode
-- 🔌 dApp Integration with DAppBridge
-- 🔒 Session-based permissions management
-- 📊 Portfolio tracking and analytics
-- 🚀 Gas optimization and transaction batching
+- **Persistent Sessions**: Connect once and navigate seamlessly between dApps without reconnecting
+- **Network State Preservation**: Maintain your selected network when moving between applications
+- **Per-dApp Preferences**: Remember user preferences for each connected application
+- **User-Controlled Permissions**: Control which dApps can auto-connect to your wallet
 
-## Tech Stack
+## Implementation Approach
 
-- **Frontend**: React, TypeScript, TailwindCSS
-- **Ethereum**: Viem (for all Ethereum interactions)
-- **State Management**: React Context + Custom Hooks
-- **UI Components**: Radix UI, Lucide React
-- **Testing**: Jest, React Testing Library
-- **CI/CD**: GitHub Actions, Vercel
-- **Security**: Device fingerprinting, session management
+This proof of concept implements a session management system that allows for persistent wallet connections across dApps, focusing on these key components:
 
-## Getting Started
+### Session Management
+
+The `SessionService` provides a central store for maintaining connection state, including:
+- Connected addresses
+- Selected networks per dApp
+- Auto-connect preferences
+- Connection history
+
+### Injected Provider
+
+An enhanced EIP-1193 compliant provider is injected into web pages, which:
+- Auto-initializes from saved sessions
+- Maintains connection state across page navigation
+- Synchronizes account and network changes
+
+### Background Script
+
+The background script acts as the coordinator, which:
+- Manages sessions across different tabs and domains
+- Handles lifecycle events for connections
+- Synchronizes state between the wallet UI and dApps
+
+### User Interface Components
+
+Several components have been created to support the user experience:
+- `ConnectWallet` - Enhanced connect button with session controls
+- `SessionManager` - Interface for managing dApp connections
+- `NetworkSelector` - Network switching with per-dApp preferences
+
+## How It Works
+
+1. When a user connects to a dApp, a session is created in the `SessionService`
+2. The session includes the connected address, selected network, and user preferences
+3. When the user visits another dApp where they've connected before, the wallet auto-connects using the saved session
+4. If the user switches networks, the preference is saved for that specific dApp
+5. When returning to any connected dApp, the wallet remembers the user's preferred network for that particular application
+
+## Code Structure
+
+```
+src/
+├── services/
+│   └── SessionService.ts      # Core session management functionality
+├── inject/
+│   └── provider.ts            # Enhanced Web3 provider for dApp integration
+├── background/
+│   └── background.ts          # Background script for cross-dApp coordination
+├── content/
+│   └── content-script.ts      # Bridge between dApp and extension
+├── components/
+│   ├── ConnectWallet.tsx      # Wallet connection component
+│   ├── SessionManager.tsx     # Session management interface
+│   └── NetworkSelector.tsx    # Network selection component
+├── contexts/
+│   └── WalletContext.tsx      # React context for wallet state
+└── config/
+    └── networks.ts            # Network configuration
+```
+
+## Development Setup
 
 ### Prerequisites
 
-- Node.js (v16 or later)
+- Node.js (v16 or higher)
 - npm or yarn
-- MetaMask or other Web3 wallet (for development)
+- Chrome browser
 
 ### Installation
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/Osamakahen/freo-wallet.git
+   git clone https://github.com/yourusername/freo-wallet.git
    cd freo-wallet
    ```
 
 2. Install dependencies:
    ```bash
    npm install
+   # or
+   yarn install
    ```
 
-3. Start the development server:
+3. Build the extension:
    ```bash
-   npm run dev
+   npm run build
+   # or
+   yarn build
    ```
 
-## Architecture
+4. Load the extension in Chrome:
+   - Open Chrome and navigate to `chrome://extensions/`
+   - Enable "Developer mode" in the top right
+   - Click "Load unpacked" and select the `dist` folder from the project
 
-### Core Components
+## Usage
 
-1. **Wallet Management**
-   - Secure key storage and management
-   - Account creation and import
-   - Balance tracking
-   - Device fingerprinting for enhanced security
-
-2. **Transaction System**
-   - Transaction preparation and signing
-   - Gas estimation and optimization
-   - Real-time transaction monitoring
-   - Transaction history with detailed analytics
-   - Transaction batching support
-
-3. **Token Management**
-   - Native token (ETH) support
-   - ERC20 token support
-   - Token price tracking
-   - Token approval system
-   - Portfolio value tracking
-
-4. **Security**
-   - Encrypted key storage
-   - Secure transaction signing
-   - Phishing protection
-   - Session management
-   - Device fingerprinting
-   - Risk scoring system
-
-5. **dApp Integration**
-   - DAppBridge for seamless dApp connections
-   - Permission management
-   - Session-based authentication
-   - Transaction request handling
-
-### Key Classes
-
-- `Wallet`: Core wallet functionality
-- `TransactionManager`: Transaction handling
-- `TokenManager`: Token operations
-- `KeyManager`: Secure key management
-- `EVMAdapter`: Ethereum network interaction
-- `DAppBridge`: dApp integration
-- `SessionManager`: Session handling
-- `DeviceFingerprint`: Security and device tracking
+1. Click the Freo Wallet icon to open the popup
+2. Connect to any dApp as you normally would
+3. Navigate to another dApp and experience automatic connection
+4. Manage your connections in the "Connected dApps" section of the wallet
 
 ## Development
 
-### Code Structure
+### Available Scripts
 
-```
-src/
-├── components/     # React components
-│   ├── dashboard/  # Dashboard components
-│   ├── ui/        # UI components
-│   └── shared/    # Shared components
-├── core/          # Core wallet functionality
-│   ├── wallet/    # Wallet management
-│   ├── transaction/ # Transaction handling
-│   ├── token/     # Token management
-│   ├── dapp/      # dApp integration
-│   ├── session/   # Session management
-│   └── security/  # Security features
-├── contexts/      # React contexts
-├── hooks/         # Custom React hooks
-├── types/         # TypeScript types
-└── utils/         # Utility functions
-```
+- `npm run dev` - Start development server
+- `npm run build` - Build production version
+- `npm run test` - Run tests
+- `npm run lint` - Run linter
 
-### Testing
+### TypeScript Support
 
-Run tests:
-```bash
-npm test
-```
+The project uses TypeScript for type safety and better development experience. All new code should be written in TypeScript.
 
-Run tests with coverage:
-```bash
-npm run test:coverage
-```
+## Future Improvements
 
-## Security
+While this proof of concept demonstrates the core functionality, a full middleware implementation would include:
 
-- Private keys are never stored in plain text
-- All sensitive operations require user confirmation
-- Regular security audits
-- Phishing protection mechanisms
-- Device fingerprinting for enhanced security
-- Session-based permission management
-- Risk scoring system for suspicious activities
+1. More robust session security with timeouts and verification
+2. Formalized protocol for dApp-to-wallet communication
+3. Enhanced state synchronization between components
+4. Advanced permission management for dApp integrations
+5. Performance optimizations for state persistence
 
 ## Contributing
 
@@ -161,8 +151,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- [Viem](https://viem.sh/) for Ethereum interaction
-- [React](https://reactjs.org/) for the UI framework
-- [TailwindCSS](https://tailwindcss.com/) for styling
-- [Radix UI](https://www.radix-ui.com/) for accessible components
-- [Lucide React](https://lucide.dev/) for icons
+- EIP-1193 for the Ethereum Provider JavaScript API
+- The Web3 community for inspiration and feedback
+
+---
+
+This proof of concept demonstrates the feasibility of persistent wallet sessions while we work toward the full middleware implementation.

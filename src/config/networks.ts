@@ -1,51 +1,129 @@
+/**
+ * Network configuration for FreoWallet
+ * This defines the supported blockchain networks
+ */
+
 export interface NetworkConfig {
-  name: string;
-  chainId: number;
-  rpcUrl: string;
-  symbol: string;
-  blockExplorer?: string;
-  explorer?: string;
-  iconUrl?: string;
+  chainId: string;
+  chainName: string;
+  chainColor: string;
+  rpcUrls: string[];
+  blockExplorerUrls: string[];
+  nativeCurrency: {
+    name: string;
+    symbol: string;
+    decimals: number;
+  };
 }
 
-export const NETWORKS: NetworkConfig[] = [
-  {
-    name: process.env.NEXT_PUBLIC_NETWORK_NAME || 'Ethereum Mainnet',
-    chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID) || 1,
-    rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || 'https://eth-mainnet.g.alchemy.com/v2/',
-    symbol: process.env.NEXT_PUBLIC_SYMBOL || 'ETH',
-    explorer: process.env.NEXT_PUBLIC_EXPLORER || 'https://etherscan.io'
+export const CHAINS: Record<string, NetworkConfig> = {
+  // Ethereum Mainnet
+  '1': {
+    chainId: '1',
+    chainName: 'Ethereum Mainnet',
+    chainColor: '#627EEA',
+    nativeCurrency: {
+      name: 'Ether',
+      symbol: 'ETH',
+      decimals: 18
+    },
+    rpcUrls: ['https://mainnet.infura.io/v3/'],
+    blockExplorerUrls: ['https://etherscan.io']
   },
-  {
-    name: 'Polygon',
-    chainId: 137,
-    rpcUrl: process.env.NEXT_PUBLIC_POLYGON_RPC_URL || 'https://polygon-rpc.com',
-    symbol: 'MATIC',
-    blockExplorer: process.env.NEXT_PUBLIC_POLYGONSCAN_URL || 'https://polygonscan.com',
-    iconUrl: '/images/polygon-logo.svg'
+  
+  // Polygon (Matic)
+  '137': {
+    chainId: '137',
+    chainName: 'Polygon Mainnet',
+    chainColor: '#8247E5',
+    nativeCurrency: {
+      name: 'MATIC',
+      symbol: 'MATIC',
+      decimals: 18
+    },
+    rpcUrls: ['https://polygon-rpc.com'],
+    blockExplorerUrls: ['https://polygonscan.com']
   },
-  {
-    name: 'BNB Smart Chain',
-    chainId: 56,
-    rpcUrl: process.env.NEXT_PUBLIC_BSC_RPC_URL || 'https://bsc-dataseed.binance.org',
-    symbol: 'BNB',
-    blockExplorer: process.env.NEXT_PUBLIC_BSCSCAN_URL || 'https://bscscan.com',
-    iconUrl: '/images/bnb-logo.svg'
+  
+  // Binance Smart Chain
+  '56': {
+    chainId: '56',
+    chainName: 'BNB Smart Chain',
+    chainColor: '#F0B90B',
+    nativeCurrency: {
+      name: 'BNB',
+      symbol: 'BNB',
+      decimals: 18
+    },
+    rpcUrls: ['https://bsc-dataseed.binance.org'],
+    blockExplorerUrls: ['https://bscscan.com']
   },
-  {
-    name: 'Arbitrum One',
-    chainId: 42161,
-    rpcUrl: process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc',
-    symbol: 'ETH',
-    blockExplorer: process.env.NEXT_PUBLIC_ARBISCAN_URL || 'https://arbiscan.io',
-    iconUrl: '/images/arbitrum-logo.svg'
+  
+  // Arbitrum
+  '42161': {
+    chainId: '42161',
+    chainName: 'Arbitrum One',
+    chainColor: '#28A0F0',
+    nativeCurrency: {
+      name: 'Ether',
+      symbol: 'ETH',
+      decimals: 18
+    },
+    rpcUrls: ['https://arb1.arbitrum.io/rpc'],
+    blockExplorerUrls: ['https://arbiscan.io']
   },
-  {
-    name: 'Optimism',
-    chainId: 10,
-    rpcUrl: process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL || 'https://mainnet.optimism.io',
-    symbol: 'ETH',
-    blockExplorer: process.env.NEXT_PUBLIC_OPTIMISMSCAN_URL || 'https://optimistic.etherscan.io',
-    iconUrl: '/images/optimism-logo.svg'
+  
+  // Optimism
+  '10': {
+    chainId: '10',
+    chainName: 'Optimism',
+    chainColor: '#FF0420',
+    nativeCurrency: {
+      name: 'Ether',
+      symbol: 'ETH',
+      decimals: 18
+    },
+    rpcUrls: ['https://mainnet.optimism.io'],
+    blockExplorerUrls: ['https://optimistic.etherscan.io']
+  },
+  
+  // Base
+  '0x2105': {
+    chainId: '0x2105',
+    chainName: 'Base',
+    chainColor: '#0052FF',
+    nativeCurrency: {
+      name: 'Ether',
+      symbol: 'ETH',
+      decimals: 18
+    },
+    rpcUrls: ['https://mainnet.base.org'],
+    blockExplorerUrls: ['https://basescan.org']
+  },
+  
+  // Ethereum Sepolia Testnet
+  '0xaa36a7': {
+    chainId: '0xaa36a7',
+    chainName: 'Sepolia Testnet',
+    chainColor: '#627EEA',
+    nativeCurrency: {
+      name: 'Sepolia Ether',
+      symbol: 'ETH',
+      decimals: 18
+    },
+    rpcUrls: ['https://rpc.sepolia.org'],
+    blockExplorerUrls: ['https://sepolia.etherscan.io']
   }
-]; 
+};
+
+/**
+ * Helper function to get network details by chain ID
+ * @param chainId - The chain ID to look up
+ * @returns Network configuration or null if not found
+ */
+export function getNetworkDetails(chainId: string): NetworkConfig | undefined {
+  return CHAINS[chainId];
+}
+
+// Default chain to use when no preference is set
+export const DEFAULT_CHAIN_ID = '1'; 

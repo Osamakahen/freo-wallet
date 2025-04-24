@@ -1,3 +1,5 @@
+'use client';
+
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { ethers } from 'ethers';
 import { mainnet } from 'viem/chains';
@@ -55,7 +57,7 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setNetwork(prev => ({ ...prev, error: null }));
 
-      if (!window.ethereum) {
+      if (typeof window === 'undefined' || !window.ethereum) {
         throw new Error("Ethereum provider not found");
       }
 
@@ -80,7 +82,7 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!window.ethereum) return;
+    if (typeof window === 'undefined' || !window.ethereum) return;
 
     const handleChainChanged = (params: unknown) => {
       const chainId = typeof params === 'string' ? params : 
@@ -98,29 +100,6 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
     };
   }, [updateNetwork]);
 
-  const switchNetwork = useCallback(async (chainId: string | number) => {
-    try {
-      setLoading(true);
-      setNetwork(prev => ({ ...prev, error: null }));
-
-      if (!window.ethereum) {
-        throw new Error("Ethereum provider not found");
-      }
-
-      const ethereum = window.ethereum;
-      await ethereum.request({
-        method: 'walletSwitchEthereumChain',
-        params: [{ chainId: typeof chainId === 'string' ? chainId : `0x${chainId.toString(16)}` }],
-      });
-
-      await updateNetwork(typeof chainId === 'string' ? parseInt(chainId, 16) : chainId);
-    } catch (err) {
-      setNetwork(prev => ({ ...prev, error: err instanceof Error ? err.message : 'Failed to switch network' }));
-    } finally {
-      setLoading(false);
-    }
-  }, [updateNetwork]);
-
   const setChainId = (chainId: number) => {
     setNetwork(prev => ({ ...prev, chainId }));
   };
@@ -135,6 +114,28 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
 
   const setError = (error: string | null) => {
     setNetwork(prev => ({ ...prev, error }));
+  };
+
+  const switchNetwork = async (chainId: string | number) => {
+    try {
+      setLoading(true);
+      setNetwork(prev => ({ ...prev, error: null }));
+
+      if (typeof window === 'undefined' || !window.ethereum) {
+        throw new Error("Ethereum provider not found");
+      }
+
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: `0x${Number(chainId).toString(16)}` }],
+      });
+
+      await updateNetwork(Number(chainId));
+    } catch (err) {
+      setNetwork(prev => ({ ...prev, error: err instanceof Error ? err.message : 'Failed to switch network' }));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

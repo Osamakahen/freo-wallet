@@ -21,7 +21,8 @@ import { ConversionFooter } from '@/components/ConversionFooter';
 
 export default function Home() {
   return (
-    <main className="min-h-screen">
+    <main className="relative">
+      <div className="absolute inset-0 bg-[url('/hex-grid.svg')] opacity-10 pointer-events-none" />
       <HeroSection />
       <FeatureCards />
       <AssetDashboard />
