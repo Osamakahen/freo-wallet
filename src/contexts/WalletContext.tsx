@@ -29,10 +29,11 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 interface WalletProviderProps {
   children: ReactNode;
+  devMode?: boolean;
 }
 
 // Provider component
-export function WalletProvider({ children }: WalletProviderProps) {
+export function WalletProvider({ children, devMode = false }: WalletProviderProps) {
   const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
   const [connected, setConnected] = useState<boolean>(false);
   const [connecting, setConnecting] = useState<boolean>(false);

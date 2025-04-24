@@ -20,6 +20,8 @@ interface SessionContextType {
   connectedDapps: Session[];
   refreshSessions: () => void;
   disconnectDapp: (domain: string) => Promise<void>;
+  isAuthenticated: boolean;
+  permissions: Record<string, boolean>;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -81,7 +83,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         sessionExpiry,
         connectedDapps,
         refreshSessions,
-        disconnectDapp
+        disconnectDapp,
+        isAuthenticated: activeSessions,
+        permissions: {}
       }}
     >
       {children}
