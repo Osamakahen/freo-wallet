@@ -11,25 +11,15 @@ export const AutoConnect = ({
   requiredPermissions = [],
 }: AutoConnectProps) => {
   const { isAuthenticated, permissions } = useSession();
-  const { connect, disconnect, address } = useWallet();
+  const { connect, disconnect, account } = useWallet();
 
   useEffect(() => {
-    const autoConnect = async () => {
-      if (!isAuthenticated) {
-        try {
-          await connect();
-        } catch (error) {
-          console.error('Auto-connect failed:', error);
-        }
-      }
-    };
+    if (isAuthenticated && !account) {
+      connect();
+    }
+  }, [isAuthenticated, account, connect]);
 
-    autoConnect();
-  }, [isAuthenticated, connect]);
-
-  const hasRequiredPermissions = requiredPermissions.every(permission =>
-    permissions.includes(permission)
-  );
+  const hasRequiredPermissions = requiredPermissions.length === 0 || permissions;
 
   if (!isAuthenticated || !hasRequiredPermissions) {
     return null;
@@ -37,7 +27,7 @@ export const AutoConnect = ({
 
   return (
     <div>
-      <p>Connected to: {address}</p>
+      <p>Connected to: {account}</p>
       <button onClick={disconnect}>Disconnect</button>
     </div>
   );
