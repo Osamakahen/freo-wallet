@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { TransactionRequest, TransactionReceipt } from '../types/wallet';
 import { TransactionManager } from '../core/transaction/TransactionManager';
 import { KeyManager } from '../core/keyManagement/KeyManager';
@@ -34,13 +34,34 @@ const TransactionContext = createContext<TransactionContextType>({
 export const useTransactions = () => useContext(TransactionContext);
 
 export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { address, isConnected } = useWallet();
+  const { account, connected } = useWallet();
   const [pendingTransactions, setPendingTransactions] = useState<TransactionRequest[]>([]);
   const [transactionHistory, setTransactionHistory] = useState<TransactionReceipt[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [keyManager] = useState(() => new KeyManager());
   const [transactionManager] = useState(() => new TransactionManager('http://localhost:8545', keyManager));
+
+  useEffect(() => {
+    if (!connected || !account) return;
+    
+    const loadTransactions = async () => {
+      try {
+        const history = await transactionManager.getTransactionHistory(account as `0x${string}`);
+        const receipts = await Promise.all(
+          history.map(async tx => {
+            const txId = `${tx.from}_${tx.nonce}`;
+            return transactionManager.getTransactionReceipt(txId);
+          })
+        );
+        setTransactionHistory(receipts.filter((r): r is TransactionReceipt => r !== null));
+      } catch (error) {
+        console.error('Failed to load transactions:', error);
+      }
+    };
+    
+    loadTransactions();
+  }, [account, connected, transactionManager]);
 
   const sendTransaction = async (request: TransactionRequest): Promise<string> => {
     try {
@@ -91,7 +112,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const cancelTransaction = async (hash: string, gasSettings: GasSettings): Promise<string> => {
-    if (!address) throw new Error('No connected account');
+    if (!account) throw new Error('No connected account');
 
     try {
       setLoading(true);
@@ -99,7 +120,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const tx = await transactionManager.getTransaction(hash);
       if (!tx || !tx.nonce) throw new Error('Transaction not found');
 
-      return await transactionManager.cancelTransaction(address as `0x${string}`, tx.nonce, gasSettings);
+      return await transactionManager.cancelTransaction(account as `0x${string}`, tx.nonce, gasSettings);
     } catch (err) {
       setError('Failed to cancel transaction');
       console.error('Failed to cancel transaction:', err);
@@ -110,12 +131,12 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const refreshHistory = async () => {
-    if (!isConnected || !address) return;
+    if (!connected || !account) return;
 
     try {
       setLoading(true);
       setError(null);
-      const history = await transactionManager.getTransactionHistory(address as `0x${string}`);
+      const history = await transactionManager.getTransactionHistory(account as `0x${string}`);
       
       const receipts = await Promise.all(
         history.map(async (tx) => {
