@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 export const Settings: React.FC = () => {
   const { chainId, switchNetwork } = useNetwork();
   const { gasPrices, updateGasSettings } = useGas();
-  const { address } = useWallet();
+  const { account } = useWallet();
   const [customGasSettings, setCustomGasSettings] = useState({
     gasLimit: '',
     maxFeePerGas: '',
@@ -134,7 +134,7 @@ export const Settings: React.FC = () => {
               Connected Wallet
             </label>
             <p className="mt-1 text-sm text-gray-500">
-              {address || 'Not connected'}
+              {account || 'Not connected'}
             </p>
           </div>
         </div>
