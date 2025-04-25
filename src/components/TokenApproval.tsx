@@ -17,14 +17,14 @@ export const TokenApproval: React.FC<TokenApprovalProps> = ({
   onApproval
 }) => {
   const { chainId } = useNetwork();
-  const { address } = useWallet();
+  const { account } = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [approved, setApproved] = useState(false);
 
   useEffect(() => {
     const checkApproval = async () => {
-      if (!address || !chainId) return;
+      if (!account || !chainId) return;
 
       try {
         setLoading(true);
@@ -32,7 +32,7 @@ export const TokenApproval: React.FC<TokenApprovalProps> = ({
 
         // Here you would typically call your token contract's allowance method
         // For example:
-        // const allowance = await tokenContract.allowance(address, spenderAddress);
+        // const allowance = await tokenContract.allowance(account, spenderAddress);
         // setApproved(allowance.gte(amount));
 
         // For now, we'll just set it to false
@@ -49,10 +49,10 @@ export const TokenApproval: React.FC<TokenApprovalProps> = ({
     };
 
     checkApproval();
-  }, [address, chainId, tokenAddress, spenderAddress, amount]);
+  }, [account, chainId, tokenAddress, spenderAddress, amount]);
 
   const handleApprove = async () => {
-    if (!address || !chainId) {
+    if (!account || !chainId) {
       toast.error('Please connect your wallet first', {
         position: 'top-right',
         autoClose: 5000,
