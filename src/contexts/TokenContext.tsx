@@ -35,7 +35,7 @@ const TokenContext = createContext<TokenContextType | undefined>(undefined);
 const STORAGE_KEY = 'tracked_tokens';
 
 export const TokenProvider = ({ children }: { children: ReactNode }) => {
-  const { address, isConnected } = useWallet();
+  const { account, connected } = useWallet();
   const [tokens, setTokens] = useState<Token[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -64,7 +64,7 @@ export const TokenProvider = ({ children }: { children: ReactNode }) => {
   }, [tokens]);
 
   const refreshBalances = useCallback(async () => {
-    if (!address || !isConnected) return;
+    if (!account || !connected) return;
 
     try {
       setIsLoading(true);
@@ -72,7 +72,7 @@ export const TokenProvider = ({ children }: { children: ReactNode }) => {
       
       const newBalances = await Promise.all(
         tokens.map(async (token) => {
-          const balance = await tokenManager.getTokenBalance(token.address, address as `0x${string}`);
+          const balance = await tokenManager.getTokenBalance(token.address, account as `0x${string}`);
           return {
             ...token,
             balance: balance.balance,
@@ -92,7 +92,7 @@ export const TokenProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [address, isConnected, tokenManager, tokens]);
+  }, [account, connected, tokenManager, tokens]);
 
   // Debounce refreshBalances to prevent too many calls
   const debouncedRefresh = useCallback(
@@ -103,11 +103,11 @@ export const TokenProvider = ({ children }: { children: ReactNode }) => {
   );
 
   useEffect(() => {
-    if (address && isConnected) {
+    if (account && connected) {
       debouncedRefresh();
     }
     return () => debouncedRefresh.cancel();
-  }, [address, isConnected, debouncedRefresh]);
+  }, [account, connected, debouncedRefresh]);
 
   const addToken = useCallback((token: Token) => {
     setTokens(prevTokens => [...prevTokens, token]);
