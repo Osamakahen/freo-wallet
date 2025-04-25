@@ -6,7 +6,7 @@ import { useNetwork } from '@/contexts/NetworkContext';
 import { formatEther } from 'viem';
 
 export function HeroSection() {
-  const { address, isConnected, connect } = useWallet();
+  const { account, connect } = useWallet();
   const { networkName, symbol } = useNetwork();
 
   return (
@@ -34,7 +34,7 @@ export function HeroSection() {
           Your Gateway to Web3
         </motion.p>
 
-        {isConnected ? (
+        {account ? (
           <div className="space-y-6">
             <motion.div
               className="flex flex-col items-center space-y-2"
@@ -43,7 +43,7 @@ export function HeroSection() {
               transition={{ duration: 0.5, delay: 0.4 }}
             >
               <span className="text-[#00FF88] text-lg">Connected to {networkName}</span>
-              <span className="text-white/60">{address}</span>
+              <span className="text-white/60">{account}</span>
             </motion.div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">

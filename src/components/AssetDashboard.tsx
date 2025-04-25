@@ -7,7 +7,7 @@ import { SessionService } from '@/services/SessionService';
 import { DAppSession } from '@/services/SessionService';
 import { Wallet, ArrowUpRight, ArrowDownRight, Loader2 } from 'lucide-react';
 
-const AssetDashboard: React.FC = () => {
+export const AssetDashboard: React.FC = () => {
   const { account, chainId } = useWallet();
   const [balance, setBalance] = useState<string>('0');
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -108,6 +108,4 @@ const AssetDashboard: React.FC = () => {
       )}
     </motion.div>
   );
-};
-
-export default AssetDashboard; 
+}; 
