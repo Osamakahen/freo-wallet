@@ -17,7 +17,7 @@ interface Token extends TokenInfo {
 }
 
 const TokenManager: React.FC = () => {
-  const { address, isConnected } = useWallet();
+  const { account, connected } = useWallet();
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -29,7 +29,7 @@ const TokenManager: React.FC = () => {
   const [tokenManager] = useState(() => new TokenManagerCore(new EVMAdapter(mainnet)));
 
   const loadTokens = useCallback(async () => {
-    if (!address || !isConnected) return;
+    if (!account || !connected) return;
     
     setLoading(true);
     try {
@@ -37,7 +37,7 @@ const TokenManager: React.FC = () => {
       const tokenBalances = await Promise.all(
         tokenAddresses.map(async (tokenAddress) => {
           const info = await tokenManager.getTokenInfo(tokenAddress);
-          const balance = await tokenManager.getBalance(tokenAddress, address as `0x${string}`);
+          const balance = await tokenManager.getBalance(tokenAddress, account as `0x${string}`);
           return {
             ...info,
             balance
@@ -56,20 +56,20 @@ const TokenManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [address, isConnected, tokenManager]);
+  }, [account, connected, tokenManager]);
 
   useEffect(() => {
-    if (address && isConnected) {
+    if (account && connected) {
       loadTokens();
     }
-  }, [address, isConnected, loadTokens]);
+  }, [account, connected, loadTokens]);
 
   const handleAddToken = async (values: { address: string }) => {
     setAddTokenLoading(true);
     try {
       const tokenAddress = values.address as `0x${string}`;
       const tokenInfo = await tokenManager.getTokenInfo(tokenAddress);
-      const balance = await tokenManager.getBalance(tokenAddress, address as `0x${string}`);
+      const balance = await tokenManager.getBalance(tokenAddress, account as `0x${string}`);
       
       setTokens(prev => {
         const newTokens = [...prev];
@@ -159,7 +159,7 @@ const TokenManager: React.FC = () => {
     },
   ];
 
-  if (!address || !isConnected) {
+  if (!account || !connected) {
     return (
       <div style={{ padding: '24px' }}>
         <Card>
