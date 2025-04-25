@@ -6,7 +6,7 @@ import { useToken } from '@/contexts/TokenContext';
 import { formatEther, parseEther } from 'ethers';
 
 export const WalletTester = () => {
-  const { address, balance, walletManager, isConnected } = useWallet();
+  const { account, balance, connected } = useWallet();
   const { tokens, addToken } = useToken();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
@@ -19,17 +19,27 @@ export const WalletTester = () => {
       setLoading(true);
       setError(null);
 
-      if (!recipientAddress || !amount) {
+      if (!recipientAddress || !amount || !account) {
         throw new Error('Please fill in all fields');
       }
 
+      const ethereum = (window as any).ethereum;
+      if (!ethereum) {
+        throw new Error('No wallet found');
+      }
+
       const tx = {
+        from: account,
         to: recipientAddress as `0x${string}`,
         value: parseEther(amount).toString(),
         data: '0x'
       };
 
-      const hash = await walletManager.sendTransaction(tx);
+      const hash = await ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [tx]
+      });
+      
       console.log('Transaction sent:', hash);
       alert(`Transaction sent! Hash: ${hash}`);
     } catch (err) {
@@ -68,7 +78,7 @@ export const WalletTester = () => {
     }
   };
 
-  if (!isConnected) {
+  if (!connected) {
     return null;
   }
 
@@ -78,7 +88,7 @@ export const WalletTester = () => {
       
       <div className="space-y-4">
         <div>
-          <p className="text-white mb-2">Your Address: {address}</p>
+          <p className="text-white mb-2">Your Address: {account}</p>
           <p className="text-white mb-4">Balance: {balance} ETH</p>
         </div>
 
